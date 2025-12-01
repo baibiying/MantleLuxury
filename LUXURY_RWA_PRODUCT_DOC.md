@@ -340,7 +340,7 @@
 
 ---
 
-## 10. 技术亮点与竞争优势
+## 10. 项目亮点
 
 - **Technical Excellence（技术卓越性）**：  
   - 采用 React/Next.js + TypeScript + Solidity + Mantle L2 的现代化技术栈，前后端与合约均基于成熟、活跃的开源生态  
