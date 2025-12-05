@@ -24,6 +24,7 @@ async function main() {
   const assetIdHex = process.env.ASSET_ID || ethers.ZeroHash;
   const metadataHashHex = process.env.METADATA_HASH || ethers.ZeroHash;
   const initialSupplyStr = process.env.INITIAL_SUPPLY || "1000";
+  const pricePerTokenStr = process.env.PRICE_PER_TOKEN || "1000000000000000000"; // 默认 1 MNT (wei)
   const owner = process.env.OWNER_ADDRESS || deployer.address;
 
   // 转换参数
@@ -47,6 +48,7 @@ async function main() {
   }
   
   const initialSupply = ethers.parseEther(initialSupplyStr);
+  const pricePerToken = BigInt(pricePerTokenStr);
 
   console.log("Deployment parameters:");
   console.log("  Name:", name);
@@ -54,6 +56,7 @@ async function main() {
   console.log("  Asset ID:", assetId);
   console.log("  Metadata Hash:", metadataHash);
   console.log("  Initial Supply:", initialSupply.toString());
+  console.log("  Price Per Token (wei):", pricePerToken.toString());
   console.log("  Owner:", owner);
 
   const LuxuryToken = await ethers.getContractFactory("LuxuryToken");
@@ -63,6 +66,7 @@ async function main() {
     assetId,
     metadataHash,
     initialSupply,
+    pricePerToken,
     owner
   );
 
@@ -74,6 +78,8 @@ async function main() {
   console.log("Asset ID:", await token.assetId());
   console.log("Metadata Hash:", await token.metadataHash());
   console.log("Total Supply:", (await token.totalSupply()).toString());
+  console.log("Price Per Token:", (await token.pricePerToken()).toString());
+  console.log("Sales Enabled:", await token.salesEnabled());
   console.log("Owner:", await token.owner());
   
   // 输出 JSON 格式，方便后端解析
@@ -83,6 +89,8 @@ async function main() {
     assetId: await token.assetId(),
     metadataHash: await token.metadataHash(),
     totalSupply: (await token.totalSupply()).toString(),
+    pricePerToken: (await token.pricePerToken()).toString(),
+    salesEnabled: await token.salesEnabled(),
     owner: await token.owner()
   }));
 }

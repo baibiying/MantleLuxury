@@ -75,7 +75,8 @@ public class AssetService {
                     tokenName,
                     tokenSymbol,
                     totalSupply,
-                    metadataHash
+                    metadataHash,
+                    request.pricePerShare()  // 传递每份价格
             );
             
             if (tokenAddress == null || tokenAddress.isEmpty()) {
@@ -141,6 +142,7 @@ public class AssetService {
      */
     private AssetDto toDto(Asset asset) {
         // 计算剩余可购份数（简化版：假设已售出为 0）
+        // TODO: 后续应该从链上读取实际已售出数量
         BigDecimal remainingSupply = asset.getTotalSupply() != null 
                 ? asset.getTotalSupply() 
                 : BigDecimal.ZERO;
@@ -154,7 +156,9 @@ public class AssetService {
                 asset.getPricePerShare(),
                 asset.getTotalSupply(),
                 remainingSupply,
-                asset.getStatus()
+                asset.getStatus(),
+                asset.getTokenAddress(),  // 合约地址
+                asset.getDescription()   // 描述
         );
     }
 }

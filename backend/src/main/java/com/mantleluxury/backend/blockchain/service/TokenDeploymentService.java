@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 /**
@@ -31,6 +32,7 @@ public class TokenDeploymentService {
      * @param symbol 代币符号
      * @param totalSupply 总供应量
      * @param metadataHash 元数据哈希 (bytes32)
+     * @param pricePerShare 每份价格（USD），用于设置合约中的代币价格
      * @return 合约地址
      */
     public String deployToken(
@@ -38,9 +40,10 @@ public class TokenDeploymentService {
             String name,
             String symbol,
             BigInteger totalSupply,
-            String metadataHash
+            String metadataHash,
+            BigDecimal pricePerShare
     ) {
-        return mantleDeploymentService.deployToken(assetId, name, symbol, totalSupply, metadataHash);
+        return mantleDeploymentService.deployToken(assetId, name, symbol, totalSupply, metadataHash, pricePerShare);
     }
 }
 

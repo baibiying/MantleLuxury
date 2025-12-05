@@ -12,13 +12,16 @@ type FormData = {
   model: string;
   year: string;
   description: string;
-  purchasePrice: string;
+  purchasePrice: string; // USD
   purchaseDate: string;
   serialNumber: string;
   totalSupply: string;
-  pricePerShare: string;
+  pricePerShare: string; // USD
   submittedBy: string;
 };
+
+// 汇率：1 USD = 1 MNT（简化处理，实际应该接入价格预言机）
+const USD_TO_MNT_RATE = 1;
 
 export default function AssetSubmitPage() {
   const router = useRouter();
@@ -238,6 +241,12 @@ export default function AssetSubmitPage() {
                     placeholder="例如：50000"
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  {formData.purchasePrice && parseFloat(formData.purchasePrice) > 0 && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      约 {parseFloat(formData.purchasePrice) * USD_TO_MNT_RATE} MNT
+                      <span className="text-slate-500 ml-1">(汇率: 1 USD = {USD_TO_MNT_RATE} MNT)</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -278,6 +287,15 @@ export default function AssetSubmitPage() {
                   <p className="text-xs text-slate-400 mt-1">
                     将资产拆分为多少份代币
                   </p>
+                  {formData.totalSupply && formData.pricePerShare && 
+                   parseFloat(formData.totalSupply) > 0 && 
+                   parseFloat(formData.pricePerShare) > 0 && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      总价值: ${(parseFloat(formData.totalSupply) * parseFloat(formData.pricePerShare)).toFixed(2)} USD
+                      {' '}
+                      (约 {(parseFloat(formData.totalSupply) * parseFloat(formData.pricePerShare) * USD_TO_MNT_RATE).toFixed(2)} MNT)
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -295,8 +313,14 @@ export default function AssetSubmitPage() {
                     placeholder="例如：500"
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
-                  <p className="text-xs text-slate-400 mt-1">
-                    每份代币的售价
+                  {formData.pricePerShare && parseFloat(formData.pricePerShare) > 0 && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      约 {parseFloat(formData.pricePerShare) * USD_TO_MNT_RATE} MNT 每份
+                      <span className="text-slate-500 ml-1">(汇率: 1 USD = {USD_TO_MNT_RATE} MNT)</span>
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-500 mt-1">
+                    投资者将用 MNT 支付此价格来购买代币份额
                   </p>
                 </div>
               </div>

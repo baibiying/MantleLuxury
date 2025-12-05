@@ -16,7 +16,9 @@ public record AssetDto(
         BigDecimal pricePerShare,
         BigDecimal totalSupply,
         BigDecimal remainingSupply,
-        String status          // fundraising / funded / sold
+        String status,          // fundraising / funded / sold
+        String tokenAddress,   // 合约地址（用于前端调用合约）
+        String description     // 资产描述
 ) {
 }
 

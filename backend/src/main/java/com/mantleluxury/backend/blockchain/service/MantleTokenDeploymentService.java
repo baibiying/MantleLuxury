@@ -15,6 +15,7 @@ import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Convert;
 import org.web3j.utils.Numeric;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -54,7 +55,8 @@ public class MantleTokenDeploymentService {
             String name,
             String symbol,
             BigInteger totalSupply,
-            String metadataHash
+            String metadataHash,
+            BigDecimal pricePerShare
     ) {
         if (!enabled) {
             logger.warn("Blockchain deployment is disabled. Returning mock address.");
@@ -96,7 +98,7 @@ public class MantleTokenDeploymentService {
             // 通过调用 Hardhat 脚本或使用 web3j 的合约工厂
             
             // 方案1：使用 ProcessBuilder 调用 Hardhat 脚本（推荐用于 MVP）
-            String contractAddress = deployViaHardhatScript(assetId, name, symbol, totalSupply, metadataHash);
+            String contractAddress = deployViaHardhatScript(assetId, name, symbol, totalSupply, metadataHash, pricePerShare);
             
             logger.info("✅ LuxuryToken deployed successfully at: {}", contractAddress);
             return contractAddress;
@@ -115,7 +117,8 @@ public class MantleTokenDeploymentService {
             String name,
             String symbol,
             BigInteger totalSupply,
-            String metadataHash
+            String metadataHash,
+            BigDecimal pricePerShare
     ) throws Exception {
         logger.info("Deploying via Hardhat script...");
 
@@ -128,12 +131,25 @@ public class MantleTokenDeploymentService {
                 "--network", "mantleTestnet"
         );
 
+        // 计算每份代币的价格（wei 单位）
+        // 假设 1 USD = 1 MNT（实际应该使用价格预言机）
+        // pricePerShare 是 USD，需要转换为 wei：例如 $85.00 = 85 * 10^18 wei
+        BigInteger pricePerTokenWei;
+        if (pricePerShare != null) {
+            // 将 USD 价格转换为 wei（假设 1 USD = 1 MNT）
+            pricePerTokenWei = pricePerShare.multiply(new BigDecimal(BigInteger.TEN.pow(18))).toBigInteger();
+        } else {
+            // 默认价格：1 MNT per token
+            pricePerTokenWei = BigInteger.TEN.pow(18);
+        }
+        
         // 设置环境变量
         processBuilder.environment().put("TOKEN_NAME", name);
         processBuilder.environment().put("TOKEN_SYMBOL", symbol);
         processBuilder.environment().put("ASSET_ID", assetId);
         processBuilder.environment().put("METADATA_HASH", metadataHash);
         processBuilder.environment().put("INITIAL_SUPPLY", totalSupply.divide(BigInteger.TEN.pow(18)).toString());
+        processBuilder.environment().put("PRICE_PER_TOKEN", pricePerTokenWei.toString());
         processBuilder.environment().put("OWNER_ADDRESS", credentials.getAddress());
         
         // 设置工作目录

@@ -5,10 +5,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  // 暂时禁用 Turbopack，使用 webpack 以避免字体加载问题
-  experimental: {
-    turbo: false,
-  },
 };
 
 export default nextConfig;

@@ -85,9 +85,10 @@ export default function AssetsPage() {
 
         <section className="grid gap-4 md:grid-cols-2">
           {assets.map((asset) => (
-            <article
+            <Link
               key={asset.id}
-              className="rounded-2xl border border-slate-800 bg-slate-900/60 px-5 py-4 hover:border-sky-500/60 transition"
+              href={`/assets/${asset.id}`}
+              className="rounded-2xl border border-slate-800 bg-slate-900/60 px-5 py-4 hover:border-sky-500/60 transition block"
             >
               <div className="flex items-baseline justify-between gap-4 mb-2">
                 <div>
@@ -127,7 +128,7 @@ export default function AssetsPage() {
               <dl className="mt-3 grid grid-cols-2 gap-y-1 text-xs text-slate-300">
                 <div>
                   <dt className="text-slate-500">单份价格</dt>
-                  <dd className="font-medium">${asset.pricePerShare}</dd>
+                  <dd className="font-medium">{asset.pricePerShare} MNT</dd>
                 </div>
                 <div>
                   <dt className="text-slate-500">总份数</dt>
@@ -138,7 +139,7 @@ export default function AssetsPage() {
                   <dd>{asset.remainingSupply}</dd>
                 </div>
               </dl>
-            </article>
+            </Link>
           ))}
         </section>
       </div>
