@@ -166,23 +166,27 @@ export default function AssetDetailPage() {
   // 在客户端挂载之前，显示加载状态
   if (!mounted || loading) {
     return (
-      <main className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
-        <p className="text-sm text-slate-300">加载资产详情中…</p>
+      <main className="min-h-screen gradient-bg text-slate-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="loading-spinner mx-auto"></div>
+          <p className="text-sm text-slate-300">加载资产详情中…</p>
+        </div>
       </main>
     );
   }
 
   if (error || !asset) {
     return (
-      <main className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
-        <div className="bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4 max-w-md">
-          <p className="text-sm font-semibold text-red-200 mb-1">
+      <main className="min-h-screen gradient-bg text-slate-50 flex items-center justify-center px-6">
+        <div className="glass-effect border border-red-500/40 rounded-2xl px-8 py-6 max-w-md text-center space-y-4">
+          <div className="text-4xl mb-2">⚠️</div>
+          <p className="text-lg font-semibold text-red-200">
             {error ? "加载失败" : "资产不存在"}
           </p>
-          <p className="text-xs text-red-300 break-all">{error || "未找到该资产"}</p>
+          <p className="text-sm text-red-300 break-all">{error || "未找到该资产"}</p>
           <button
             onClick={() => router.push("/assets")}
-            className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white text-sm"
+            className="mt-4 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-xl text-white text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/50"
           >
             返回资产列表
           </button>
@@ -192,10 +196,16 @@ export default function AssetDetailPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50 px-6 py-10">
-      <div className="max-w-4xl mx-auto">
+    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
+      {/* 背景装饰 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* 头部导航 */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <button
             onClick={() => router.back()}
             className="text-sm text-slate-400 hover:text-slate-200 transition"
@@ -206,10 +216,13 @@ export default function AssetDetailPage() {
         </div>
 
         {/* 资产详情 */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {/* 左侧：资产信息 */}
           <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-6 py-5">
+            <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+              {/* 背景渐变 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+              <div className="relative z-10">
               <div className="mb-4">
                 <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">
                   {asset.assetType === "watch" ? "名表" : "珠宝"}
@@ -284,12 +297,16 @@ export default function AssetDetailPage() {
                   </a>
                 </div>
               )}
+              </div>
             </div>
           </div>
 
           {/* 右侧：投资模块 */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-6 py-5">
-            <h2 className="text-xl font-semibold mb-4">投资此资产</h2>
+          <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+            {/* 背景渐变 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
+            <div className="relative z-10">
+            <h2 className="text-xl font-semibold mb-4 gradient-text">投资此资产</h2>
 
             {asset.status !== "fundraising" && (
               <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
@@ -353,9 +370,12 @@ export default function AssetDetailPage() {
                 <button
                   onClick={handleInvest}
                   disabled={investing || isWriting || isConfirming || !investAmount || parseFloat(investAmount) <= 0}
-                  className="w-full px-6 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg text-white font-medium transition"
+                  className="group relative w-full px-6 py-4 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] disabled:hover:scale-100 shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70 disabled:shadow-none"
                 >
-                  {isWriting ? "发送交易..." : isConfirming ? "等待确认..." : investing ? "处理中..." : "确认投资"}
+                  <span className="relative z-10">
+                    {isWriting ? "发送交易..." : isConfirming ? "等待确认..." : investing ? "处理中..." : "确认投资"}
+                  </span>
+                  <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                 </button>
 
                 {hash && (
@@ -381,6 +401,7 @@ export default function AssetDetailPage() {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

@@ -94,13 +94,18 @@ export default function AssetSubmitPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50 px-6 py-10">
-      <div className="max-w-3xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight mb-2">
-            提交奢侈品资产
+    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
+      {/* 背景装饰 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+      </div>
+      <div className="max-w-5xl mx-auto">
+        <header className="mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
+            <span className="gradient-text">提交奢侈品资产</span>
           </h1>
-          <p className="text-sm text-slate-300">
+          <p className="text-base text-slate-300">
             将您的奢侈品进行 RWA 代币化，让更多投资者参与分享资产价值。
           </p>
         </header>
@@ -125,10 +130,13 @@ export default function AssetSubmitPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/60 px-6 py-5">
-            <h2 className="text-lg font-semibold mb-4">基本信息</h2>
-            <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+            {/* 背景渐变 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+            <div className="relative z-10">
+            <h2 className="text-xl font-bold mb-4 gradient-text">基本信息</h2>
+            <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   资产类型 <span className="text-red-400">*</span>
@@ -221,11 +229,15 @@ export default function AssetSubmitPage() {
                 />
               </div>
             </div>
+            </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/60 px-6 py-5">
-            <h2 className="text-lg font-semibold mb-4">购买信息</h2>
-            <div className="space-y-4">
+          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+            {/* 背景渐变 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+            <div className="relative z-10">
+            <h2 className="text-xl font-bold mb-4 gradient-text">购买信息</h2>
+            <div className="space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -263,11 +275,15 @@ export default function AssetSubmitPage() {
                 </div>
               </div>
             </div>
+            </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/60 px-6 py-5">
-            <h2 className="text-lg font-semibold mb-4">代币化参数</h2>
-            <div className="space-y-4">
+          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+            {/* 背景渐变 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+            <div className="relative z-10">
+            <h2 className="text-xl font-bold mb-4 gradient-text">代币化参数</h2>
+            <div className="space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -338,6 +354,7 @@ export default function AssetSubmitPage() {
                   className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
               </div>
+            </div>
             </div>
           </section>
 

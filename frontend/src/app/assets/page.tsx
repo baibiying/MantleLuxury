@@ -44,8 +44,11 @@ export default function AssetsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
-        <p className="text-sm text-slate-300">加载资产列表中…</p>
+      <main className="min-h-screen gradient-bg text-slate-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="loading-spinner mx-auto"></div>
+          <p className="text-sm text-slate-300">加载资产列表中…</p>
+        </div>
       </main>
     );
   }
@@ -64,81 +67,95 @@ export default function AssetsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50 px-6 py-10">
-      <div className="max-w-5xl mx-auto">
-        <header className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight mb-2">
-              可投资资产
+    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
+      {/* 背景装饰 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        <header className="mb-6 flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
+              <span className="gradient-text">可投资资产</span>
             </h1>
             <p className="text-sm text-slate-300">
-              来自 MantleLuxury 的奢侈品 RWA 资产列表。
+              来自 MantleLuxury 的奢侈品 RWA 资产列表
             </p>
           </div>
           <Link
             href="/assets/submit"
-            className="px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white text-sm font-medium transition"
+            className="group relative px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl text-white text-sm font-semibold hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50"
           >
-            + 提交资产
+            <span className="relative z-10 flex items-center gap-2">
+              <span className="text-lg">+</span> 提交资产
+            </span>
           </Link>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2">
-          {assets.map((asset) => (
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {assets.map((asset, index) => (
             <Link
               key={asset.id}
               href={`/assets/${asset.id}`}
-              className="rounded-2xl border border-slate-800 bg-slate-900/60 px-5 py-4 hover:border-sky-500/60 transition block"
+              className="group card-hover glass-effect rounded-2xl px-6 py-5 border border-slate-700/50 hover:border-sky-500/50 relative overflow-hidden"
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <div className="flex items-baseline justify-between gap-4 mb-2">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">
-                    {asset.assetType === "watch"
-                      ? "名表"
-                      : asset.assetType === "jewelry"
-                      ? "珠宝"
-                      : asset.assetType}
+              {/* 卡片背景渐变 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              <div className="relative z-10">
+                <div className="flex items-baseline justify-between gap-4 mb-3">
+                  <div className="flex-1">
+                    <div className="text-xs uppercase tracking-wide text-slate-400 mb-2 font-medium">
+                      {asset.assetType === "watch"
+                        ? "⌚ 名表"
+                        : asset.assetType === "jewelry"
+                        ? "💎 珠宝"
+                        : asset.assetType}
+                    </div>
+                    <h2 className="text-xl font-bold mb-1 group-hover:text-sky-400 transition-colors">
+                      {asset.brand} {asset.model}
+                    </h2>
+                    {asset.year && (
+                      <p className="text-xs text-slate-400">
+                        {asset.year} 年
+                      </p>
+                    )}
                   </div>
-                  <h2 className="text-lg font-semibold">
-                    {asset.brand} {asset.model}
-                  </h2>
-                  {asset.year && (
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {asset.year} 年
-                    </p>
-                  )}
-                </div>
-                <span
-                  className={`text-xs rounded-full px-2 py-1 border ${
-                    asset.status === "fundraising"
-                      ? "border-amber-400/60 text-amber-200 bg-amber-500/10"
+                  <span
+                    className={`text-xs rounded-full px-3 py-1.5 border font-medium ${
+                      asset.status === "fundraising"
+                        ? "border-amber-400/60 text-amber-200 bg-amber-500/20 shadow-lg shadow-amber-500/20"
+                        : asset.status === "funded"
+                        ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/20 shadow-lg shadow-emerald-500/20"
+                        : "border-slate-500/60 text-slate-200 bg-slate-500/20"
+                    }`}
+                  >
+                    {asset.status === "fundraising"
+                      ? "募集中"
                       : asset.status === "funded"
-                      ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/10"
-                      : "border-slate-500/60 text-slate-200 bg-slate-500/10"
-                  }`}
-                >
-                  {asset.status === "fundraising"
-                    ? "募集中"
-                    : asset.status === "funded"
-                    ? "已满额"
-                    : "已结束"}
-                </span>
-              </div>
+                      ? "已满额"
+                      : "已结束"}
+                  </span>
+                </div>
 
-              <dl className="mt-3 grid grid-cols-2 gap-y-1 text-xs text-slate-300">
-                <div>
-                  <dt className="text-slate-500">单份价格</dt>
-                  <dd className="font-medium">{asset.pricePerShare} MNT</dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500">总份数</dt>
-                  <dd>{asset.totalSupply}</dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500">剩余可购</dt>
-                  <dd>{asset.remainingSupply}</dd>
-                </div>
-              </dl>
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-1">
+                    <dt className="text-slate-500 text-xs">单份价格</dt>
+                    <dd className="font-bold text-sky-400">{asset.pricePerShare} MNT</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-slate-500 text-xs">总份数</dt>
+                    <dd className="font-semibold">{asset.totalSupply}</dd>
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <dt className="text-slate-500 text-xs">剩余可购</dt>
+                    <dd className="font-semibold text-emerald-400">{asset.remainingSupply} 份</dd>
+                  </div>
+                </dl>
+              </div>
             </Link>
           ))}
         </section>
