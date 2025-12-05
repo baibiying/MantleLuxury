@@ -5,6 +5,21 @@ spring:
   application:
     name: mantle-luxury-backend
 
+  datasource:
+    url: jdbc:mysql://localhost:3306/mantle_luxury?useSSL=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: root
+    password: root123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # 改为 validate，避免 Hibernate 自动修改表结构
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
   jackson:
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false
@@ -14,5 +29,12 @@ management:
     web:
       exposure:
         include: health,info
+
+# 区块链配置
+blockchain:
+  enabled: true  # 设置为 true 启用真实的区块链部署到 Mantle 测试网
+  # Mantle Sepolia 测试网 RPC URL（已验证可用）
+  rpc-url: https://rpc.sepolia.mantle.xyz
+  private-key: 773d526fabccd1b26abef51ed7bdcda523409069ecfecd4269cb757c282a599e # 从环境变量读取私钥，或直接配置（不要提交到 Git）
 
 

@@ -1,62 +1,68 @@
 package com.mantleluxury.backend.assets.api;
 
+import com.mantleluxury.backend.assets.service.AssetService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 
 /**
- * 资产列表 / 详情接口（MVP：使用内存 mock 数据，后续替换为数据库 + 链上数据）。
+ * 资产列表 / 详情 / 提交接口
  */
 @RestController
 @RequestMapping("/api/assets")
 @CrossOrigin(origins = "http://localhost:3000")
 public class AssetController {
 
-    // TODO: 替换成 service + repository，从 PostgreSQL 和链上读取真实数据
-    private final List<AssetDto> mockAssets = List.of(
-            new AssetDto(
-                    "asset-pp-watch-001",
-                    "watch",
-                    "Patek Philippe",
-                    "Nautilus 5711",
-                    2019,
-                    new BigDecimal("500"),
-                    new BigDecimal("1000"),
-                    new BigDecimal("600"),
-                    "fundraising"
-            ),
-            new AssetDto(
-                    "asset-cartier-jewelry-001",
-                    "jewelry",
-                    "Cartier",
-                    "LOVE Bracelet",
-                    2021,
-                    new BigDecimal("250"),
-                    new BigDecimal("2000"),
-                    new BigDecimal("0"),
-                    "funded"
-            )
-    );
+    private final AssetService assetService;
+
+    public AssetController(AssetService assetService) {
+        this.assetService = assetService;
+    }
 
     @GetMapping
     public ResponseEntity<List<AssetDto>> listAssets() {
-        return ResponseEntity.ok(mockAssets);
+        return ResponseEntity.ok(assetService.getAllAssets());
+    }
+
+    // 测试端点，用于验证 POST 请求是否正常工作
+    @PostMapping("/test")
+    public ResponseEntity<String> testPost() {
+        return ResponseEntity.ok("POST request works!");
+    }
+
+    // 将具体的路径放在通配符路径之前，避免路径冲突
+    @PostMapping(value = "/submit", consumes = "application/json", produces = "application/json")
+    public ResponseEntity<?> submitAsset(@RequestBody AssetSubmitRequest request) {
+        try {
+            System.out.println("Received asset submission request: " + request);
+            var asset = assetService.submitAsset(request);
+            AssetDto dto = assetService.getAssetById(asset.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+        } catch (RuntimeException e) {
+            // 合约部署失败或其他业务异常
+            System.err.println("Asset submission failed: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Asset submission failed: " + e.getMessage());
+        } catch (Exception e) {
+            // 其他未预期的异常
+            System.err.println("Unexpected error during asset submission: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Internal server error: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AssetDto> getAsset(@PathVariable String id) {
-        Optional<AssetDto> found = mockAssets.stream()
-                .filter(a -> a.id().equals(id))
-                .findFirst();
-        return found.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        AssetDto asset = assetService.getAssetById(id);
+        if (asset != null) {
+            return ResponseEntity.ok(asset);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 type Asset = {
   id: string;
@@ -65,13 +66,21 @@ export default function AssetsPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-slate-50 px-6 py-10">
       <div className="max-w-5xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight mb-2">
-            可投资资产
-          </h1>
-          <p className="text-sm text-slate-300">
-            来自 MantleLuxury 的奢侈品 RWA 资产列表（当前为演示数据）。
-          </p>
+        <header className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight mb-2">
+              可投资资产
+            </h1>
+            <p className="text-sm text-slate-300">
+              来自 MantleLuxury 的奢侈品 RWA 资产列表。
+            </p>
+          </div>
+          <Link
+            href="/assets/submit"
+            className="px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white text-sm font-medium transition"
+          >
+            + 提交资产
+          </Link>
         </header>
 
         <section className="grid gap-4 md:grid-cols-2">
@@ -136,4 +145,3 @@ export default function AssetsPage() {
     </main>
   );
 }
-

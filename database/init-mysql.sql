@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS assets (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     asset_id_bytes32 VARCHAR(66) UNIQUE NOT NULL COMMENT '链上 assetId',
-    token_address VARCHAR(42) NOT NULL COMMENT 'LuxuryToken 合约地址',
+    token_address VARCHAR(42) COMMENT 'LuxuryToken 合约地址（资产上链后才有）',
     asset_type VARCHAR(50) NOT NULL COMMENT 'watch, jewelry',
     brand VARCHAR(100),
     model VARCHAR(100),

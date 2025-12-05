@@ -63,6 +63,17 @@ cleanup_existing_container() {
             print_info "停止并删除现有容器..."
             docker stop "$CONTAINER_NAME" > /dev/null 2>&1 || true
             docker rm "$CONTAINER_NAME" > /dev/null 2>&1 || true
+            
+            # 询问是否删除数据卷（完全重新生成表格）
+            read -p "是否删除数据卷并完全重新生成数据库? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                print_warn "删除数据卷: ${SCRIPT_DIR}/mysql-data"
+                rm -rf "${SCRIPT_DIR}/mysql-data"
+                print_info "数据卷已删除，将重新生成数据库和表格"
+            else
+                print_info "保留数据卷，使用现有数据"
+            fi
         else
             print_info "使用现有容器"
             return 1
