@@ -146,6 +146,24 @@ execute_init_sql() {
     fi
 }
 
+# 确保关键列存在（适用于保留旧数据卷的情况）
+ensure_schema() {
+    print_info "检查并补齐 assets 表缺失列..."
+    local sql="
+        ALTER TABLE assets
+            ADD COLUMN IF NOT EXISTS submitted_by VARCHAR(42) COMMENT '提交者钱包地址或用户ID',
+            ADD COLUMN IF NOT EXISTS description TEXT COMMENT '资产描述',
+            ADD COLUMN IF NOT EXISTS purchase_price DECIMAL(36, 18) COMMENT '购入价格',
+            ADD COLUMN IF NOT EXISTS purchase_date DATE COMMENT '购入日期',
+            ADD COLUMN IF NOT EXISTS serial_number VARCHAR(200) COMMENT '序列号';
+    "
+    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$sql" > /dev/null 2>&1; then
+        print_info "assets 表列检查完成（如有缺失已自动补齐）"
+    else
+        print_warn "列自动补齐失败，请手动检查数据库"
+    fi
+}
+
 # 显示连接信息
 show_connection_info() {
     echo
@@ -204,6 +222,8 @@ main() {
     
     # 执行初始化 SQL
     execute_init_sql
+    # 补齐可能缺失的列
+    ensure_schema
     
     # 显示连接信息
     show_connection_info
