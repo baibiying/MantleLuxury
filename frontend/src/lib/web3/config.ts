@@ -49,8 +49,9 @@ if (typeof window !== 'undefined') {
   // 只在浏览器环境中创建 MetaMask 连接器
   connectors = [
     metaMask({
-      // 允许用户选择账户
-      // MetaMask 会自动显示账户选择界面
+      // 允许用户选择账户；设置 shim 开关以便每次连接都可选择
+      shimDisconnect: true,
+      UNSTABLE_shimOnConnectSelectAccount: true,
       dappMetadata: {
         name: 'MantleLuxury',
         url: window.location.origin,

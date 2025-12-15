@@ -11,6 +11,7 @@ export default function WalletConnect() {
   const { switchChainAsync } = useSwitchChain();
   const [mounted, setMounted] = useState(false);
   const [networkError, setNetworkError] = useState<string | null>(null);
+  const [switchingNetwork, setSwitchingNetwork] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -31,13 +32,14 @@ export default function WalletConnect() {
   // 连接后自动尝试切到 Mantle Sepolia
   useEffect(() => {
     const ensureMantle = async () => {
-      if (!isConnected) return;
+      if (!isConnected || switchingNetwork) return;
       if (chainId === mantleSepoliaTestnet.id) {
         setNetworkError(null);
         return;
       }
       try {
         if (switchChainAsync) {
+          setSwitchingNetwork(true);
           await switchChainAsync({ chainId: mantleSepoliaTestnet.id });
           setNetworkError(null);
         }
@@ -59,10 +61,12 @@ export default function WalletConnect() {
         } else {
           setNetworkError(error?.message || '请在钱包中切换到 Mantle Sepolia');
         }
+      } finally {
+        setSwitchingNetwork(false);
       }
     };
     ensureMantle();
-  }, [isConnected, chainId, switchChainAsync]);
+  }, [isConnected, chainId, switchChainAsync, switchingNetwork]);
 
   if (!mounted) {
     return null;
@@ -76,10 +80,11 @@ export default function WalletConnect() {
         </div>
         {chainId !== mantleSepoliaTestnet.id && (
           <button
-            onClick={() => switchChainAsync?.({ chainId: mantleSepoliaTestnet.id })}
-            className="px-3 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-white text-xs transition"
+            onClick={() => !switchingNetwork && switchChainAsync?.({ chainId: mantleSepoliaTestnet.id })}
+            disabled={switchingNetwork}
+            className="px-3 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 rounded-lg text-white text-xs transition"
           >
-            切换到 Mantle Sepolia
+            {switchingNetwork ? '切换中...' : '切换到 Mantle Sepolia'}
           </button>
         )}
         <button
