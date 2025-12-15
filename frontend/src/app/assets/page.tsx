@@ -28,6 +28,11 @@ export default function AssetsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [onchainRemaining, setOnchainRemaining] = useState<Record<string, string>>({});
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortKey, setSortKey] = useState<"price" | "recent">("recent");
+  const [priceMin, setPriceMin] = useState<string>("");
+  const [priceMax, setPriceMax] = useState<string>("");
 
   const chainId = useChainId();
   const publicClient = usePublicClient();
@@ -113,6 +118,29 @@ export default function AssetsPage() {
     );
   }
 
+  // 过滤与排序
+  const filtered = assets
+    .filter((a) => (typeFilter === "all" ? true : a.assetType === typeFilter))
+    .filter((a) => (statusFilter === "all" ? true : a.status === statusFilter))
+    .filter((a) => {
+      if (priceMin) {
+        const pmin = parseFloat(priceMin);
+        if (!isNaN(pmin) && parseFloat(a.pricePerShare) < pmin) return false;
+      }
+      if (priceMax) {
+        const pmax = parseFloat(priceMax);
+        if (!isNaN(pmax) && parseFloat(a.pricePerShare) > pmax) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortKey === "price") {
+        return parseFloat(a.pricePerShare) - parseFloat(b.pricePerShare);
+      }
+      // recent: 默认按加载顺序（假定后端按创建时间）
+      return 0;
+    });
+
   return (
     <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
       {/* 背景装饰 */}
@@ -141,8 +169,67 @@ export default function AssetsPage() {
           </Link>
         </header>
 
+        {/* 筛选与排序 */}
+        <section className="mb-4 grid gap-3 md:grid-cols-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">资产类型</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">全部</option>
+              <option value="watch">名表</option>
+              <option value="jewelry">珠宝</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">状态</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">全部</option>
+              <option value="fundraising">募集中</option>
+              <option value="funded">已满额</option>
+              <option value="sold">已结束</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">价格区间 (MNT)</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={priceMin}
+                onChange={(e) => setPriceMin(e.target.value)}
+                placeholder="最低"
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+              />
+              <input
+                type="number"
+                value={priceMax}
+                onChange={(e) => setPriceMax(e.target.value)}
+                placeholder="最高"
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">排序</label>
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as any)}
+              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="recent">上架时间（默认）</option>
+              <option value="price">价格（从低到高）</option>
+            </select>
+          </div>
+        </section>
+
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {assets.map((asset, index) => (
+          {filtered.map((asset, index) => (
             <Link
               key={asset.id}
               href={`/assets/${asset.id}`}
