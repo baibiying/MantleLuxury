@@ -33,8 +33,13 @@ export default function AssetDetailPage() {
   // 使用 wagmi hooks（必须在 WagmiProvider 内部）
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
-  const { writeContract, data: hash, isPending: isWriting } = useWriteContract();
+  const { switchChainAsync } = useSwitchChain();
+  const {
+    writeContractAsync,
+    data: hash,
+    isPending: isWriting,
+    error: writeError,
+  } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
   });
@@ -71,6 +76,31 @@ export default function AssetDetailPage() {
     }
   }, [params.id]);
 
+  const ensureMantleNetwork = async () => {
+    // 优先使用 wagmi 切链，若不存在则添加后再切
+    if (chainId === mantleSepoliaTestnet.id) return;
+
+    try {
+      if (switchChainAsync) {
+        await switchChainAsync({ chainId: mantleSepoliaTestnet.id });
+        return;
+      }
+      throw new Error("switchChain 不可用");
+    } catch (error: any) {
+      if (error?.code === 4902 || error?.message?.includes("Unrecognized chain")) {
+        await (window as any).ethereum?.request({
+          method: "wallet_addEthereumChain",
+          params: [mantleSepoliaMetaMaskConfig],
+        });
+        if (switchChainAsync) {
+          await switchChainAsync({ chainId: mantleSepoliaTestnet.id });
+          return;
+        }
+      }
+      throw error;
+    }
+  };
+
   const handleInvest = async () => {
     if (!asset || !isConnected || !address) {
       setInvestError("请先连接钱包");
@@ -82,31 +112,18 @@ export default function AssetDetailPage() {
       return;
     }
 
-    // 检查网络
+    // 检查/切换网络：失败则不发起交易
     if (chainId !== mantleSepoliaTestnet.id) {
-      setInvestError("请切换到 Mantle Sepolia 测试网");
+      setInvestError("正在请求切换到 Mantle Sepolia，请在钱包确认");
       try {
-        // 尝试切换网络
-        await switchChain({ chainId: mantleSepoliaTestnet.id });
+        await ensureMantleNetwork();
       } catch (error: any) {
-        // 如果网络不存在，尝试添加网络
-        if (error?.code === 4902 || error?.message?.includes('Unrecognized chain')) {
-          try {
-            await (window as any).ethereum?.request({
-              method: 'wallet_addEthereumChain',
-              params: [mantleSepoliaMetaMaskConfig],
-            });
-            // 网络添加后，再次尝试切换
-            await switchChain({ chainId: mantleSepoliaTestnet.id });
-          } catch (addError) {
-            setInvestError("请手动在 MetaMask 中添加 Mantle Sepolia 网络");
-            return;
-          }
-        } else {
-          setInvestError("网络切换失败，请手动切换");
-          return;
-        }
+        setInvestError(error?.message || "网络切换失败，请在钱包手动切换到 Mantle Sepolia");
+        setInvesting(false);
+        return;
       }
+      // 让用户在链切换完成后重新点击
+      setInvesting(false);
       return;
     }
 
@@ -129,18 +146,24 @@ export default function AssetDetailPage() {
       // 假设 1 份 = 1 个代币（最小单位），实际应该根据代币的 decimals 来计算
       const tokenAmount = parseEther(shares);
 
-      // 调用合约的 buyTokens 函数
-      // 需要发送 MNT（value）来购买代币
-      writeContract({
+      // 调用合约的 buyTokens 函数；用户在 MetaMask 取消会抛错（code 4001）
+      await writeContractAsync({
         address: asset.tokenAddress as `0x${string}`,
         abi: luxuryTokenAbi,
         functionName: 'buyTokens',
         args: [tokenAmount],
+        chainId: mantleSepoliaTestnet.id,
         value: parseEther(investAmount), // 发送 MNT 支付购买费用
       });
     } catch (e: any) {
-      setInvestError(e.message ?? "投资失败");
+      const userRejected =
+        e?.code === 4001 ||
+        e?.message?.includes("User rejected") ||
+        e?.message?.includes("User denied");
+      const message = userRejected ? "用户已取消交易" : e?.message ?? "投资失败";
+      setInvestError(message);
       setInvesting(false);
+      return;
     }
   };
 
@@ -153,6 +176,18 @@ export default function AssetDetailPage() {
       alert("投资成功！代币已发送到你的钱包。");
     }
   }, [isConfirmed]);
+
+  // 监听写入错误（例如用户取消）
+  useEffect(() => {
+    if (writeError) {
+      const message =
+        (writeError as any)?.code === 4001 || writeError.message?.includes("User rejected")
+          ? "用户已取消交易"
+          : writeError.message ?? "投资失败";
+      setInvestError(message);
+      setInvesting(false);
+    }
+  }, [writeError]);
 
   const calculateShares = (amount: string) => {
     if (!asset || !amount || parseFloat(amount) <= 0) {
