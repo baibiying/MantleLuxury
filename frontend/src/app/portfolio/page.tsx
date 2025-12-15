@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount, useChainId, usePublicClient } from "wagmi";
-import { formatEther } from "viem";
-import { mantleSepoliaTestnet } from "@/lib/web3/config";
-import { luxuryTokenAbi } from "@/lib/web3/contracts";
+import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
 
 const API_BASE =
@@ -25,15 +22,22 @@ type Asset = {
 };
 
 type Holding = {
-  asset: Asset;
-  balance: string; // human-readable份数
-  value: string;   // 估算价值（balance * pricePerShare）
+  assetId: string | null;
+  assetType: string | null;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  tokenAddress: string;
+  balance: string;        // 份数
+  pricePerShare: string;  // 单份价格
+  estimatedValue: string; // 当前市值
+  totalCost: string;      // 成本
+  pnl: string;            // 浮动收益
+  roi: string;            // 收益率（小数，例如 0.12）
 };
 
 export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const publicClient = usePublicClient();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -55,53 +59,28 @@ export default function PortfolioPage() {
       setLoading(true);
       setError(null);
       try {
-        // 1. 获取所有资产
-        const res = await fetch(`${API_BASE}/api/assets`);
+        const res = await fetch(
+          `${API_BASE}/api/portfolio/${address}`
+        );
         if (!res.ok) {
-          throw new Error(`加载资产失败: ${res.status}`);
+          throw new Error(`加载持仓失败: ${res.status}`);
         }
-        const assets: Asset[] = await res.json();
-        const assetsWithToken = assets.filter(
-          (a) => a.tokenAddress && a.status === "fundraising"
-        );
-
-        if (!publicClient || chainId !== mantleSepoliaTestnet.id) {
-          setError("请切换到 Mantle Sepolia 网络以查看持仓");
-          setHoldings([]);
-          setLoading(false);
-          return;
-        }
-
-        // 2. 逐个读取 balanceOf
-        const results = await Promise.all(
-          assetsWithToken.map(async (asset) => {
-            try {
-              const raw = (await publicClient.readContract({
-                address: asset.tokenAddress as `0x${string}`,
-                abi: luxuryTokenAbi,
-                functionName: "balanceOf",
-                args: [address as `0x${string}`],
-                chainId: mantleSepoliaTestnet.id,
-              })) as bigint;
-
-              if (raw === 0n) return null;
-
-              const balance = parseFloat(formatEther(raw));
-              const price = parseFloat(asset.pricePerShare);
-              const value = isNaN(price) ? 0 : balance * price;
-
-              return {
-                asset,
-                balance: balance.toFixed(4).replace(/\.?0+$/, ""),
-                value: value.toFixed(4).replace(/\.?0+$/, ""),
-              } as Holding;
-            } catch {
-              return null;
-            }
-          })
-        );
-
-        setHoldings(results.filter((h): h is Holding => h !== null));
+        const data = await res.json();
+        const parsed: Holding[] = data.map((item: any) => ({
+          assetId: item.assetId,
+          assetType: item.assetType,
+          brand: item.brand,
+          model: item.model,
+          year: item.year,
+          tokenAddress: item.tokenAddress,
+          balance: item.balance?.toString() ?? "0",
+          pricePerShare: item.pricePerShare?.toString() ?? "0",
+          estimatedValue: item.estimatedValue?.toString() ?? "0",
+          totalCost: item.totalCost?.toString() ?? "0",
+          pnl: item.pnl?.toString() ?? "0",
+          roi: item.roi?.toString() ?? "0",
+        }));
+        setHoldings(parsed);
       } catch (e: any) {
         setError(e.message ?? "加载持仓失败");
       } finally {
@@ -110,7 +89,7 @@ export default function PortfolioPage() {
     };
 
     loadHoldings();
-  }, [mounted, address, isConnected, chainId, publicClient]);
+  }, [mounted, address, isConnected]);
 
   if (!mounted) {
     return null;
@@ -156,33 +135,43 @@ export default function PortfolioPage() {
                   <th className="py-3 text-left font-normal">资产</th>
                   <th className="py-3 text-right font-normal">持有份额</th>
                   <th className="py-3 text-right font-normal">单份价格 (MNT)</th>
-                  <th className="py-3 text-right font-normal">估算持仓价值 (MNT)</th>
+                  <th className="py-3 text-right font-normal">持仓成本 (MNT)</th>
+                  <th className="py-3 text-right font-normal">当前市值 (MNT)</th>
+                  <th className="py-3 text-right font-normal">浮动收益 (MNT)</th>
+                  <th className="py-3 text-right font-normal">收益率</th>
                   <th className="py-3 text-right font-normal">操作</th>
                 </tr>
               </thead>
               <tbody>
-                {holdings.map(({ asset, balance, value }) => (
+                {holdings.map((h) => (
                   <tr
-                    key={asset.id}
+                    key={h.assetId ?? h.tokenAddress}
                     className="border-b border-slate-800/40 last:border-0"
                   >
                     <td className="py-3 pr-4">
                       <div className="flex flex-col">
                         <span className="font-medium">
-                          {asset.brand} {asset.model}
+                          {h.brand} {h.model}
                         </span>
                         <span className="text-xs text-slate-500 mt-1">
-                          {asset.assetType === "watch" ? "名表" : "珠宝"} ·{" "}
-                          {asset.year ?? "年份未知"}
+                          {h.assetType === "watch" ? "名表" : "珠宝"} ·{" "}
+                          {h.year ?? "年份未知"}
                         </span>
                       </div>
                     </td>
-                    <td className="py-3 text-right">{balance}</td>
-                    <td className="py-3 text-right">{asset.pricePerShare}</td>
-                    <td className="py-3 text-right">{value}</td>
+                    <td className="py-3 text-right">{h.balance}</td>
+                    <td className="py-3 text-right">{h.pricePerShare}</td>
+                    <td className="py-3 text-right">{h.totalCost}</td>
+                    <td className="py-3 text-right">{h.estimatedValue}</td>
+                    <td className="py-3 text-right">{h.pnl}</td>
+                    <td className="py-3 text-right">
+                      {h.roi
+                        ? `${(Number(h.roi) * 100).toFixed(2)}%`
+                        : "-"}
+                    </td>
                     <td className="py-3 text-right">
                       <a
-                        href={`/assets/${asset.id}`}
+                        href={`/assets/${h.assetId}`}
                         className="text-xs text-sky-400 hover:text-sky-300"
                       >
                         查看详情

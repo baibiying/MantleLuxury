@@ -95,6 +95,22 @@ CREATE TABLE IF NOT EXISTS user_holdings (
     INDEX idx_token_address (token_address)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- user_investments 表（记录用户投资成本）
+CREATE TABLE IF NOT EXISTS user_investments (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_address VARCHAR(42) NOT NULL,
+    asset_id CHAR(36) NOT NULL,
+    token_address VARCHAR(42) NOT NULL,
+    invested_amount_mnt DECIMAL(36, 18) NOT NULL COMMENT '本次投入的 MNT 金额',
+    shares DECIMAL(36, 18) NOT NULL COMMENT '本次购买的份数',
+    tx_hash VARCHAR(66),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+    INDEX idx_user_address (user_address),
+    INDEX idx_asset_id (asset_id),
+    INDEX idx_token_address (token_address)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 显示创建的表
 SHOW TABLES;
 

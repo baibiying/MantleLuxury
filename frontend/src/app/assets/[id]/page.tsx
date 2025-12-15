@@ -218,7 +218,26 @@ export default function AssetDetailPage() {
     if (isConfirmed) {
       setInvesting(false);
       setInvestAmount("");
-      // 可以显示成功消息或刷新数据
+      // 成功后记录投资到后端
+      if (asset && address && hash && investAmount) {
+        const shares = calculateShares(investAmount);
+        fetch(`${API_BASE}/api/portfolio/investment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userAddress: address,
+            assetId: asset.id,
+            tokenAddress: asset.tokenAddress,
+            investedAmountMnt: investAmount,
+            shares,
+            txHash: hash,
+          }),
+        }).catch(() => {
+          // 记录失败不影响链上交易
+        });
+      }
       alert("投资成功！代币已发送到你的钱包。");
     }
   }, [isConfirmed]);

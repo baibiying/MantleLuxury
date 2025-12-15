@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useChainId, usePublicClient } from "wagmi";
+import { formatEther } from "viem";
+import { mantleSepoliaTestnet } from "@/lib/web3/config";
+import { luxuryTokenAbi } from "@/lib/web3/contracts";
 
 type Asset = {
   id: string;
@@ -13,6 +17,7 @@ type Asset = {
   totalSupply: string;
   remainingSupply: string;
   status: string;
+  tokenAddress: string | null;
 };
 
 const API_BASE =
@@ -22,6 +27,10 @@ export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [onchainRemaining, setOnchainRemaining] = useState<Record<string, string>>({});
+
+  const chainId = useChainId();
+  const publicClient = usePublicClient();
 
   useEffect(() => {
     async function fetchAssets() {
@@ -41,6 +50,44 @@ export default function AssetsPage() {
 
     fetchAssets();
   }, []);
+
+  // 从链上读取每个资产的剩余可购份数（getAvailableTokens）
+  useEffect(() => {
+    const loadOnchainRemaining = async () => {
+      if (!publicClient || chainId !== mantleSepoliaTestnet.id) return;
+      const withToken = assets.filter(
+        (a) => a.tokenAddress && a.status === "fundraising"
+      );
+      if (withToken.length === 0) return;
+
+      const entries = await Promise.all(
+        withToken.map(async (asset) => {
+          try {
+            const raw = (await publicClient.readContract({
+              address: asset.tokenAddress as `0x${string}`,
+              abi: luxuryTokenAbi,
+              functionName: "getAvailableTokens",
+              chainId: mantleSepoliaTestnet.id,
+            })) as bigint;
+            const formatted = formatEther(raw);
+            return [asset.tokenAddress as string, formatted] as const;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const next: Record<string, string> = {};
+      for (const e of entries) {
+        if (e) {
+          next[e[0]] = e[1];
+        }
+      }
+      setOnchainRemaining(next);
+    };
+
+    loadOnchainRemaining();
+  }, [assets, publicClient, chainId]);
 
   if (loading) {
     return (
@@ -152,7 +199,12 @@ export default function AssetsPage() {
                   </div>
                   <div className="space-y-1 col-span-2">
                     <dt className="text-slate-500 text-xs">剩余可购</dt>
-                    <dd className="font-semibold text-emerald-400">{asset.remainingSupply} 份</dd>
+                    <dd className="font-semibold text-emerald-400">
+                      {asset.tokenAddress &&
+                      onchainRemaining[asset.tokenAddress] !== undefined
+                        ? `${onchainRemaining[asset.tokenAddress]} 份`
+                        : `${asset.remainingSupply} 份`}
+                    </dd>
                   </div>
                 </dl>
               </div>
