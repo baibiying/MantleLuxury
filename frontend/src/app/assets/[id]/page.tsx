@@ -256,6 +256,11 @@ export default function AssetDetailPage() {
     return shares.toString();
   };
 
+  // 展示用剩余份数（优先链上）
+  const displayRemaining = onchainAvailable
+    ? formatEther(BigInt(onchainAvailable))
+    : asset?.remainingSupply ?? "0";
+
   // 在客户端挂载之前，显示加载状态
   if (!mounted || loading) {
     return (
@@ -349,7 +354,7 @@ export default function AssetDetailPage() {
                   </div>
                   <div>
                     <dt className="text-slate-500">剩余可购</dt>
-                    <dd>{asset.remainingSupply}</dd>
+                    <dd>{displayRemaining}</dd>
                   </div>
                   <div>
                     <dt className="text-slate-500">状态</dt>
