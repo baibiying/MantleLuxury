@@ -141,6 +141,16 @@ export default function AssetsPage() {
       return 0;
     });
 
+  const imageFor = (asset: Asset) => {
+    if (asset.assetType === "watch") {
+      return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+    }
+    if (asset.assetType === "jewelry") {
+      return "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=800&q=80";
+    }
+    return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80";
+  };
+
   return (
     <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
       {/* 背景装饰 */}
@@ -240,6 +250,12 @@ export default function AssetsPage() {
               <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
               <div className="relative z-10">
+                <div className="overflow-hidden rounded-xl mb-3 border border-slate-800/60 shadow-inner">
+                  <div
+                    className="h-40 w-full bg-cover bg-center transform transition duration-500 group-hover:scale-105"
+                    style={{ backgroundImage: `url(${imageFor(asset)})` }}
+                  />
+                </div>
                 <div className="flex items-baseline justify-between gap-4 mb-3">
                   <div className="flex-1">
                     <div className="text-xs uppercase tracking-wide text-slate-400 mb-2 font-medium">

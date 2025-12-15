@@ -345,6 +345,13 @@ export default function AssetDetailPage() {
     );
   }
 
+  const heroImage =
+    asset.assetType === "watch"
+      ? "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80"
+      : asset.assetType === "jewelry"
+      ? "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=1200&q=80"
+      : "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";
+
   return (
     <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
       {/* 背景装饰 */}
@@ -373,6 +380,12 @@ export default function AssetDetailPage() {
               {/* 背景渐变 */}
               <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
               <div className="relative z-10">
+              <div className="overflow-hidden rounded-xl mb-4 border border-slate-800/60 shadow-inner">
+                <div
+                  className="h-56 w-full bg-cover bg-center"
+                  style={{ backgroundImage: `url(${heroImage})` }}
+                />
+              </div>
               <div className="mb-4">
                 <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">
                   {asset.assetType === "watch" ? "名表" : "珠宝"}

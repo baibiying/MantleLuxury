@@ -438,6 +438,16 @@ export default function AssetSubmitPage() {
                 : "提交资产"}
             </button>
           </div>
+          <p className="mt-2 text-xs text-amber-300 text-right">
+            为符合合规要求，提交资产前需要完成{" "}
+            <a
+              href="/kyc"
+              className="underline decoration-amber-300 hover:text-amber-100"
+            >
+              KYC / AML 审核
+            </a>
+            ，通过后才能提交。
+          </p>
         </form>
         )}
       </div>
