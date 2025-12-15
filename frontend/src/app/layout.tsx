@@ -45,7 +45,7 @@ export default function RootLayout({
                     { href: "/assets", label: "资产列表" },
                     { href: "/assets/submit", label: "提交资产" },
                     { href: "/portfolio", label: "我的持仓" },
-                    { href: "/kyc", label: "实名认证" },
+                    { href: "/kyc", label: "KYC / AML" },
                   ].map((item) => (
                     <Link
                       key={item.href}

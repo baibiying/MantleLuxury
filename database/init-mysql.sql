@@ -111,6 +111,15 @@ CREATE TABLE IF NOT EXISTS user_investments (
     INDEX idx_token_address (token_address)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- aml_blacklist 表（基础黑名单）
+CREATE TABLE IF NOT EXISTS aml_blacklist (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    wallet_address VARCHAR(42) NOT NULL UNIQUE,
+    reason VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_wallet_address (wallet_address)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 显示创建的表
 SHOW TABLES;
 

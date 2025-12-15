@@ -58,7 +58,7 @@ export default function Home() {
             href="/kyc"
             className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
           >
-            实名认证(KYC)
+            KYC / AML
           </a>
         </div>
 

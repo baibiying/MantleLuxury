@@ -72,9 +72,9 @@ export default function KycPage() {
       <div className="max-w-xl mx-auto">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">KYC 实名认证</h1>
+            <h1 className="text-2xl font-semibold">KYC / AML 审核</h1>
             <p className="text-sm text-slate-400 mt-1">
-              完成 KYC 后即可在 MantleLuxury 平台投资资产。
+              完成 KYC / AML 后即可在 MantleLuxury 平台投资资产。
             </p>
           </div>
           <WalletConnect />
@@ -117,6 +117,16 @@ export default function KycPage() {
                   ? "已驳回"
                   : "未提交"}
               </span>
+            </div>
+
+            <div className="text-xs text-slate-400 space-y-1">
+              <p>审核流程（当前为 Demo）：</p>
+              <p>1) 提交钱包地址与邮箱，进入审核中。</p>
+              <p>2) 平台风控（含黑名单、限额）检查通过后标记“已通过”。</p>
+              <p>3) 审核通过后可投资资产、提交新资产；未通过/驳回则无法操作。</p>
+              <p className="text-[11px] text-slate-500">
+                * Demo 环节：可用接口 <span className="font-mono">/api/kyc/approve/&#123;walletAddress&#125;</span> 手动置为通过。
+              </p>
             </div>
 
             {status === "approved" ? (

@@ -55,7 +55,7 @@ export default function AssetSubmitPage() {
     }
   }, [address]);
 
-  // 加载 KYC 状态
+  // 加载 KYC / AML 状态
   useEffect(() => {
     const loadKyc = async () => {
       if (!address) {
@@ -94,7 +94,7 @@ export default function AssetSubmitPage() {
       return;
     }
     if (kycStatus !== "approved") {
-      setError("请先完成 KYC 实名认证再提交资产");
+      setError("请先完成 KYC / AML 审核再提交资产");
       return;
     }
     setLoading(true);
@@ -430,9 +430,9 @@ export default function AssetSubmitPage() {
               className="flex-1 px-6 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg text-white font-medium transition"
             >
               {kycLoading
-                ? "检查 KYC 状态..."
+                ? "检查 KYC / AML 状态..."
                 : kycStatus !== "approved"
-                ? "请先完成 KYC"
+                ? "请先完成 KYC / AML"
                 : loading
                 ? "提交中..."
                 : "提交资产"}

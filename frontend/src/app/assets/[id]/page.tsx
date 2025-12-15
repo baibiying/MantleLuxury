@@ -86,7 +86,7 @@ export default function AssetDetailPage() {
     }
   }, [params.id]);
 
-  // 加载当前钱包的 KYC 状态
+  // 加载当前钱包的 KYC / AML 状态
   useEffect(() => {
     const loadKyc = async () => {
       if (!address) {
@@ -162,9 +162,9 @@ export default function AssetDetailPage() {
       return;
     }
 
-    // 前端强制检查 KYC 状态
+    // 前端强制检查 KYC / AML 状态
     if (kycStatus !== "approved") {
-      setInvestError("请先完成 KYC 实名认证再进行投资");
+      setInvestError("请先完成 KYC / AML 审核再进行投资");
       return;
     }
 
@@ -498,7 +498,7 @@ export default function AssetDetailPage() {
                       href="/kyc"
                       className="underline text-amber-100 hover:text-amber-50"
                     >
-                      KYC 实名认证
+                      KYC / AML 审核
                     </a>
                     ，通过后才能进行投资。
                   </div>
@@ -544,9 +544,9 @@ export default function AssetDetailPage() {
                 >
                   <span className="relative z-10">
                     {kycLoading
-                      ? "检查 KYC 状态..."
+                      ? "检查 KYC / AML 状态..."
                       : kycStatus !== "approved"
-                      ? "请先完成 KYC"
+                      ? "请先完成 KYC / AML"
                       : isWriting
                       ? "发送交易..."
                       : isConfirming

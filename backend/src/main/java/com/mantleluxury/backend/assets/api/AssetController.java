@@ -1,6 +1,7 @@
 package com.mantleluxury.backend.assets.api;
 
 import com.mantleluxury.backend.assets.service.AssetService;
+import com.mantleluxury.backend.assets.service.AmlService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,9 +17,11 @@ import java.util.List;
 public class AssetController {
 
     private final AssetService assetService;
+    private final AmlService amlService;
 
-    public AssetController(AssetService assetService) {
+    public AssetController(AssetService assetService, AmlService amlService) {
         this.assetService = assetService;
+        this.amlService = amlService;
     }
 
     @GetMapping
@@ -36,6 +39,11 @@ public class AssetController {
     @PostMapping(value = "/submit", consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> submitAsset(@RequestBody AssetSubmitRequest request) {
         try {
+            // AML 基础校验：提交者地址
+            if (request.submittedBy() != null) {
+                amlService.checkAddress(request.submittedBy());
+            }
+
             System.out.println("Received asset submission request: " + request);
             var asset = assetService.submitAsset(request);
             AssetDto dto = assetService.getAssetById(asset.getId());

@@ -6,6 +6,7 @@ import com.mantleluxury.backend.assets.domain.UserInvestment;
 import com.mantleluxury.backend.assets.repository.AssetRepository;
 import com.mantleluxury.backend.assets.repository.UserHoldingRepository;
 import com.mantleluxury.backend.assets.repository.UserInvestmentRepository;
+import com.mantleluxury.backend.assets.service.AmlService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,13 +23,16 @@ public class PortfolioController {
     private final UserHoldingRepository holdingRepository;
     private final AssetRepository assetRepository;
     private final UserInvestmentRepository investmentRepository;
+    private final AmlService amlService;
 
     public PortfolioController(UserHoldingRepository holdingRepository,
                                AssetRepository assetRepository,
-                               UserInvestmentRepository investmentRepository) {
+                               UserInvestmentRepository investmentRepository,
+                               AmlService amlService) {
         this.holdingRepository = holdingRepository;
         this.assetRepository = assetRepository;
         this.investmentRepository = investmentRepository;
+        this.amlService = amlService;
     }
 
     @GetMapping("/{userAddress}")
@@ -112,6 +116,10 @@ public class PortfolioController {
             if (userAddress == null || assetId == null || tokenAddress == null) {
                 return ResponseEntity.badRequest().body("Missing required fields");
             }
+
+            // AML：黑名单 + 投资额度
+            amlService.checkAddress(userAddress);
+            amlService.checkInvestmentLimits(userAddress, new BigDecimal(amountStr));
 
             UserInvestment inv = new UserInvestment();
             inv.setUserAddress(userAddress);

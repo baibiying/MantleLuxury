@@ -2,6 +2,7 @@ package com.mantleluxury.backend.assets.api;
 
 import com.mantleluxury.backend.assets.domain.User;
 import com.mantleluxury.backend.assets.repository.UserRepository;
+import com.mantleluxury.backend.assets.service.AmlService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +16,11 @@ import java.util.Map;
 public class KycController {
 
     private final UserRepository userRepository;
+    private final AmlService amlService;
 
-    public KycController(UserRepository userRepository) {
+    public KycController(UserRepository userRepository, AmlService amlService) {
         this.userRepository = userRepository;
+        this.amlService = amlService;
     }
 
     @GetMapping("/{walletAddress}")
@@ -36,6 +39,9 @@ public class KycController {
             if (walletAddress == null || walletAddress.isEmpty()) {
                 return ResponseEntity.badRequest().body("walletAddress is required");
             }
+
+            // AML 基础校验
+            amlService.checkAddress(walletAddress);
 
             User user = userRepository.findByWalletAddress(walletAddress).orElseGet(User::new);
             user.setWalletAddress(walletAddress);
