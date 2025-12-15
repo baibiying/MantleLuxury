@@ -62,6 +62,8 @@ export default function AssetDetailPage() {
   const [investing, setInvesting] = useState(false);
   const [investError, setInvestError] = useState<string | null>(null);
   const [onchainAvailable, setOnchainAvailable] = useState<string | null>(null); // raw token units (uint256)
+  const [kycStatus, setKycStatus] = useState<"none" | "pending" | "approved" | "rejected">("none");
+  const [kycLoading, setKycLoading] = useState(false);
 
   useEffect(() => {
     async function fetchAsset() {
@@ -83,6 +85,31 @@ export default function AssetDetailPage() {
       fetchAsset();
     }
   }, [params.id]);
+
+  // 加载当前钱包的 KYC 状态
+  useEffect(() => {
+    const loadKyc = async () => {
+      if (!address) {
+        setKycStatus("none");
+        return;
+      }
+      setKycLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/kyc/${address}`);
+        if (res.ok) {
+          const data = await res.json();
+          setKycStatus((data.status as any) ?? "none");
+        } else {
+          setKycStatus("none");
+        }
+      } catch {
+        setKycStatus("none");
+      } finally {
+        setKycLoading(false);
+      }
+    };
+    loadKyc();
+  }, [address]);
 
   // 从链上读取可售数量，确保校验与显示一致
   useEffect(() => {
@@ -132,6 +159,12 @@ export default function AssetDetailPage() {
   const handleInvest = async () => {
     if (!asset || !isConnected || !address) {
       setInvestError("请先连接钱包");
+      return;
+    }
+
+    // 前端强制检查 KYC 状态
+    if (kycStatus !== "approved") {
+      setInvestError("请先完成 KYC 实名认证再进行投资");
       return;
     }
 
@@ -458,6 +491,18 @@ export default function AssetDetailPage() {
 
             {asset.status === "fundraising" && isConnected && chainId === mantleSepoliaTestnet.id && (
               <div className="space-y-4">
+                {kycStatus !== "approved" && (
+                  <div className="p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg text-sm text-amber-200">
+                    为符合合规要求，你需要先完成{" "}
+                    <a
+                      href="/kyc"
+                      className="underline text-amber-100 hover:text-amber-50"
+                    >
+                      KYC 实名认证
+                    </a>
+                    ，通过后才能进行投资。
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     投资金额 (MNT)
@@ -486,11 +531,29 @@ export default function AssetDetailPage() {
 
                 <button
                   onClick={handleInvest}
-                  disabled={investing || isWriting || isConfirming || !investAmount || parseFloat(investAmount) <= 0}
+                  disabled={
+                    investing ||
+                    isWriting ||
+                    isConfirming ||
+                    !investAmount ||
+                    parseFloat(investAmount) <= 0 ||
+                    kycStatus !== "approved" ||
+                    kycLoading
+                  }
                   className="group relative w-full px-6 py-4 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] disabled:hover:scale-100 shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70 disabled:shadow-none"
                 >
                   <span className="relative z-10">
-                    {isWriting ? "发送交易..." : isConfirming ? "等待确认..." : investing ? "处理中..." : "确认投资"}
+                    {kycLoading
+                      ? "检查 KYC 状态..."
+                      : kycStatus !== "approved"
+                      ? "请先完成 KYC"
+                      : isWriting
+                      ? "发送交易..."
+                      : isConfirming
+                      ? "等待确认..."
+                      : investing
+                      ? "处理中..."
+                      : "确认投资"}
                   </span>
                   <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                 </button>

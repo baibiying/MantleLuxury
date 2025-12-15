@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
+import WalletConnect from "@/components/WalletConnect";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -25,9 +27,12 @@ const USD_TO_MNT_RATE = 1;
 
 export default function AssetSubmitPage() {
   const router = useRouter();
+  const { address, isConnected } = useAccount();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [kycStatus, setKycStatus] = useState<"none" | "pending" | "approved" | "rejected">("none");
+  const [kycLoading, setKycLoading] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     assetType: "watch",
@@ -43,6 +48,38 @@ export default function AssetSubmitPage() {
     submittedBy: "",
   });
 
+  // 当连接的钱包变化时，自动填充提交者地址
+  useEffect(() => {
+    if (address) {
+      setFormData((prev) => ({ ...prev, submittedBy: address }));
+    }
+  }, [address]);
+
+  // 加载 KYC 状态
+  useEffect(() => {
+    const loadKyc = async () => {
+      if (!address) {
+        setKycStatus("none");
+        return;
+      }
+      setKycLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/kyc/${address}`);
+        if (res.ok) {
+          const data = await res.json();
+          setKycStatus((data.status as any) ?? "none");
+        } else {
+          setKycStatus("none");
+        }
+      } catch {
+        setKycStatus("none");
+      } finally {
+        setKycLoading(false);
+      }
+    };
+    loadKyc();
+  }, [address]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -52,6 +89,14 @@ export default function AssetSubmitPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isConnected || !address) {
+      setError("请先连接钱包再提交资产");
+      return;
+    }
+    if (kycStatus !== "approved") {
+      setError("请先完成 KYC 实名认证再提交资产");
+      return;
+    }
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -101,13 +146,16 @@ export default function AssetSubmitPage() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
       </div>
       <div className="max-w-5xl mx-auto">
-        <header className="mb-6">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
-            <span className="gradient-text">提交奢侈品资产</span>
-          </h1>
-          <p className="text-base text-slate-300">
-            将您的奢侈品进行 RWA 代币化，让更多投资者参与分享资产价值。
-          </p>
+        <header className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
+              <span className="gradient-text">提交奢侈品资产</span>
+            </h1>
+            <p className="text-base text-slate-300">
+              将您的奢侈品进行 RWA 代币化，让更多投资者参与分享资产价值。
+            </p>
+          </div>
+          <WalletConnect />
         </header>
 
         {success && (
@@ -130,6 +178,14 @@ export default function AssetSubmitPage() {
           </div>
         )}
 
+        {!isConnected ? (
+          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+            <p className="text-sm text-slate-300 mb-3">
+              请先连接钱包，再提交资产。
+            </p>
+            <WalletConnect />
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
             {/* 背景渐变 */}
@@ -343,16 +399,18 @@ export default function AssetSubmitPage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  提交者标识
+                  提交者钱包地址
                 </label>
                 <input
                   type="text"
                   name="submittedBy"
                   value={formData.submittedBy}
-                  onChange={handleChange}
-                  placeholder="钱包地址或用户ID（可选）"
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  readOnly
+                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-400 cursor-not-allowed"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  当前连接的钱包地址将作为资产发行方标识。
+                </p>
               </div>
             </div>
             </div>
@@ -368,13 +426,20 @@ export default function AssetSubmitPage() {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || kycStatus !== "approved" || kycLoading}
               className="flex-1 px-6 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg text-white font-medium transition"
             >
-              {loading ? "提交中..." : "提交资产"}
+              {kycLoading
+                ? "检查 KYC 状态..."
+                : kycStatus !== "approved"
+                ? "请先完成 KYC"
+                : loading
+                ? "提交中..."
+                : "提交资产"}
             </button>
           </div>
         </form>
+        )}
       </div>
     </main>
   );
