@@ -17,7 +17,8 @@ public record AssetSubmitRequest(
         String serialNumber,
         BigDecimal totalSupply,    // 代币总份数
         BigDecimal pricePerShare,  // 每份价格
-        String submittedBy         // 提交者钱包地址或用户ID
+        String submittedBy,        // 提交者钱包地址或用户ID
+        String imageUrls           // 图片 JSON 字符串
 ) {
 }
 

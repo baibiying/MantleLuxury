@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS assets (
     purchase_price DECIMAL(36, 18) COMMENT '购入价格',
     purchase_date DATE COMMENT '购入日期',
     serial_number VARCHAR(200) COMMENT '序列号',
+    image_urls TEXT COMMENT '资产图片 URL 列表（JSON 数组）',
     status VARCHAR(20) NOT NULL DEFAULT 'registered' COMMENT 'registered, fundraising, funded, sold',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

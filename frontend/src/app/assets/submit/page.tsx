@@ -20,6 +20,7 @@ type FormData = {
   totalSupply: string;
   pricePerShare: string; // USD
   submittedBy: string;
+  imageUrls: string[];
 };
 
 // 汇率：1 USD = 1 MNT（简化处理，实际应该接入价格预言机）
@@ -33,6 +34,7 @@ export default function AssetSubmitPage() {
   const [success, setSuccess] = useState(false);
   const [kycStatus, setKycStatus] = useState<"none" | "pending" | "approved" | "rejected">("none");
   const [kycLoading, setKycLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     assetType: "watch",
@@ -46,6 +48,7 @@ export default function AssetSubmitPage() {
     totalSupply: "",
     pricePerShare: "",
     submittedBy: "",
+    imageUrls: [],
   });
 
   // 当连接的钱包变化时，自动填充提交者地址
@@ -119,6 +122,7 @@ export default function AssetSubmitPage() {
           totalSupply: formData.totalSupply ? parseFloat(formData.totalSupply) : null,
           pricePerShare: formData.pricePerShare ? parseFloat(formData.pricePerShare) : null,
           submittedBy: formData.submittedBy || "anonymous",
+          imageUrls: JSON.stringify(formData.imageUrls ?? []),
         }),
       });
 
@@ -413,6 +417,90 @@ export default function AssetSubmitPage() {
                 </p>
               </div>
             </div>
+            </div>
+          </section>
+
+          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+            <div className="relative z-10">
+              <h2 className="text-xl font-bold mb-4 gradient-text">资产图片</h2>
+              <p className="text-xs text-slate-400 mb-3">
+                上传 1-3 张资产照片（JPG/PNG），优先展示第一张作为封面。
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={async (e) => {
+                    if (!e.target.files || e.target.files.length === 0) return;
+                    const files = Array.from(e.target.files);
+                    setUploading(true);
+                    setError(null);
+                    try {
+                      const uploaded: string[] = [];
+                      for (const f of files) {
+                        const form = new FormData();
+                        form.append("file", f);
+                        const res = await fetch(`${API_BASE}/api/assets/upload-image`, {
+                          method: "POST",
+                          body: form,
+                        });
+                        if (!res.ok) {
+                          const t = await res.text();
+                          throw new Error(t || "上传失败");
+                        }
+                        const data = await res.json();
+                        if (data.url) uploaded.push(data.url);
+                      }
+                      setFormData((prev) => ({
+                        ...prev,
+                        imageUrls: [...(prev.imageUrls ?? []), ...uploaded].slice(0, 3),
+                      }));
+                    } catch (err: any) {
+                      setError(err.message || "上传失败，请重试");
+                    } finally {
+                      setUploading(false);
+                      // 清空文件选择
+                      e.target.value = "";
+                    }
+                  }}
+                  className="text-sm text-slate-200"
+                />
+                {uploading && (
+                  <span className="text-xs text-slate-300">上传中...</span>
+                )}
+              </div>
+              {formData.imageUrls && formData.imageUrls.length > 0 && (
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  {formData.imageUrls.map((url, idx) => {
+                    // 如果是相对路径，拼接后端地址
+                    const imageUrl = url.startsWith('/uploads/') 
+                      ? `${API_BASE}${url}` 
+                      : url;
+                    return (
+                    <div key={idx} className="relative">
+                      <div
+                        className="h-24 w-full rounded-lg border border-slate-700 bg-cover bg-center"
+                        style={{ backgroundImage: `url(${imageUrl})` }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            imageUrls: prev.imageUrls.filter((_, i) => i !== idx),
+                          }))
+                        }
+                        className="absolute top-1 right-1 text-[10px] px-2 py-1 bg-slate-900/80 text-slate-200 rounded"
+                      >
+                        移除
+                      </button>
+                    </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </section>
 

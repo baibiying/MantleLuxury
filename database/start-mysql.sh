@@ -155,7 +155,8 @@ ensure_schema() {
             ADD COLUMN IF NOT EXISTS description TEXT COMMENT '资产描述',
             ADD COLUMN IF NOT EXISTS purchase_price DECIMAL(36, 18) COMMENT '购入价格',
             ADD COLUMN IF NOT EXISTS purchase_date DATE COMMENT '购入日期',
-            ADD COLUMN IF NOT EXISTS serial_number VARCHAR(200) COMMENT '序列号';
+            ADD COLUMN IF NOT EXISTS serial_number VARCHAR(200) COMMENT '序列号',
+            ADD COLUMN IF NOT EXISTS image_urls TEXT COMMENT '资产图片 URL 列表（JSON 数组）';
     "
     if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$sql" > /dev/null 2>&1; then
         print_info "assets 表列检查完成（如有缺失已自动补齐）"

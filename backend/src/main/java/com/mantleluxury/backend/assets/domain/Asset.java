@@ -73,6 +73,9 @@ public class Asset {
     
     @Column(name = "serial_number", length = 200)
     private String serialNumber;
+
+    @Column(name = "image_urls", columnDefinition = "TEXT")
+    private String imageUrls; // JSON 数组字符串
     
     @PrePersist
     protected void onCreate() {
@@ -250,6 +253,14 @@ public class Asset {
     
     public void setSerialNumber(String serialNumber) {
         this.serialNumber = serialNumber;
+    }
+
+    public String getImageUrls() {
+        return imageUrls;
+    }
+
+    public void setImageUrls(String imageUrls) {
+        this.imageUrls = imageUrls;
     }
 }
 

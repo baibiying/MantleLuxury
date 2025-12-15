@@ -18,6 +18,7 @@ type Asset = {
   remainingSupply: string;
   status: string;
   tokenAddress: string | null;
+  imageUrls?: string | null;
 };
 
 const API_BASE =
@@ -142,6 +143,18 @@ export default function AssetsPage() {
     });
 
   const imageFor = (asset: Asset) => {
+    if (asset.imageUrls) {
+      try {
+        const arr = JSON.parse(asset.imageUrls);
+        if (Array.isArray(arr) && arr.length > 0) {
+          const url = arr[0];
+          // 如果是相对路径，拼接后端地址
+          return url.startsWith('/uploads/') ? `${API_BASE}${url}` : url;
+        }
+      } catch {
+        // ignore
+      }
+    }
     if (asset.assetType === "watch") {
       return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
     }
@@ -250,7 +263,7 @@ export default function AssetsPage() {
               <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
               <div className="relative z-10">
-                <div className="overflow-hidden rounded-xl mb-3 border border-slate-800/60 shadow-inner">
+        <div className="overflow-hidden rounded-xl mb-3 border border-slate-800/60 shadow-inner bg-slate-900">
                   <div
                     className="h-40 w-full bg-cover bg-center transform transition duration-500 group-hover:scale-105"
                     style={{ backgroundImage: `url(${imageFor(asset)})` }}

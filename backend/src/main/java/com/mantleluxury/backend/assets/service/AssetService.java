@@ -23,13 +23,16 @@ public class AssetService {
     
     private final AssetRepository assetRepository;
     private final TokenDeploymentService tokenDeploymentService;
+    private final org.springframework.core.io.ResourceLoader resourceLoader;
     
     public AssetService(
             AssetRepository assetRepository,
-            TokenDeploymentService tokenDeploymentService
+            TokenDeploymentService tokenDeploymentService,
+            org.springframework.core.io.ResourceLoader resourceLoader
     ) {
         this.assetRepository = assetRepository;
         this.tokenDeploymentService = tokenDeploymentService;
+        this.resourceLoader = resourceLoader;
     }
     
     /**
@@ -48,6 +51,7 @@ public class AssetService {
         asset.setPurchasePrice(request.purchasePrice());
         asset.setPurchaseDate(request.purchaseDate());
         asset.setSerialNumber(request.serialNumber());
+        asset.setImageUrls(request.imageUrls());
         asset.setTotalSupply(request.totalSupply());
         asset.setPricePerShare(request.pricePerShare());
         asset.setSubmittedBy(request.submittedBy());
@@ -148,6 +152,44 @@ public class AssetService {
                 .map(this::toDto)
                 .orElse(null);
     }
+
+    /**
+     * 保存上传的图片到本地 uploads 目录，返回相对访问路径
+     */
+    public String saveImage(org.springframework.web.multipart.MultipartFile file) throws Exception {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty or null");
+        }
+        
+        // 使用绝对路径，确保目录创建在项目根目录下
+        java.nio.file.Path uploadsDir = java.nio.file.Paths.get("uploads").toAbsolutePath();
+        
+        // 创建目录（如果不存在）
+        if (!java.nio.file.Files.exists(uploadsDir)) {
+            java.nio.file.Files.createDirectories(uploadsDir);
+            logger.info("Created uploads directory: {}", uploadsDir);
+        }
+        
+        // 生成安全的文件名
+        String original = file.getOriginalFilename();
+        String safeName = original != null 
+                ? original.replaceAll("[^a-zA-Z0-9._-]", "_") 
+                : "image";
+        String filename = java.util.UUID.randomUUID().toString() + "_" + safeName;
+        java.nio.file.Path dest = uploadsDir.resolve(filename);
+        
+        // 保存文件
+        try {
+            file.transferTo(dest.toFile());
+            logger.info("Image saved successfully: {}", dest);
+        } catch (Exception e) {
+            logger.error("Failed to save image to: {}", dest, e);
+            throw new Exception("Failed to save image: " + e.getMessage(), e);
+        }
+        
+        // 返回相对路径，前端通过 /uploads/** 访问
+        return "/uploads/" + filename;
+    }
     
     /**
      * 转换为 DTO
@@ -170,7 +212,8 @@ public class AssetService {
                 remainingSupply,
                 asset.getStatus(),
                 asset.getTokenAddress(),  // 合约地址
-                asset.getDescription()   // 描述
+                asset.getDescription(),   // 描述
+                asset.getImageUrls()
         );
     }
 }

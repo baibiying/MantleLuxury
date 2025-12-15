@@ -2,11 +2,15 @@ package com.mantleluxury.backend.assets.api;
 
 import com.mantleluxury.backend.assets.service.AssetService;
 import com.mantleluxury.backend.assets.service.AmlService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 资产列表 / 详情 / 提交接口
@@ -15,6 +19,8 @@ import java.util.List;
 @RequestMapping("/api/assets")
 @CrossOrigin(origins = "http://localhost:3000")
 public class AssetController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AssetController.class);
 
     private final AssetService assetService;
     private final AmlService amlService;
@@ -81,6 +87,34 @@ public class AssetController {
             return ResponseEntity.ok("Deleted asset with token: " + tokenAddress);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    // 上传资产图片（简单本地存储）
+    @PostMapping("/upload-image")
+    public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
+        logger.info("Received image upload request. File name: {}, Size: {} bytes", 
+                file != null ? file.getOriginalFilename() : "null",
+                file != null ? file.getSize() : 0);
+        
+        try {
+            if (file == null || file.isEmpty()) {
+                logger.warn("Upload failed: File is empty or null");
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "File is empty or null"));
+            }
+            
+            String url = assetService.saveImage(file);
+            logger.info("Image uploaded successfully. URL: {}", url);
+            return ResponseEntity.ok(new AssetImageUploadResponse(url));
+        } catch (IllegalArgumentException e) {
+            logger.error("Upload failed: Invalid argument", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid file: " + e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Upload failed: Unexpected error", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Upload failed: " + e.getMessage()));
         }
     }
 }

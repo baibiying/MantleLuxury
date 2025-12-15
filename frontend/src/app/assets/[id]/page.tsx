@@ -23,6 +23,7 @@ type Asset = {
   status: string;
   tokenAddress: string | null;
   description: string | null;
+  imageUrls?: string | null;
 };
 
 export default function AssetDetailPage() {
@@ -345,12 +346,27 @@ export default function AssetDetailPage() {
     );
   }
 
-  const heroImage =
-    asset.assetType === "watch"
-      ? "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80"
-      : asset.assetType === "jewelry"
-      ? "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=1200&q=80"
-      : "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";
+  const heroImage = (() => {
+    if (asset.imageUrls) {
+      try {
+        const arr = JSON.parse(asset.imageUrls);
+        if (Array.isArray(arr) && arr.length > 0) {
+          const url = arr[0];
+          // 如果是相对路径，拼接后端地址
+          return url.startsWith('/uploads/') ? `${API_BASE}${url}` : url;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (asset.assetType === "watch") {
+      return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80";
+    }
+    if (asset.assetType === "jewelry") {
+      return "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=1200&q=80";
+    }
+    return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";
+  })();
 
   return (
     <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
