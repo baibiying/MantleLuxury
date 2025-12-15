@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { mantleSepoliaTestnet, mantleSepoliaMetaMaskConfig } from "@/lib/web3/config";
 import { luxuryTokenAbi } from "@/lib/web3/contracts";
@@ -33,6 +33,7 @@ export default function AssetDetailPage() {
   // 使用 wagmi hooks（必须在 WagmiProvider 内部）
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
+  const publicClient = usePublicClient();
   const { switchChainAsync } = useSwitchChain();
   const {
     writeContractAsync,
@@ -40,8 +41,14 @@ export default function AssetDetailPage() {
     isPending: isWriting,
     error: writeError,
   } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+  const {
+    isLoading: isConfirming,
+    isSuccess: isConfirmed,
+    isError: isConfirmError,
+    error: confirmError,
+  } = useWaitForTransactionReceipt({
     hash,
+    chainId: mantleSepoliaTestnet.id,
   });
 
   useEffect(() => {
@@ -54,6 +61,7 @@ export default function AssetDetailPage() {
   const [investAmount, setInvestAmount] = useState("");
   const [investing, setInvesting] = useState(false);
   const [investError, setInvestError] = useState<string | null>(null);
+  const [onchainAvailable, setOnchainAvailable] = useState<string | null>(null); // raw token units (uint256)
 
   useEffect(() => {
     async function fetchAsset() {
@@ -75,6 +83,26 @@ export default function AssetDetailPage() {
       fetchAsset();
     }
   }, [params.id]);
+
+  // 从链上读取可售数量，确保校验与显示一致
+  useEffect(() => {
+    const loadOnchainAvailable = async () => {
+      if (!asset?.tokenAddress || !publicClient) return;
+      try {
+        const available = await publicClient.readContract({
+          address: asset.tokenAddress as `0x${string}`,
+          abi: luxuryTokenAbi,
+          functionName: "getAvailableTokens",
+          chainId: mantleSepoliaTestnet.id,
+        });
+        setOnchainAvailable(available?.toString() ?? null);
+      } catch (e) {
+        // 读取失败时不阻塞，但清空链上值
+        setOnchainAvailable(null);
+      }
+    };
+    loadOnchainAvailable();
+  }, [asset?.tokenAddress, publicClient]);
 
   const ensureMantleNetwork = async () => {
     // 优先使用 wagmi 切链，若不存在则添加后再切
@@ -133,8 +161,25 @@ export default function AssetDetailPage() {
     }
 
     const shares = calculateShares(investAmount);
-    if (parseInt(shares) <= 0) {
+    const sharesInt = parseInt(shares);
+    if (sharesInt <= 0) {
       setInvestError(`投资金额至少需要 $${asset.pricePerShare} 才能购买 1 份`);
+      return;
+    }
+    // 计算需要购买的代币数量（基于份数）
+    // 假设 1 份 = 1 个代币（最小单位 10^decimals），与合约保持一致
+    const tokenAmount = parseEther(shares);
+
+    // 校验剩余可购数量（优先使用链上可用量，单位 = 最小代币单位）
+    const remainingOnchain = onchainAvailable ? BigInt(onchainAvailable) : null;
+    if (remainingOnchain !== null && tokenAmount > remainingOnchain) {
+      setInvestError(`剩余可购份数不足（链上剩余 ${formatEther(remainingOnchain)} 份），请减少投资金额`);
+      return;
+    }
+    // 后端/页面的剩余数量是整份数，作为兜底
+    const remainingOffchain = parseFloat(asset.remainingSupply);
+    if (remainingOnchain === null && !Number.isNaN(remainingOffchain) && sharesInt > remainingOffchain) {
+      setInvestError(`剩余可购份数不足（剩余 ${remainingOffchain}），请减少投资金额`);
       return;
     }
 
@@ -142,10 +187,6 @@ export default function AssetDetailPage() {
     setInvestError(null);
 
     try {
-      // 计算需要购买的代币数量（基于份数）
-      // 假设 1 份 = 1 个代币（最小单位），实际应该根据代币的 decimals 来计算
-      const tokenAmount = parseEther(shares);
-
       // 调用合约的 buyTokens 函数；用户在 MetaMask 取消会抛错（code 4001）
       await writeContractAsync({
         address: asset.tokenAddress as `0x${string}`,
@@ -160,7 +201,12 @@ export default function AssetDetailPage() {
         e?.code === 4001 ||
         e?.message?.includes("User rejected") ||
         e?.message?.includes("User denied");
-      const message = userRejected ? "用户已取消交易" : e?.message ?? "投资失败";
+      const insufficient = e?.message?.includes("Insufficient tokens available");
+      const message = userRejected
+        ? "用户已取消交易"
+        : insufficient
+        ? "剩余代币数量不足，请减少投资金额或稍后再试"
+        : e?.message ?? "投资失败";
       setInvestError(message);
       setInvesting(false);
       return;
@@ -176,6 +222,18 @@ export default function AssetDetailPage() {
       alert("投资成功！代币已发送到你的钱包。");
     }
   }, [isConfirmed]);
+
+  // 监听交易确认阶段的错误（例如链不匹配或用户拒绝）
+  useEffect(() => {
+    if (isConfirmError && confirmError) {
+      const message =
+        (confirmError as any)?.code === 4001 || confirmError.message?.includes("User rejected")
+          ? "用户已取消交易"
+          : confirmError.message ?? "交易确认失败";
+      setInvestError(message);
+      setInvesting(false);
+    }
+  }, [isConfirmError, confirmError]);
 
   // 监听写入错误（例如用户取消）
   useEffect(() => {

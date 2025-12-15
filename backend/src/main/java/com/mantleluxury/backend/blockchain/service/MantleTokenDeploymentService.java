@@ -136,11 +136,14 @@ public class MantleTokenDeploymentService {
         // pricePerShare 是 USD，需要转换为 wei：例如 $85.00 = 85 * 10^18 wei
         BigInteger pricePerTokenWei;
         if (pricePerShare != null) {
-            // 将 USD 价格转换为 wei（假设 1 USD = 1 MNT）
-            pricePerTokenWei = pricePerShare.multiply(new BigDecimal(BigInteger.TEN.pow(18))).toBigInteger();
+            // pricePerShare 以 "MNT/份"（整份 Token）为单位。
+            // 合约 buyTokens 传入的是最小单位 amount（例如 1 份=10^18），totalCost = amount * pricePerToken。
+            // 为使 1 份 (1e18) * pricePerToken = pricePerShare(wei)，需要 pricePerToken = pricePerShareWei / 1e18。
+            BigInteger pricePerShareWei = pricePerShare.multiply(new BigDecimal(BigInteger.TEN.pow(18))).toBigInteger();
+            pricePerTokenWei = pricePerShareWei.divide(BigInteger.TEN.pow(18)); // 每个最小单位的价格
         } else {
-            // 默认价格：1 MNT per token
-            pricePerTokenWei = BigInteger.TEN.pow(18);
+            // 默认价格：1 MNT/份 => 每最小单位价格 = 1
+            pricePerTokenWei = BigInteger.ONE;
         }
         
         // 设置环境变量
@@ -148,7 +151,8 @@ public class MantleTokenDeploymentService {
         processBuilder.environment().put("TOKEN_SYMBOL", symbol);
         processBuilder.environment().put("ASSET_ID", assetId);
         processBuilder.environment().put("METADATA_HASH", metadataHash);
-        processBuilder.environment().put("INITIAL_SUPPLY", totalSupply.divide(BigInteger.TEN.pow(18)).toString());
+        // totalSupply 以“份”为单位（与合约 decimals=18 对应），直接传给脚本，由脚本内部 parseEther 放大 10^18
+        processBuilder.environment().put("INITIAL_SUPPLY", totalSupply.toString());
         processBuilder.environment().put("PRICE_PER_TOKEN", pricePerTokenWei.toString());
         processBuilder.environment().put("OWNER_ADDRESS", credentials.getAddress());
         

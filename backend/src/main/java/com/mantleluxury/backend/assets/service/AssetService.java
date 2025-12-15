@@ -127,6 +127,18 @@ public class AssetService {
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
+
+    /**
+     * 按合约地址删除资产
+     */
+    @Transactional
+    public void deleteByTokenAddress(String tokenAddress) {
+        assetRepository.findByTokenAddress(tokenAddress)
+                .ifPresentOrElse(
+                        asset -> assetRepository.deleteByTokenAddress(tokenAddress),
+                        () -> { throw new RuntimeException("Asset not found for token address: " + tokenAddress); }
+                );
+    }
     
     /**
      * 根据 ID 获取资产

@@ -64,6 +64,17 @@ public class AssetController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    // 按合约地址删除资产（仅后台运维用途）
+    @DeleteMapping("/token/{tokenAddress}")
+    public ResponseEntity<String> deleteByToken(@PathVariable String tokenAddress) {
+        try {
+            assetService.deleteByTokenAddress(tokenAddress);
+            return ResponseEntity.ok("Deleted asset with token: " + tokenAddress);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
 }
 
 

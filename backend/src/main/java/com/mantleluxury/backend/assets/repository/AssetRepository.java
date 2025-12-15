@@ -11,6 +11,8 @@ import java.util.Optional;
 public interface AssetRepository extends JpaRepository<Asset, String> {
     
     Optional<Asset> findByAssetIdBytes32(String assetIdBytes32);
+    Optional<Asset> findByTokenAddress(String tokenAddress);
+    void deleteByTokenAddress(String tokenAddress);
     
     List<Asset> findByStatus(String status);
     
