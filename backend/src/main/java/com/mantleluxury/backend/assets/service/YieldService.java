@@ -53,6 +53,20 @@ public class YieldService {
     @Value("${blockchain.yield-distribution-contract:}")
     private String yieldDistributionContractAddress;
 
+    /**
+     * 区块链 chainId，用于构造 EIP-155 保护的交易（Mantle Sepolia 默认 5003）
+     */
+    @Value("${blockchain.chain-id:5003}")
+    private long chainId;
+
+    /**
+     * 全局 gas limit，避免默认 9,000,000 过低导致 intrinsic gas too low。
+     * Mantle 给出的最小值约为 50,666,904，这里默认给一个更高的安全值 80,000,000，
+     * 同时允许通过配置覆盖。
+     */
+    @Value("${blockchain.gas-limit:80000000}")
+    private BigInteger gasLimit;
+
     public YieldService(
             YieldDistributionRepository yieldDistributionRepository,
             AssetRepository assetRepository,
@@ -104,9 +118,7 @@ public class YieldService {
      */
     @Transactional
     public String createDistributionOnChain(String distributionId) throws Exception {
-        if (yieldDistributionContractAddress == null || yieldDistributionContractAddress.isEmpty()) {
-            throw new RuntimeException("YieldDistribution contract address is not configured. Please deploy the contract first.");
-        }
+        String contractAddress = getValidatedYieldDistributionAddress();
 
         YieldDistribution distribution = yieldDistributionRepository.findById(distributionId)
                 .orElseThrow(() -> new RuntimeException("Distribution not found: " + distributionId));
@@ -138,20 +150,126 @@ public class YieldService {
 
         String encodedFunction = FunctionEncoder.encode(function);
 
-        // 发送交易
-        TransactionManager transactionManager = new RawTransactionManager(web3j, credentials);
-        String txHash = transactionManager.sendTransaction(
-                DefaultGasProvider.GAS_PRICE,
-                DefaultGasProvider.GAS_LIMIT,
-                yieldDistributionContractAddress,
-                encodedFunction,
-                BigInteger.ZERO
-        ).getTransactionHash();
+        // 发送交易并检查错误
+        TransactionManager transactionManager = new RawTransactionManager(web3j, credentials, chainId);
+        org.web3j.protocol.core.methods.response.EthSendTransaction txResponse =
+                transactionManager.sendTransaction(
+                        DefaultGasProvider.GAS_PRICE,
+                        gasLimit,
+                        contractAddress,
+                        encodedFunction,
+                        BigInteger.ZERO
+                );
+
+        if (txResponse.hasError()) {
+            String message = "Failed to create distribution on chain: " + txResponse.getError().getMessage();
+            logger.error(message);
+            throw new RuntimeException(message);
+        }
+
+        String txHash = txResponse.getTransactionHash();
 
         distribution.setTransactionHash(txHash);
         yieldDistributionRepository.save(distribution);
 
         logger.info("Created distribution on chain. DistributionId: {}, TxHash: {}", distributionId, txHash);
+        return txHash;
+    }
+
+    /**
+     * 在链上执行收益分配（调用合约的 distribute）
+     * 根据当前资产的投资记录计算持有人地址列表，并调用 distribute。
+     * 前提：需要先向 YieldDistribution 合约地址转入足够的 MNT（总额 >= totalAmount）。
+     */
+    @Transactional
+    public String distributeOnChain(String distributionId) throws Exception {
+        String contractAddress = getValidatedYieldDistributionAddress();
+
+        YieldDistribution distribution = yieldDistributionRepository.findById(distributionId)
+                .orElseThrow(() -> new RuntimeException("Distribution not found: " + distributionId));
+
+        if (Boolean.TRUE.equals(distribution.getIsCompleted())) {
+            throw new RuntimeException("Distribution already completed");
+        }
+
+        // 基于资产 ID 从用户投资记录中找出所有投资者地址
+        List<UserInvestment> investments = userInvestmentRepository.findAll().stream()
+                .filter(inv -> distribution.getAssetId().equals(inv.getAssetId()))
+                .collect(Collectors.toList());
+
+        if (investments.isEmpty()) {
+            throw new RuntimeException("No investors found for asset: " + distribution.getAssetId());
+        }
+
+        List<String> holderAddresses = investments.stream()
+                .map(UserInvestment::getUserAddress)
+                .map(String::toLowerCase)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (holderAddresses.isEmpty()) {
+            throw new RuntimeException("No holders found for distribution");
+        }
+
+        // 将 distributionIdBytes32 转换为 bytes32
+        String hexId = distributionIdBytes32ToHex(distribution.getDistributionIdBytes32());
+        byte[] distributionIdBytes = Numeric.hexStringToByteArray(hexId);
+        if (distributionIdBytes.length > 32) {
+            byte[] truncated = new byte[32];
+            System.arraycopy(distributionIdBytes, 0, truncated, 0, 32);
+            distributionIdBytes = truncated;
+        } else if (distributionIdBytes.length < 32) {
+            byte[] padded = new byte[32];
+            System.arraycopy(distributionIdBytes, 0, padded, 32 - distributionIdBytes.length, distributionIdBytes.length);
+            distributionIdBytes = padded;
+        }
+
+        // 准备 holders 参数
+        List<Type> inputParameters = new java.util.ArrayList<>();
+        inputParameters.add(new org.web3j.abi.datatypes.generated.Bytes32(distributionIdBytes));
+
+        java.util.List<org.web3j.abi.datatypes.Address> holderTypes = holderAddresses.stream()
+                .map(addr -> new org.web3j.abi.datatypes.Address(160, addr))
+                .collect(Collectors.toList());
+        org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.Address> holderArray =
+                new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.Address>(
+                        org.web3j.abi.datatypes.Address.class,
+                        holderTypes
+                );
+        inputParameters.add(holderArray);
+
+        Function function = new Function(
+                "distribute",
+                inputParameters,
+                Collections.emptyList()
+        );
+
+        String encodedFunction = FunctionEncoder.encode(function);
+
+        TransactionManager transactionManager = new RawTransactionManager(web3j, credentials, chainId);
+        org.web3j.protocol.core.methods.response.EthSendTransaction txResponse =
+                transactionManager.sendTransaction(
+                        DefaultGasProvider.GAS_PRICE,
+                        gasLimit,
+                        contractAddress,
+                        encodedFunction,
+                        BigInteger.ZERO
+                );
+
+        if (txResponse.hasError()) {
+            String message = "Failed to execute distribution on chain: " + txResponse.getError().getMessage();
+            logger.error(message);
+            throw new RuntimeException(message);
+        }
+
+        String txHash = txResponse.getTransactionHash();
+
+        // 分发完成后，简单认为链上会按 totalAmount 分配完，更新本地记录
+        distribution.setIsCompleted(true);
+        distribution.setDistributedAmount(distribution.getTotalAmount());
+        yieldDistributionRepository.save(distribution);
+
+        logger.info("Executed distribution on chain. DistributionId: {}, TxHash: {}", distributionId, txHash);
         return txHash;
     }
 
@@ -219,6 +337,24 @@ public class YieldService {
             return distributionIdBytes32;
         }
         return "0x" + distributionIdBytes32;
+    }
+
+    /**
+     * 获取并校验 YieldDistribution 合约地址
+     */
+    private String getValidatedYieldDistributionAddress() {
+        if (yieldDistributionContractAddress == null) {
+            throw new RuntimeException("YieldDistribution contract address is not configured. Please deploy the contract first.");
+        }
+        String addr = yieldDistributionContractAddress.trim();
+        if (!addr.startsWith("0x")) {
+            addr = "0x" + addr;
+        }
+        // 0x + 40 hex chars
+        if (addr.length() != 42) {
+            throw new RuntimeException("Invalid YieldDistribution contract address length: " + addr);
+        }
+        return addr;
     }
 
     /**

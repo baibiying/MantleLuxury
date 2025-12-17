@@ -132,3 +132,4 @@ public class Insurance {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
 
+

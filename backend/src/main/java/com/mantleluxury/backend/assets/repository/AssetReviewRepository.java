@@ -16,3 +16,4 @@ public interface AssetReviewRepository extends JpaRepository<AssetReview, String
     List<AssetReview> findByReviewerAddress(String reviewerAddress);
 }
 
+

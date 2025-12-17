@@ -14,3 +14,4 @@ public interface UserInvestmentRepository extends JpaRepository<UserInvestment, 
 
 
 
+
