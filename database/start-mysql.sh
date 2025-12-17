@@ -360,6 +360,32 @@ ensure_schema() {
     else
         print_warn "aml_alerts 表创建失败，请手动检查数据库"
     fi
+    
+    # 检查并创建 risk_assessments 表（如果不存在）
+    print_info "检查 risk_assessments 表..."
+    local create_risk_assessments_table_sql="
+        CREATE TABLE IF NOT EXISTS risk_assessments (
+            id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+            wallet_address VARCHAR(42) NOT NULL,
+            investment_experience_score INT COMMENT '投资经验评分 (1-5)',
+            risk_tolerance_score INT COMMENT '风险承受能力评分 (1-5)',
+            investment_goal_score INT COMMENT '投资目标评分 (1-5)',
+            investment_horizon_score INT COMMENT '投资期限偏好评分 (1-5)',
+            total_score INT COMMENT '总分数 (4-20)',
+            risk_level VARCHAR(20) COMMENT '风险等级：conservative, moderate, aggressive',
+            assessment_result TEXT COMMENT '测评结果描述',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_wallet_address (wallet_address),
+            INDEX idx_risk_level (risk_level),
+            INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    "
+    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$create_risk_assessments_table_sql" > /dev/null 2>&1; then
+        print_info "risk_assessments 表检查完成（如不存在已自动创建）"
+    else
+        print_warn "risk_assessments 表创建失败，请手动检查数据库"
+    fi
 }
 
 # 显示连接信息
