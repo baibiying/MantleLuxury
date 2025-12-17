@@ -47,6 +47,7 @@ export default function RootLayout({
                     { href: "/portfolio", label: "我的持仓" },
                     { href: "/yields", label: "收益记录" },
                     { href: "/kyc", label: "KYC / AML" },
+                    { href: "/settings", label: "账户设置" },
                   ].map((item) => (
                     <Link
                       key={item.href}

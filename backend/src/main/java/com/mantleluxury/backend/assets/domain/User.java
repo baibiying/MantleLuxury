@@ -28,6 +28,15 @@ public class User {
     @Column(name = "kyc_approved_at")
     private LocalDateTime kycApprovedAt;
 
+    @Column(name = "email_notifications")
+    private Boolean emailNotifications;
+
+    @Column(name = "yield_notifications")
+    private Boolean yieldNotifications;
+
+    @Column(name = "announcement_notifications")
+    private Boolean announcementNotifications;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -41,6 +50,15 @@ public class User {
         }
         if (kycStatus == null) {
             kycStatus = "none";
+        }
+        if (emailNotifications == null) {
+            emailNotifications = true;
+        }
+        if (yieldNotifications == null) {
+            yieldNotifications = true;
+        }
+        if (announcementNotifications == null) {
+            announcementNotifications = true;
         }
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
@@ -113,6 +131,30 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Boolean getEmailNotifications() {
+        return emailNotifications;
+    }
+
+    public void setEmailNotifications(Boolean emailNotifications) {
+        this.emailNotifications = emailNotifications;
+    }
+
+    public Boolean getYieldNotifications() {
+        return yieldNotifications;
+    }
+
+    public void setYieldNotifications(Boolean yieldNotifications) {
+        this.yieldNotifications = yieldNotifications;
+    }
+
+    public Boolean getAnnouncementNotifications() {
+        return announcementNotifications;
+    }
+
+    public void setAnnouncementNotifications(Boolean announcementNotifications) {
+        this.announcementNotifications = announcementNotifications;
     }
 }
 

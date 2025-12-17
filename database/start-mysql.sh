@@ -148,6 +148,60 @@ execute_init_sql() {
 
 # 确保关键列存在（适用于保留旧数据卷的情况）
 ensure_schema() {
+    print_info "检查并补齐 users 表缺失列..."
+    # MySQL 8.0 不支持 IF NOT EXISTS，使用存储过程方式检查并添加列
+    local users_sql="
+        SET @dbname = DATABASE();
+        SET @tablename = 'users';
+        
+        -- 检查并添加 email_notifications 列
+        SET @columnname = 'email_notifications';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' BOOLEAN DEFAULT TRUE COMMENT ''是否接收邮件通知''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 yield_notifications 列
+        SET @columnname = 'yield_notifications';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' BOOLEAN DEFAULT TRUE COMMENT ''是否接收收益分配通知''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 announcement_notifications 列
+        SET @columnname = 'announcement_notifications';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' BOOLEAN DEFAULT TRUE COMMENT ''是否接收重要公告通知''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+    "
+    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$users_sql" > /dev/null 2>&1; then
+        print_info "users 表列检查完成（如有缺失已自动补齐）"
+    else
+        print_warn "users 表列自动补齐失败，请手动检查数据库"
+    fi
+    
     print_info "检查并补齐 assets 表缺失列..."
     local sql="
         ALTER TABLE assets
