@@ -15,10 +15,19 @@ type YieldDistribution = {
   createdAt: string;
 };
 
+type OverviewStats = {
+  totalUsers: number;
+  kycApprovedUsers: number;
+  aum: string;
+  totalYield: string;
+  yieldDistributions: number;
+};
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [recentYields, setRecentYields] = useState<YieldDistribution[]>([]);
   const [loadingYields, setLoadingYields] = useState(true);
+  const [overview, setOverview] = useState<OverviewStats | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -41,8 +50,59 @@ export default function Home() {
     loadRecentYields();
   }, []);
 
+  useEffect(() => {
+    const loadOverview = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/stats/overview`);
+        if (res.ok) {
+          const data = await res.json();
+          setOverview(data);
+          // 触发数字滚动动画
+          setTimeout(() => {
+            animateCountUp();
+          }, 100);
+        }
+      } catch (err) {
+        console.error("Failed to load overview stats", err);
+      }
+    };
+    loadOverview();
+  }, []);
+
+  // 格式化大数字
+  const formatLargeNumber = (num: number): string => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(2) + "M";
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(2) + "K";
+    }
+    return num.toFixed(2);
+  };
+
+  // 数字滚动动画
+  const animateCountUp = () => {
+    const elements = document.querySelectorAll(".count-up");
+    elements.forEach((el) => {
+      const target = parseInt(el.getAttribute("data-target") || "0");
+      const duration = 2000; // 2秒
+      const increment = target / (duration / 16); // 60fps
+      let current = 0;
+
+      const updateCount = () => {
+        current += increment;
+        if (current < target) {
+          el.textContent = Math.floor(current).toString();
+          requestAnimationFrame(updateCount);
+        } else {
+          el.textContent = target.toString();
+        }
+      };
+      updateCount();
+    });
+  };
+
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-6 py-10 relative overflow-hidden">
+    <main className="min-h-screen gradient-bg text-slate-50 relative overflow-hidden">
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl float-animation"></div>
@@ -50,91 +110,210 @@ export default function Home() {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl glow-effect"></div>
       </div>
 
-      <div className="max-w-6xl w-full mx-auto text-center space-y-10 relative z-10">
-        <div className="space-y-5">
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-400 font-medium">
-            MantleLuxury
-          </p>
-          <h1 className="text-6xl md:text-7xl font-bold tracking-tight leading-tight">
-            <span className="gradient-text">奢侈品 RWA</span>
-            <br />
-            投资平台
-          </h1>
-          <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-3xl mx-auto">
-            基于 <span className="text-sky-400 font-semibold">Mantle L2</span> 的奢侈品实物资产代币化平台，
-            将名表、珠宝等资产拆分为可交易的份额，让更多投资者以更低门槛参与高端奢侈品投资。
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center gap-6 pt-6">
-          <a
-            href="/assets"
-            className="group relative px-10 py-4 bg-gradient-to-r from-sky-500 to-blue-600 rounded-full text-base font-semibold text-white hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70"
-          >
-            <span className="relative z-10">浏览可投资资产</span>
-            <span className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-          </a>
-          <a
-            href="/assets/submit"
-            className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
-          >
-            提交资产
-          </a>
-          <a
-            href="/portfolio"
-            className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
-          >
-            我的持仓
-          </a>
-          <a
-            href="/kyc"
-            className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
-          >
-            KYC / AML
-          </a>
-        </div>
-
-        {/* 特性展示 */}
-        {mounted && (
-          <div className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t border-slate-800/50 max-w-5xl mx-auto">
-            <div className="space-y-2">
-              <div className="text-3xl font-bold gradient-text">100%</div>
-              <div className="text-sm text-slate-400 uppercase tracking-wide">链上透明</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold gradient-text">低门槛</div>
-              <div className="text-sm text-slate-400 uppercase tracking-wide">碎片化投资</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold gradient-text">L2</div>
-              <div className="text-sm text-slate-400 uppercase tracking-wide">低成本交易</div>
-            </div>
+      <div className="relative z-10">
+        {/* Hero 区域 */}
+        <section className="max-w-7xl mx-auto px-6 py-20 text-center">
+          <div className="space-y-6 mb-12">
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-400 font-medium">
+              MantleLuxury
+            </p>
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight">
+              <span className="gradient-text">奢侈品 RWA</span>
+              <br />
+              投资平台
+            </h1>
+            <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-3xl mx-auto">
+              基于 <span className="text-sky-400 font-semibold">Mantle L2</span> 的奢侈品实物资产代币化平台，
+              将名表、珠宝等资产拆分为可交易的份额，让更多投资者以更低门槛参与高端奢侈品投资。
+            </p>
           </div>
+
+          {/* 主要操作按钮 */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
+            <a
+              href="/assets"
+              className="group relative px-10 py-4 bg-gradient-to-r from-sky-500 to-blue-600 rounded-full text-base font-semibold text-white hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70"
+            >
+              <span className="relative z-10">浏览可投资资产</span>
+              <span className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+            </a>
+            <a
+              href="/assets/submit"
+              className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
+            >
+              提交资产
+            </a>
+            <a
+              href="/portfolio"
+              className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
+            >
+              我的持仓
+            </a>
+            <a
+              href="/kyc"
+              className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
+            >
+              KYC / AML
+            </a>
+          </div>
+        </section>
+
+        {/* 平台数据展示区域 */}
+        {mounted && overview && (
+          <section className="max-w-7xl mx-auto px-6 py-16">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold gradient-text mb-3">平台数据</h2>
+              <p className="text-slate-400">实时更新的关键指标</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+              {/* 注册用户数 */}
+              <div className="group relative stats-card glass-effect rounded-2xl border border-slate-700/50 p-6 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
+                {/* 图标放在右上角边缘 */}
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center border border-blue-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                  <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                </div>
+                <div className="relative z-10 pr-12">
+                  <div className="space-y-4">
+                    <div className="text-xl md:text-2xl font-bold text-slate-100 tracking-wide">
+                      注册用户
+                    </div>
+                    <div className="text-4xl md:text-5xl font-bold text-blue-400 count-up" data-target={overview.totalUsers}>
+                      {overview.totalUsers}
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              </div>
+
+              {/* KYC 通过数 */}
+              <div className="group relative stats-card glass-effect rounded-2xl border border-slate-700/50 p-6 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
+                {/* 图标放在右上角边缘 */}
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 flex items-center justify-center border border-emerald-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                  <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 16l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/>
+                  </svg>
+                </div>
+                <div className="relative z-10 pr-12">
+                  <div className="space-y-4">
+                    <div className="text-xl md:text-2xl font-bold text-slate-100 tracking-wide">
+                      KYC 通过
+                    </div>
+                    <div className="text-4xl md:text-5xl font-bold text-emerald-400 count-up" data-target={overview.kycApprovedUsers}>
+                      {overview.kycApprovedUsers}
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              </div>
+
+              {/* 托管资产规模 */}
+              <div className="group relative stats-card glass-effect rounded-2xl border border-slate-700/50 p-6 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
+                {/* 图标放在右上角边缘 */}
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-600/20 flex items-center justify-center border border-amber-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                  <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20 8h-3V6c0-1.1-.9-2-2-2H9C7.9 4 7 4.9 7 6v2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6h6v2H9V6zm11 14H4V10h16v10zm-5.5-6.5L13 16l-2.5-2.5 1.41-1.41L13 13.17l2.09-2.09L16.5 11.5z"/>
+                  </svg>
+                </div>
+                <div className="relative z-10 pr-12">
+                  <div className="space-y-4">
+                    <div className="text-xl md:text-2xl font-bold text-slate-100 tracking-wide">
+                      托管资产 (MNT)
+                    </div>
+                    <div className="text-4xl md:text-5xl font-bold text-amber-400">
+                      {formatLargeNumber(Number(overview.aum || "0"))}
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              </div>
+
+              {/* 累计收益 */}
+              <div className="group relative stats-card glass-effect rounded-2xl border border-slate-700/50 p-6 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-transparent to-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
+                {/* 图标放在右上角边缘 */}
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500/20 to-pink-600/20 flex items-center justify-center border border-pink-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                  <svg className="w-5 h-5 text-pink-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M7.5 21H2v-5.5h5.5V21zM13.5 21H8V10.5h5.5V21zM19.5 21H14v-9.5h5.5V21zM19.5 8.5H14V3h5.5v5.5z"/>
+                  </svg>
+                </div>
+                <div className="relative z-10 pr-12">
+                  <div className="space-y-4">
+                    <div className="text-xl md:text-2xl font-bold text-slate-100 tracking-wide">
+                      累计收益 (MNT)
+                    </div>
+                    <div className="text-4xl md:text-5xl font-bold text-pink-400">
+                      {formatLargeNumber(Number(overview.totalYield || "0"))}
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-rose-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 平台特性展示 */}
+        {mounted && (
+          <section className="max-w-7xl mx-auto px-6 py-16 border-t border-slate-800/50">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold gradient-text mb-3">平台优势</h2>
+              <p className="text-slate-400">为什么选择 MantleLuxury</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              <div className="text-center space-y-3 glass-effect rounded-2xl border border-slate-700/50 p-8 hover:border-slate-600/50 transition-all duration-300">
+                <div className="text-4xl font-bold gradient-text mb-2">100%</div>
+                <div className="text-lg font-semibold text-slate-200 mb-1">链上透明</div>
+                <div className="text-sm text-slate-400">所有交易和资产信息完全上链，公开可查</div>
+              </div>
+              <div className="text-center space-y-3 glass-effect rounded-2xl border border-slate-700/50 p-8 hover:border-slate-600/50 transition-all duration-300">
+                <div className="text-4xl font-bold gradient-text mb-2">低门槛</div>
+                <div className="text-lg font-semibold text-slate-200 mb-1">碎片化投资</div>
+                <div className="text-sm text-slate-400">将高价值资产拆分为可交易份额，降低投资门槛</div>
+              </div>
+              <div className="text-center space-y-3 glass-effect rounded-2xl border border-slate-700/50 p-8 hover:border-slate-600/50 transition-all duration-300">
+                <div className="text-4xl font-bold gradient-text mb-2">L2</div>
+                <div className="text-lg font-semibold text-slate-200 mb-1">低成本交易</div>
+                <div className="text-sm text-slate-400">基于 Mantle L2，享受极低的 Gas 费用</div>
+              </div>
+            </div>
+          </section>
         )}
 
         {/* 最近收益分配记录 */}
         {mounted && !loadingYields && recentYields.length > 0 && (
-          <div className="mt-16 pt-12 border-t border-slate-800/50 max-w-5xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold gradient-text">最近收益分配</h2>
+          <section className="max-w-7xl mx-auto px-6 py-16 border-t border-slate-800/50">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-4xl font-bold gradient-text mb-2">最近收益分配</h2>
+                <p className="text-slate-400">查看最新的收益分配记录</p>
+              </div>
               <Link
                 href="/yields"
-                className="text-sm text-sky-400 hover:text-sky-300 transition"
+                className="text-sm text-sky-400 hover:text-sky-300 transition flex items-center gap-2"
               >
-                查看全部 →
+                查看全部 <span>→</span>
               </Link>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-3">
               {recentYields.map((yieldItem) => (
                 <div
                   key={yieldItem.id}
-                  className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden"
+                  className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
                   <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-4">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
                           yieldItem.isCompleted
                             ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40"
                             : "bg-amber-500/20 text-amber-300 border border-amber-400/40"
@@ -146,17 +325,21 @@ export default function Home() {
                         {yieldItem.yieldType === "appreciation" ? "升值收益" : "租赁收益"}
                       </span>
                     </div>
-                    <div className="text-xl font-bold text-emerald-400 mb-2">
+                    <div className="text-2xl font-bold text-emerald-400 mb-2">
                       {parseFloat(yieldItem.totalAmount).toFixed(4)} MNT
                     </div>
                     <div className="text-xs text-slate-400">
-                      {new Date(yieldItem.createdAt).toLocaleDateString("zh-CN")}
+                      {new Date(yieldItem.createdAt).toLocaleDateString("zh-CN", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric"
+                      })}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
       </div>
     </main>
