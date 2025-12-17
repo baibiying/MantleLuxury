@@ -51,6 +51,7 @@ export default function RootLayout({
                     { href: "/admin/kyc", label: "KYC管理" },
                     { href: "/admin/assets", label: "资产审核" },
                     { href: "/admin/yields", label: "收益分配控制台" },
+                    { href: "/admin/reports", label: "报表导出" },
                   ].map((item) => (
                     <Link
                       key={item.href}
