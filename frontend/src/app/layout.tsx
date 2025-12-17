@@ -48,7 +48,8 @@ export default function RootLayout({
                     { href: "/yields", label: "收益记录" },
                     { href: "/kyc", label: "KYC / AML" },
                     { href: "/settings", label: "账户设置" },
-                    { href: "/admin/kyc", label: "管理后台" },
+                    { href: "/admin/kyc", label: "KYC管理" },
+                    { href: "/admin/assets", label: "资产审核" },
                   ].map((item) => (
                     <Link
                       key={item.href}

@@ -190,6 +190,24 @@ CREATE TABLE IF NOT EXISTS insurances (
     INDEX idx_policy_end_date (policy_end_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- asset_reviews 表（资产审核记录）
+CREATE TABLE IF NOT EXISTS asset_reviews (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    asset_id CHAR(36) NOT NULL,
+    reviewer_address VARCHAR(42) NOT NULL COMMENT '审核人钱包地址',
+    review_status VARCHAR(20) NOT NULL COMMENT 'pending, approved, rejected, needs_revision',
+    review_notes TEXT COMMENT '审核备注',
+    action_type VARCHAR(50) COMMENT '审核操作类型：initial_review, authentication_review, custody_review, insurance_review, final_approval',
+    next_step VARCHAR(255) COMMENT '下一步操作建议',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+    INDEX idx_asset_id (asset_id),
+    INDEX idx_review_status (review_status),
+    INDEX idx_reviewer_address (reviewer_address),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 显示创建的表
 SHOW TABLES;
 
