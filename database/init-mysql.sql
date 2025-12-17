@@ -121,6 +121,26 @@ CREATE TABLE IF NOT EXISTS aml_blacklist (
     INDEX idx_wallet_address (wallet_address)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- asset_authentications 表（资产真伪认证）
+CREATE TABLE IF NOT EXISTS asset_authentications (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    asset_id CHAR(36) NOT NULL,
+    authentication_status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'pending, verified, rejected',
+    authenticator_name VARCHAR(200) NOT NULL COMMENT '鉴定机构名称',
+    authenticator_type VARCHAR(50) NOT NULL COMMENT 'official_brand, third_party, ai_system',
+    verification_date DATE,
+    report_url TEXT COMMENT 'IPFS 或 S3 URL',
+    report_hash VARCHAR(66) COMMENT '报告哈希（链上存证）',
+    verifier_signature TEXT COMMENT '鉴定师签名/证书信息',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+    INDEX idx_asset_id (asset_id),
+    INDEX idx_authentication_status (authentication_status),
+    INDEX idx_authenticator_type (authenticator_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 显示创建的表
 SHOW TABLES;
 

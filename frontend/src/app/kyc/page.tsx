@@ -39,6 +39,20 @@ export default function KycPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!address) return;
+    
+    // 验证邮箱必填
+    if (!email || email.trim() === "") {
+      setError("请填写邮箱地址");
+      return;
+    }
+    
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError("请输入有效的邮箱地址");
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
@@ -49,7 +63,7 @@ export default function KycPage() {
         },
         body: JSON.stringify({
           walletAddress: address,
-          email,
+          email: email.trim(),
         }),
       });
       if (!res.ok) {
@@ -137,12 +151,16 @@ export default function KycPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">
-                    邮箱（用于通知）
+                    邮箱（用于通知）<span className="text-red-400">*</span>
                   </label>
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError(null); // 清除之前的错误
+                    }}
+                    required
                     className="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
                     placeholder="you@example.com"
                   />
@@ -154,13 +172,15 @@ export default function KycPage() {
 
                 <button
                   type="submit"
-                  disabled={loading || status === "pending"}
+                  disabled={loading || status === "pending" || !email || email.trim() === ""}
                   className="w-full px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-sm font-semibold"
                 >
                   {status === "pending"
                     ? "审核中..."
                     : loading
                     ? "提交中..."
+                    : !email || email.trim() === ""
+                    ? "请填写邮箱"
                     : "提交 KYC 信息"}
                 </button>
 

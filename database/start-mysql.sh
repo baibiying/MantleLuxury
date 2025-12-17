@@ -163,6 +163,34 @@ ensure_schema() {
     else
         print_warn "列自动补齐失败，请手动检查数据库"
     fi
+    
+    # 检查并创建 asset_authentications 表（如果不存在）
+    print_info "检查 asset_authentications 表..."
+    local create_auth_table_sql="
+        CREATE TABLE IF NOT EXISTS asset_authentications (
+            id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+            asset_id CHAR(36) NOT NULL,
+            authentication_status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'pending, verified, rejected',
+            authenticator_name VARCHAR(200) NOT NULL COMMENT '鉴定机构名称',
+            authenticator_type VARCHAR(50) NOT NULL COMMENT 'official_brand, third_party, ai_system',
+            verification_date DATE,
+            report_url TEXT COMMENT 'IPFS 或 S3 URL',
+            report_hash VARCHAR(66) COMMENT '报告哈希（链上存证）',
+            verifier_signature TEXT COMMENT '鉴定师签名/证书信息',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+            INDEX idx_asset_id (asset_id),
+            INDEX idx_authentication_status (authentication_status),
+            INDEX idx_authenticator_type (authenticator_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    "
+    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$create_auth_table_sql" > /dev/null 2>&1; then
+        print_info "asset_authentications 表检查完成（如不存在已自动创建）"
+    else
+        print_warn "asset_authentications 表创建失败，请手动检查数据库"
+    fi
 }
 
 # 显示连接信息
