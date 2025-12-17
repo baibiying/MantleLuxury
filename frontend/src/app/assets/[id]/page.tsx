@@ -24,6 +24,17 @@ type Asset = {
   tokenAddress: string | null;
   description: string | null;
   imageUrls?: string | null;
+  authentications?: Array<{
+    id: string;
+    authenticationStatus: string;
+    authenticatorName: string;
+    authenticatorType: string;
+    verificationDate: string | null;
+    reportUrl: string | null;
+    reportHash: string | null;
+    verifierSignature: string | null;
+    notes: string | null;
+  }>;
 };
 
 export default function AssetDetailPage() {
@@ -446,6 +457,8 @@ export default function AssetDetailPage() {
                             ? "border-amber-400/60 text-amber-200 bg-amber-500/10"
                             : asset.status === "funded"
                             ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/10"
+                            : asset.status === "registered"
+                            ? "border-blue-400/60 text-blue-200 bg-blue-500/10"
                             : "border-slate-500/60 text-slate-200 bg-slate-500/10"
                         }`}
                       >
@@ -453,6 +466,8 @@ export default function AssetDetailPage() {
                           ? "募集中"
                           : asset.status === "funded"
                           ? "已满额"
+                          : asset.status === "registered"
+                          ? "待认证"
                           : "已结束"}
                       </span>
                     </dd>
@@ -476,6 +491,85 @@ export default function AssetDetailPage() {
                   </a>
                 </div>
               )}
+
+              {/* 真伪认证与估值信息 */}
+              {asset.authentications && asset.authentications.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-800">
+                  <h3 className="text-sm font-medium text-slate-300 mb-3">真伪认证与估值</h3>
+                  <div className="space-y-3">
+                    {asset.authentications.map((auth) => (
+                      <div
+                        key={auth.id}
+                        className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-lg"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">
+                              {auth.authenticatorName}
+                            </div>
+                            <div className="text-xs text-slate-400 mt-1">
+                              {auth.authenticatorType === "official_brand"
+                                ? "官方品牌认证"
+                                : auth.authenticatorType === "third_party"
+                                ? "第三方机构认证"
+                                : "AI 系统认证"}
+                            </div>
+                          </div>
+                          <span
+                            className={`text-xs rounded-full px-2 py-1 border ${
+                              auth.authenticationStatus === "verified"
+                                ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/10"
+                                : auth.authenticationStatus === "rejected"
+                                ? "border-red-400/60 text-red-200 bg-red-500/10"
+                                : "border-amber-400/60 text-amber-200 bg-amber-500/10"
+                            }`}
+                          >
+                            {auth.authenticationStatus === "verified"
+                              ? "已认证"
+                              : auth.authenticationStatus === "rejected"
+                              ? "已拒绝"
+                              : "待审核"}
+                          </span>
+                        </div>
+                        {auth.verificationDate && (
+                          <div className="text-xs text-slate-500 mb-2">
+                            认证日期: {new Date(auth.verificationDate).toLocaleDateString("zh-CN")}
+                          </div>
+                        )}
+                        {auth.reportUrl && (
+                          <a
+                            href={auth.reportUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-sky-400 hover:text-sky-300 inline-block mt-1"
+                          >
+                            查看认证报告 →
+                          </a>
+                        )}
+                        {auth.reportHash && (
+                          <div className="text-xs text-slate-500 mt-1 font-mono">
+                            报告哈希: {auth.reportHash.slice(0, 20)}...
+                          </div>
+                        )}
+                        {auth.notes && (
+                          <div className="text-xs text-slate-400 mt-2 whitespace-pre-line">
+                            {auth.notes}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!asset.authentications || asset.authentications.length === 0) && (
+                <div className="mt-4 pt-4 border-t border-slate-800">
+                  <h3 className="text-sm font-medium text-slate-300 mb-2">真伪认证与估值</h3>
+                  <p className="text-xs text-slate-500">
+                    暂无认证信息
+                  </p>
+                </div>
+              )}
               </div>
             </div>
           </div>
@@ -487,13 +581,33 @@ export default function AssetDetailPage() {
             <div className="relative z-10">
             <h2 className="text-xl font-semibold mb-4 gradient-text">投资此资产</h2>
 
-            {asset.status !== "fundraising" && (
-              <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
-                <p className="text-sm text-amber-200">
-                  此资产当前不在募集中，无法投资。
-                </p>
-              </div>
-            )}
+            {/* 检查资产是否有已通过的认证 */}
+            {(() => {
+              const hasVerifiedAuth = asset.authentications && asset.authentications.some(
+                (auth) => auth.authenticationStatus === "verified"
+              );
+              const canInvest = asset.status === "fundraising" && hasVerifiedAuth;
+              
+              if (!canInvest) {
+                if (asset.status === "registered") {
+                  return (
+                    <div className="mb-4 p-4 bg-blue-950/40 border border-blue-500/40 rounded-lg">
+                      <p className="text-sm text-blue-200">
+                        此资产正在等待认证审核，认证通过后才能开始募集。
+                      </p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
+                    <p className="text-sm text-amber-200">
+                      此资产当前不在募集中，无法投资。
+                    </p>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {!isConnected && (
               <div className="mb-4 p-4 bg-blue-950/40 border border-blue-500/40 rounded-lg">
@@ -518,7 +632,13 @@ export default function AssetDetailPage() {
               </div>
             )}
 
-            {asset.status === "fundraising" && isConnected && chainId === mantleSepoliaTestnet.id && (
+            {(() => {
+              const hasVerifiedAuth = asset.authentications && asset.authentications.some(
+                (auth) => auth.authenticationStatus === "verified"
+              );
+              const canInvest = asset.status === "fundraising" && hasVerifiedAuth;
+              return canInvest && isConnected && chainId === mantleSepoliaTestnet.id;
+            })() && (
               <div className="space-y-4">
                 {kycStatus !== "approved" && (
                   <div className="p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg text-sm text-amber-200">

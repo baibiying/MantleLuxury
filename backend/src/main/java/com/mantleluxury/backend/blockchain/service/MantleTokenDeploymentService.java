@@ -122,6 +122,15 @@ public class MantleTokenDeploymentService {
     ) throws Exception {
         logger.info("Deploying via Hardhat script...");
 
+        // 查找 contracts 目录
+        java.io.File contractsDir = findContractsDirectory();
+        java.io.File deployScript = new java.io.File(contractsDir, "scripts/deployLuxuryToken.ts");
+        
+        if (!deployScript.exists()) {
+            throw new RuntimeException("Deployment script not found: " + deployScript.getAbsolutePath());
+        }
+        logger.info("Using deployment script: {}", deployScript.getAbsolutePath());
+
         // 先编译合约（Hardhat 会自动编译，但显式编译更可靠）
         compileContracts();
 
@@ -157,25 +166,47 @@ public class MantleTokenDeploymentService {
         processBuilder.environment().put("OWNER_ADDRESS", credentials.getAddress());
         
         // 设置工作目录
-        processBuilder.directory(findContractsDirectory());
-        processBuilder.redirectErrorStream(true);
+        processBuilder.directory(contractsDir);
+        processBuilder.redirectErrorStream(true); // 将错误输出合并到标准输出
 
         Process process = processBuilder.start();
         
-        // 读取输出
+        // 读取输出（包括标准输出和错误输出）
         StringBuilder output = new StringBuilder();
+        StringBuilder errorOutput = new StringBuilder();
+        
+        // 读取标准输出
         try (java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(process.getInputStream()))) {
+                new java.io.InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 output.append(line).append("\n");
                 logger.info("Hardhat output: {}", line);
             }
         }
+        
+        // 读取错误输出（如果 redirectErrorStream 为 false）
+        try (java.io.BufferedReader errorReader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = errorReader.readLine()) != null) {
+                errorOutput.append(line).append("\n");
+                logger.error("Hardhat error: {}", line);
+            }
+        }
 
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            throw new RuntimeException("Hardhat deployment failed with exit code: " + exitCode);
+            String fullOutput = output.toString();
+            String fullError = errorOutput.toString();
+            String errorMessage = String.format(
+                "Hardhat deployment failed with exit code: %d\n" +
+                "Standard output:\n%s\n" +
+                "Error output:\n%s",
+                exitCode, fullOutput, fullError
+            );
+            logger.error("Hardhat deployment failed. Full output:\n{}", errorMessage);
+            throw new RuntimeException(errorMessage);
         }
 
         // 从输出中提取合约地址

@@ -205,3 +205,153 @@ curl -s http://localhost:8080/api/yields/user/0x用户地址 | jq .
 # 查看资产的收益记录
 curl -s http://localhost:8080/api/yields/asset/资产ID | jq .
 ```
+
+---
+
+### 6. 资产真伪认证与估值
+
+#### 创建认证记录
+
+为资产提交真伪认证和估值信息：
+
+**API 端点：** `POST /api/asset-authentications`
+
+**请求参数：**
+- `assetId`: 资产 ID（必需）
+- `authenticatorName`: 鉴定机构名称（必需）
+- `authenticatorType`: 鉴定机构类型，可选值：
+  - `"official_brand"` - 官方品牌认证
+  - `"third_party"` - 第三方机构认证
+  - `"ai_system"` - AI 系统认证（默认）
+- `reportUrl`: 认证报告 URL（IPFS 或 S3）
+- `reportHash`: 报告哈希（链上存证）
+- `verifierSignature`: 鉴定师签名/证书信息
+- `notes`: 备注信息
+
+**示例：**
+
+```bash
+# 为资产创建第三方机构认证记录
+curl -X POST http://localhost:8080/api/asset-authentications \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetId": "062653bc-678b-4a19-b3a8-dec1a4405f00",
+    "authenticatorName": "瑞士钟表鉴定中心",
+    "authenticatorType": "third_party",
+    "reportUrl": "https://ipfs.io/ipfs/Qm...",
+    "reportHash": "0x1234567890abcdef...",
+    "verifierSignature": "鉴定师：张三，证书编号：ABC123",
+    "notes": "经鉴定，该手表为真品，状态良好。"
+  }'
+```
+
+#### 审核认证记录
+
+审核认证记录（通过或拒绝）：
+
+**API 端点：** `POST /api/asset-authentications/{authenticationId}/review`
+
+**请求参数：**
+- `status`: 审核状态，`"verified"`（通过）或 `"rejected"`（拒绝）
+- `notes`: 审核备注（可选）
+
+**示例：**
+
+```bash
+# 通过认证
+curl -X POST http://localhost:8080/api/asset-authentications/{认证ID}/review \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "verified",
+    "notes": "认证信息完整，予以通过"
+  }'
+```
+
+#### 查看认证记录
+
+```bash
+# 查看资产的所有认证记录
+curl -s http://localhost:8080/api/asset-authentications/asset/{资产ID} | jq .
+
+# 查看资产已通过的认证记录
+curl -s http://localhost:8080/api/asset-authentications/asset/{资产ID}/verified | jq .
+
+# 查看认证记录详情
+curl -s http://localhost:8080/api/asset-authentications/{认证ID} | jq .
+```
+
+**完整认证流程示例：**
+
+```bash
+# 1. 创建认证记录（返回认证 ID）
+AUTH_ID=$(curl -s -X POST http://localhost:8080/api/asset-authentications \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetId": "80ef25bb-db72-4cc5-8d7d-9d6609c64de9",
+    "authenticatorName": "瑞士钟表鉴定中心",
+    "authenticatorType": "third_party",
+    "reportUrl": "https://ipfs.io/ipfs/QmExample123",
+    "reportHash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "verifierSignature": "鉴定师：张三，证书编号：ABC123",
+    "notes": "经鉴定，该资产为真品，状态良好，符合上架标准。"
+  }' | jq -r '.id')
+
+echo "认证记录 ID: $AUTH_ID"
+
+# 2. 审核通过认证（认证通过后，资产状态会自动从 registered 更新为 fundraising）
+curl -X POST http://localhost:8080/api/asset-authentications/$AUTH_ID/review \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "verified",
+    "notes": "认证信息完整，予以通过"
+  }'
+
+# 3. 验证资产状态已更新为 fundraising
+curl -s http://localhost:8080/api/assets/80ef25bb-db72-4cc5-8d7d-9d6609c64de9 | jq '{id, status, authentications: .authentications | map({status: .authenticationStatus, name: .authenticatorName})}'
+```
+
+**快速认证资产（一步完成）：**
+
+```bash
+# 为资产创建并立即通过认证（需要先创建获取认证 ID，然后审核）
+ASSET_ID="80ef25bb-db72-4cc5-8d7d-9d6609c64de9"
+
+# 创建认证记录
+AUTH_RESPONSE=$(curl -s -X POST http://localhost:8080/api/asset-authentications \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"assetId\": \"$ASSET_ID\",
+    \"authenticatorName\": \"瑞士钟表鉴定中心\",
+    \"authenticatorType\": \"third_party\",
+    \"reportUrl\": \"https://ipfs.io/ipfs/QmExample123\",
+    \"reportHash\": \"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\",
+    \"verifierSignature\": \"鉴定师：张三，证书编号：ABC123\",
+    \"notes\": \"经鉴定，该资产为真品，状态良好。\"
+  }")
+
+AUTH_ID=$(echo $AUTH_RESPONSE | jq -r '.id')
+
+# 审核通过
+curl -X POST http://localhost:8080/api/asset-authentications/$AUTH_ID/review \
+  -H "Content-Type: application/json" \
+  -d '{"status": "verified"}'
+
+echo "✅ 资产 $ASSET_ID 已认证通过，状态已更新为 fundraising"
+```
+
+**前端显示：**
+
+认证信息会自动显示在资产详情页面（`/assets/{id}`）的"真伪认证与估值"部分，包括：
+- 认证机构名称和类型
+- 认证状态（待审核/已认证/已拒绝）
+- 认证日期
+- 认证报告链接（如有）
+- 报告哈希（链上存证）
+- 备注信息
+
+**重要提示：**
+
+- 资产提交后，状态为 `registered`（待认证）
+- 创建认证记录后，状态仍为 `registered`（待审核）
+- 审核通过认证后，资产状态会自动更新为 `fundraising`（募集中），此时用户可以投资
+- 只有状态为 `fundraising` 且有已通过认证的资产才能被投资

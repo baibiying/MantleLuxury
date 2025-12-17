@@ -3,9 +3,11 @@ package com.mantleluxury.backend.assets.service;
 import com.mantleluxury.backend.assets.api.AssetDto;
 import com.mantleluxury.backend.assets.api.AssetSubmitRequest;
 import com.mantleluxury.backend.assets.domain.Asset;
+import com.mantleluxury.backend.assets.domain.AssetAuthentication;
 import com.mantleluxury.backend.assets.domain.YieldDistribution;
 import com.mantleluxury.backend.assets.repository.AssetRepository;
 import com.mantleluxury.backend.assets.repository.YieldDistributionRepository;
+import com.mantleluxury.backend.assets.service.AssetAuthenticationService;
 import com.mantleluxury.backend.blockchain.service.TokenDeploymentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,17 +30,20 @@ public class AssetService {
     private final AssetRepository assetRepository;
     private final TokenDeploymentService tokenDeploymentService;
     private final YieldDistributionRepository yieldDistributionRepository;
+    private final AssetAuthenticationService authenticationService;
     private final org.springframework.core.io.ResourceLoader resourceLoader;
     
     public AssetService(
             AssetRepository assetRepository,
             TokenDeploymentService tokenDeploymentService,
             YieldDistributionRepository yieldDistributionRepository,
+            AssetAuthenticationService authenticationService,
             org.springframework.core.io.ResourceLoader resourceLoader
     ) {
         this.assetRepository = assetRepository;
         this.tokenDeploymentService = tokenDeploymentService;
         this.yieldDistributionRepository = yieldDistributionRepository;
+        this.authenticationService = authenticationService;
         this.resourceLoader = resourceLoader;
     }
     
@@ -101,10 +108,10 @@ public class AssetService {
         
         // 合约部署成功后，更新资产信息并保存
         asset.setTokenAddress(tokenAddress);
-        asset.setStatus("fundraising"); // 代币部署成功后，状态改为募集中
+        asset.setStatus("registered"); // 代币部署成功后，状态为已注册（待认证），只有认证通过后才能进入募集中
         
         asset = assetRepository.save(asset);
-        logger.info("Asset saved successfully with token address: {}", tokenAddress);
+        logger.info("Asset saved successfully with token address: {}. Status: registered (awaiting authentication)", tokenAddress);
         
         return asset;
     }
@@ -146,6 +153,18 @@ public class AssetService {
                 .ifPresentOrElse(
                         asset -> assetRepository.deleteByTokenAddress(tokenAddress),
                         () -> { throw new RuntimeException("Asset not found for token address: " + tokenAddress); }
+                );
+    }
+
+    /**
+     * 按 ID 删除资产
+     */
+    @Transactional
+    public void deleteById(String id) {
+        assetRepository.findById(id)
+                .ifPresentOrElse(
+                        asset -> assetRepository.deleteById(id),
+                        () -> { throw new RuntimeException("Asset not found with id: " + id); }
                 );
     }
     
@@ -217,6 +236,15 @@ public class AssetService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
         
+        // 获取认证信息
+        List<Map<String, Object>> authentications = List.of();
+        if (asset.getId() != null) {
+            List<AssetAuthentication> authList = authenticationService.getAssetAuthentications(asset.getId());
+            authentications = authList.stream()
+                    .map(this::authenticationToDto)
+                    .collect(Collectors.toList());
+        }
+        
         return new AssetDto(
                 asset.getId().toString(),
                 asset.getAssetType(),
@@ -230,8 +258,29 @@ public class AssetService {
                 asset.getTokenAddress(),  // 合约地址
                 asset.getDescription(),   // 描述
                 asset.getImageUrls(),     // 图片
-                totalYield                // 累计收益
+                totalYield,                // 累计收益
+                authentications           // 认证信息
         );
+    }
+    
+    /**
+     * 将认证实体转换为 DTO
+     */
+    private Map<String, Object> authenticationToDto(AssetAuthentication auth) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", auth.getId());
+        dto.put("assetId", auth.getAssetId());
+        dto.put("authenticationStatus", auth.getAuthenticationStatus());
+        dto.put("authenticatorName", auth.getAuthenticatorName());
+        dto.put("authenticatorType", auth.getAuthenticatorType());
+        dto.put("verificationDate", auth.getVerificationDate());
+        dto.put("reportUrl", auth.getReportUrl());
+        dto.put("reportHash", auth.getReportHash());
+        dto.put("verifierSignature", auth.getVerifierSignature());
+        dto.put("notes", auth.getNotes());
+        dto.put("createdAt", auth.getCreatedAt());
+        dto.put("updatedAt", auth.getUpdatedAt());
+        return dto;
     }
 }
 

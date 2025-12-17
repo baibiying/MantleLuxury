@@ -90,6 +90,17 @@ public class AssetController {
         }
     }
 
+    // 按 ID 删除资产（仅后台运维用途）
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteById(@PathVariable String id) {
+        try {
+            assetService.deleteById(id);
+            return ResponseEntity.ok("Deleted asset with id: " + id);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
     // 上传资产图片（简单本地存储）
     @PostMapping("/upload-image")
     public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {

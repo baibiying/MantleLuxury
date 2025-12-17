@@ -294,6 +294,8 @@ export default function AssetsPage() {
                         ? "border-amber-400/60 text-amber-200 bg-amber-500/20 shadow-lg shadow-amber-500/20"
                         : asset.status === "funded"
                         ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/20 shadow-lg shadow-emerald-500/20"
+                        : asset.status === "registered"
+                        ? "border-blue-400/60 text-blue-200 bg-blue-500/20 shadow-lg shadow-blue-500/20"
                         : "border-slate-500/60 text-slate-200 bg-slate-500/20"
                     }`}
                   >
@@ -301,6 +303,8 @@ export default function AssetsPage() {
                       ? "募集中"
                       : asset.status === "funded"
                       ? "已满额"
+                      : asset.status === "registered"
+                      ? "待认证"
                       : "已结束"}
                   </span>
                 </div>
