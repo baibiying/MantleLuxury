@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -46,6 +46,7 @@ export default function PortfolioPage() {
   const [error, setError] = useState<string | null>(null);
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [totalYield, setTotalYield] = useState<string>("0");
+  const [yieldHistory, setYieldHistory] = useState<Array<{ date: string; cumulativeYield: number }>>([]);
   
   // 计算资产分布数据
   const calculateDistribution = () => {
@@ -142,9 +143,10 @@ export default function PortfolioPage() {
       setLoading(true);
       setError(null);
       try {
-        const [holdingsRes, yieldsRes] = await Promise.all([
+        const [holdingsRes, yieldsRes, historyRes] = await Promise.all([
           fetch(`${API_BASE}/api/portfolio/${address}`),
           fetch(`${API_BASE}/api/portfolio/${address}/yields`),
+          fetch(`${API_BASE}/api/portfolio/${address}/yields/history`),
         ]);
 
         if (!holdingsRes.ok) {
@@ -171,6 +173,17 @@ export default function PortfolioPage() {
         if (yieldsRes.ok) {
           const summary = await yieldsRes.json();
           setTotalYield(summary.totalYield || "0");
+        }
+
+        // 加载收益历史数据
+        if (historyRes.ok) {
+          const history = await historyRes.json();
+          const formattedHistory = history.map((item: any) => ({
+            date: new Date(item.date).toLocaleDateString("zh-CN", { month: "short", day: "numeric" }),
+            cumulativeYield: parseFloat(item.cumulativeYield || "0"),
+            amount: parseFloat(item.amount || "0"),
+          }));
+          setYieldHistory(formattedHistory);
         }
       } catch (e: any) {
         setError(e.message ?? "加载持仓失败");
@@ -253,6 +266,48 @@ export default function PortfolioPage() {
               </div>
             ) : (
               <>
+            {/* 收益曲线图表 */}
+            {yieldHistory.length > 0 && (
+              <div className="mb-6 card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
+                <div className="relative z-10">
+                  <h3 className="text-lg font-semibold mb-4">累计收益曲线</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={yieldHistory} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="#94a3b8"
+                        style={{ fontSize: '12px' }}
+                      />
+                      <YAxis 
+                        stroke="#94a3b8"
+                        style={{ fontSize: '12px' }}
+                        tickFormatter={(value) => `${value.toFixed(2)}`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid rgba(148, 163, 184, 0.3)',
+                          borderRadius: '8px',
+                          color: '#e2e8f0'
+                        }}
+                        formatter={(value: number) => [`${value.toFixed(4)} MNT`, '累计收益']}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="cumulativeYield" 
+                        stroke="#10b981" 
+                        strokeWidth={2}
+                        dot={{ fill: '#10b981', r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
             {/* 资产分布图表 */}
             {(() => {
               const distribution = calculateDistribution();

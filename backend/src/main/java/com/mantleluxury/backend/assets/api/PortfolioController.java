@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -184,6 +185,55 @@ public class PortfolioController {
                 .count());
 
         return ResponseEntity.ok(summary);
+    }
+
+    /**
+     * 获取用户收益历史数据（用于绘制收益曲线）
+     */
+    @GetMapping("/{userAddress}/yields/history")
+    public ResponseEntity<List<Map<String, Object>>> getUserYieldHistory(@PathVariable String userAddress) {
+        // 获取用户持有的所有 token 地址
+        List<UserInvestment> investments = investmentRepository.findByUserAddress(userAddress);
+        List<String> userTokenAddresses = investments.stream()
+                .map(UserInvestment::getTokenAddress)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (userTokenAddresses.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        // 获取所有收益分配记录，按时间排序
+        List<YieldDistribution> yields = yieldDistributionRepository.findByTokenAddressIn(userTokenAddresses)
+                .stream()
+                .filter(YieldDistribution::getIsCompleted) // 只统计已完成的收益
+                .sorted((a, b) -> {
+                    LocalDateTime timeA = a.getCompletedAt() != null ? a.getCompletedAt() : a.getCreatedAt();
+                    LocalDateTime timeB = b.getCompletedAt() != null ? b.getCompletedAt() : b.getCreatedAt();
+                    return timeA.compareTo(timeB);
+                })
+                .collect(Collectors.toList());
+
+        // 计算累计收益时间序列
+        BigDecimal cumulativeYield = BigDecimal.ZERO;
+        List<Map<String, Object>> history = new java.util.ArrayList<>();
+
+        for (YieldDistribution yield : yields) {
+            cumulativeYield = cumulativeYield.add(yield.getDistributedAmount());
+            LocalDateTime timestamp = yield.getCompletedAt() != null ? yield.getCompletedAt() : yield.getCreatedAt();
+            
+            Map<String, Object> point = new java.util.HashMap<>();
+            point.put("date", timestamp.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            point.put("timestamp", timestamp.toEpochSecond(java.time.ZoneOffset.UTC));
+            point.put("amount", yield.getDistributedAmount());
+            point.put("cumulativeYield", cumulativeYield);
+            point.put("yieldType", yield.getYieldType());
+            point.put("assetId", yield.getAssetId());
+            
+            history.add(point);
+        }
+
+        return ResponseEntity.ok(history);
     }
 
     @PostMapping("/investment")
