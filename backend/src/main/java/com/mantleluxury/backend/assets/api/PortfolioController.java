@@ -12,10 +12,14 @@ import com.mantleluxury.backend.assets.service.AmlService;
 import com.mantleluxury.backend.assets.service.CustodyService;
 import com.mantleluxury.backend.assets.service.InsuranceService;
 import com.mantleluxury.backend.assets.service.AssetAuthenticationService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -241,6 +245,159 @@ public class PortfolioController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to record investment: " + e.getMessage());
         }
+    }
+
+    /**
+     * 导出持仓列表 CSV
+     */
+    @GetMapping("/{userAddress}/export/holdings")
+    public ResponseEntity<String> exportHoldingsCSV(@PathVariable String userAddress) {
+        List<Map<String, Object>> portfolio = getPortfolio(userAddress).getBody();
+        if (portfolio == null || portfolio.isEmpty()) {
+            return ResponseEntity.ok("资产类型,品牌,型号,年份,持有份额,单份价格(MNT),持仓成本(MNT),当前市值(MNT),浮动收益(MNT),累计收益(MNT),收益率(%)\n");
+        }
+
+        StringBuilder csv = new StringBuilder();
+        csv.append("\uFEFF"); // BOM for Excel compatibility
+        csv.append("资产类型,品牌,型号,年份,持有份额,单份价格(MNT),持仓成本(MNT),当前市值(MNT),浮动收益(MNT),累计收益(MNT),收益率(%)\n");
+
+        for (Map<String, Object> item : portfolio) {
+            String assetType = (String) item.get("assetType");
+            String typeLabel = "watch".equals(assetType) ? "名表" : "jewelry".equals(assetType) ? "珠宝" : "其他";
+            String brand = item.get("brand") != null ? item.get("brand").toString() : "";
+            String model = item.get("model") != null ? item.get("model").toString() : "";
+            Integer year = (Integer) item.get("year");
+            BigDecimal balance = (BigDecimal) item.get("balance");
+            BigDecimal pricePerShare = (BigDecimal) item.get("pricePerShare");
+            BigDecimal totalCost = (BigDecimal) item.get("totalCost");
+            BigDecimal estimatedValue = (BigDecimal) item.get("estimatedValue");
+            BigDecimal pnl = (BigDecimal) item.get("pnl");
+            BigDecimal totalYield = (BigDecimal) item.getOrDefault("totalYield", BigDecimal.ZERO);
+            BigDecimal roi = (BigDecimal) item.get("roi");
+
+            csv.append(String.format("\"%s\",\"%s\",\"%s\",\"%s\",%s,%s,%s,%s,%s,%s,%s\n",
+                    typeLabel,
+                    brand,
+                    model,
+                    year != null ? year.toString() : "",
+                    balance != null ? balance.toPlainString() : "0",
+                    pricePerShare != null ? pricePerShare.toPlainString() : "0",
+                    totalCost != null ? totalCost.toPlainString() : "0",
+                    estimatedValue != null ? estimatedValue.toPlainString() : "0",
+                    pnl != null ? pnl.toPlainString() : "0",
+                    totalYield.toPlainString(),
+                    roi != null ? roi.multiply(new BigDecimal("100")).toPlainString() : "0"
+            ));
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDispositionFormData("attachment", 
+                String.format("持仓列表_%s.csv", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))));
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(csv.toString());
+    }
+
+    /**
+     * 导出交易记录 CSV
+     */
+    @GetMapping("/{userAddress}/export/transactions")
+    public ResponseEntity<String> exportTransactionsCSV(@PathVariable String userAddress) {
+        List<UserInvestment> investments = investmentRepository.findByUserAddress(userAddress);
+        if (investments.isEmpty()) {
+            return ResponseEntity.ok("交易时间,资产,投资金额(MNT),购买份额,交易哈希\n");
+        }
+
+        Map<String, Asset> assetsById = assetRepository.findAll().stream()
+                .collect(Collectors.toMap(Asset::getId, a -> a, (a, b) -> a));
+
+        StringBuilder csv = new StringBuilder();
+        csv.append("\uFEFF"); // BOM for Excel compatibility
+        csv.append("交易时间,资产,投资金额(MNT),购买份额,交易哈希\n");
+
+        for (UserInvestment inv : investments) {
+            Asset asset = assetsById.get(inv.getAssetId());
+            String assetName = asset != null 
+                    ? String.format("%s %s", asset.getBrand(), asset.getModel())
+                    : "未知资产";
+            String txHash = inv.getTxHash() != null ? inv.getTxHash() : "";
+            String createdAt = inv.getCreatedAt() != null 
+                    ? inv.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                    : "";
+
+            csv.append(String.format("\"%s\",\"%s\",%s,%s,\"%s\"\n",
+                    createdAt,
+                    assetName,
+                    inv.getInvestedAmountMnt().toPlainString(),
+                    inv.getShares().toPlainString(),
+                    txHash
+            ));
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDispositionFormData("attachment", 
+                String.format("交易记录_%s.csv", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))));
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(csv.toString());
+    }
+
+    /**
+     * 导出收益记录 CSV
+     */
+    @GetMapping("/{userAddress}/export/yields")
+    public ResponseEntity<String> exportYieldsCSV(@PathVariable String userAddress) {
+        List<UserInvestment> investments = investmentRepository.findByUserAddress(userAddress);
+        List<String> userTokenAddresses = investments.stream()
+                .map(UserInvestment::getTokenAddress)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (userTokenAddresses.isEmpty()) {
+            return ResponseEntity.ok("收益时间,资产,收益类型,收益金额(MNT),交易哈希\n");
+        }
+
+        List<YieldDistribution> yields = yieldDistributionRepository.findByTokenAddressIn(userTokenAddresses);
+        Map<String, Asset> assetsById = assetRepository.findAll().stream()
+                .collect(Collectors.toMap(Asset::getId, a -> a, (a, b) -> a));
+
+        StringBuilder csv = new StringBuilder();
+        csv.append("\uFEFF"); // BOM for Excel compatibility
+        csv.append("收益时间,资产,收益类型,收益金额(MNT),交易哈希\n");
+
+        for (YieldDistribution yield : yields) {
+            Asset asset = assetsById.get(yield.getAssetId());
+            String assetName = asset != null 
+                    ? String.format("%s %s", asset.getBrand(), asset.getModel())
+                    : "未知资产";
+            String yieldType = "appreciation".equals(yield.getYieldType()) ? "升值收益" : "rental".equals(yield.getYieldType()) ? "租赁收益" : yield.getYieldType();
+            BigDecimal amount = yield.getIsCompleted() ? yield.getDistributedAmount() : yield.getTotalAmount();
+            String txHash = yield.getTransactionHash() != null ? yield.getTransactionHash() : "";
+            String createdAt = yield.getCreatedAt() != null 
+                    ? yield.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                    : "";
+
+            csv.append(String.format("\"%s\",\"%s\",\"%s\",%s,\"%s\"\n",
+                    createdAt,
+                    assetName,
+                    yieldType,
+                    amount.toPlainString(),
+                    txHash
+            ));
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDispositionFormData("attachment", 
+                String.format("收益记录_%s.csv", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))));
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(csv.toString());
     }
 }
 
