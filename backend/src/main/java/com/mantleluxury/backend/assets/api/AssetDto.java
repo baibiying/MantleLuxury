@@ -19,7 +19,8 @@ public record AssetDto(
         String status,          // fundraising / funded / sold
         String tokenAddress,   // 合约地址（用于前端调用合约）
         String description,    // 资产描述
-        String imageUrls       // 资产图片（JSON 字符串）
+        String imageUrls,      // 资产图片（JSON 字符串）
+        BigDecimal totalYield  // 累计收益（升值收益）
 ) {
 }
 

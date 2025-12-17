@@ -19,6 +19,7 @@ type Asset = {
   status: string;
   tokenAddress: string | null;
   imageUrls?: string | null;
+  totalYield?: string | null; // 累计收益
 };
 
 const API_BASE =
@@ -322,6 +323,14 @@ export default function AssetsPage() {
                         : `${asset.remainingSupply} 份`}
                     </dd>
                   </div>
+                  {asset.totalYield && parseFloat(asset.totalYield) > 0 && (
+                    <div className="space-y-1 col-span-2">
+                      <dt className="text-slate-500 text-xs">累计收益</dt>
+                      <dd className="font-semibold text-emerald-400">
+                        {parseFloat(asset.totalYield).toFixed(4)} MNT
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </div>
             </Link>

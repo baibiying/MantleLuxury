@@ -3,7 +3,9 @@ package com.mantleluxury.backend.assets.service;
 import com.mantleluxury.backend.assets.api.AssetDto;
 import com.mantleluxury.backend.assets.api.AssetSubmitRequest;
 import com.mantleluxury.backend.assets.domain.Asset;
+import com.mantleluxury.backend.assets.domain.YieldDistribution;
 import com.mantleluxury.backend.assets.repository.AssetRepository;
+import com.mantleluxury.backend.assets.repository.YieldDistributionRepository;
 import com.mantleluxury.backend.blockchain.service.TokenDeploymentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,15 +25,18 @@ public class AssetService {
     
     private final AssetRepository assetRepository;
     private final TokenDeploymentService tokenDeploymentService;
+    private final YieldDistributionRepository yieldDistributionRepository;
     private final org.springframework.core.io.ResourceLoader resourceLoader;
     
     public AssetService(
             AssetRepository assetRepository,
             TokenDeploymentService tokenDeploymentService,
+            YieldDistributionRepository yieldDistributionRepository,
             org.springframework.core.io.ResourceLoader resourceLoader
     ) {
         this.assetRepository = assetRepository;
         this.tokenDeploymentService = tokenDeploymentService;
+        this.yieldDistributionRepository = yieldDistributionRepository;
         this.resourceLoader = resourceLoader;
     }
     
@@ -201,6 +206,17 @@ public class AssetService {
                 ? asset.getTotalSupply() 
                 : BigDecimal.ZERO;
         
+        // 计算累计收益（统计所有收益记录，包括未完成的）
+        BigDecimal totalYield = BigDecimal.ZERO;
+        if (asset.getId() != null) {
+            List<YieldDistribution> yields = yieldDistributionRepository.findByAssetId(asset.getId());
+            totalYield = yields.stream()
+                    .map(dist -> dist.getIsCompleted() 
+                        ? dist.getDistributedAmount() 
+                        : dist.getTotalAmount())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+        
         return new AssetDto(
                 asset.getId().toString(),
                 asset.getAssetType(),
@@ -213,7 +229,8 @@ public class AssetService {
                 asset.getStatus(),
                 asset.getTokenAddress(),  // 合约地址
                 asset.getDescription(),   // 描述
-                asset.getImageUrls()
+                asset.getImageUrls(),     // 图片
+                totalYield                // 累计收益
         );
     }
 }
