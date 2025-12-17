@@ -333,6 +333,33 @@ ensure_schema() {
     else
         print_warn "asset_reviews 表创建失败，请手动检查数据库"
     fi
+
+    # 检查并创建 aml_alerts 表（如果不存在）
+    print_info "检查 aml_alerts 表..."
+    local create_aml_alerts_table_sql="
+        CREATE TABLE IF NOT EXISTS aml_alerts (
+            id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+            wallet_address VARCHAR(42) NOT NULL,
+            alert_type VARCHAR(50) NOT NULL COMMENT '告警类型：blacklist_hit, single_tx_limit, total_limit, external_risk, manual',
+            risk_level VARCHAR(20) NOT NULL COMMENT '风险等级：low, medium, high, critical',
+            source VARCHAR(100) COMMENT '告警来源：internal_rule, chainalysis 等',
+            message TEXT COMMENT '详细告警信息',
+            status VARCHAR(20) NOT NULL DEFAULT 'open' COMMENT 'open, in_review, resolved, ignored',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            handled_by VARCHAR(42) COMMENT '处理人钱包地址',
+            handled_at TIMESTAMP NULL COMMENT '处理时间',
+            handle_notes TEXT COMMENT '处理备注',
+            INDEX idx_wallet_address (wallet_address),
+            INDEX idx_status (status),
+            INDEX idx_risk_level (risk_level)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    "
+    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$create_aml_alerts_table_sql" > /dev/null 2>&1; then
+        print_info "aml_alerts 表检查完成（如不存在已自动创建）"
+    else
+        print_warn "aml_alerts 表创建失败，请手动检查数据库"
+    fi
 }
 
 # 显示连接信息
