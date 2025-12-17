@@ -136,3 +136,72 @@ ERC-20 代币合约，代表单个奢侈品资产的份额。
 - **RPC URL**: https://rpc.sepolia.mantle.xyz
 - **区块浏览器**: https://explorer.sepolia.mantle.xyz
 - **Faucet**: https://faucet.testnet.mantle.xyz/
+
+### 5. 收益分配管理
+
+#### 部署 YieldDistribution 合约
+
+`YieldDistribution` 合约需要手动部署一次（全局单例合约）：
+
+```bash
+cd contracts
+npx hardhat run scripts/deployYieldDistribution.ts --network mantleTestnet
+```
+
+部署完成后，在 `backend/src/main/resources/application.yml` 中配置合约地址：
+
+```yaml
+blockchain:
+  yield-distribution-contract: 0x...  # 填入部署后的合约地址
+```
+
+#### 创建收益分配记录
+
+**获取资产 ID：**
+
+```bash
+curl -s http://localhost:8080/api/assets | jq '.[] | {id: .id, brand: .brand, model: .model}'
+```
+
+**创建收益分配记录：**
+
+```bash
+curl -X POST http://localhost:8080/api/yields/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetId": "资产ID",
+    "yieldType": "appreciation",
+    "totalAmount": 收益金额
+  }'
+```
+
+参数说明：
+- `assetId`: 资产的 UUID（从 `/api/assets` 获取）
+- `yieldType`: 收益类型，`"appreciation"`（升值收益）或 `"rental"`（租赁收益）
+- `totalAmount`: 总收益金额（MNT）
+
+**示例：**
+
+```bash
+# 为资产创建 50 MNT 的升值收益分配
+curl -X POST http://localhost:8080/api/yields/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetId": "062653bc-678b-4a19-b3a8-dec1a4405f00",
+    "yieldType": "appreciation",
+    "totalAmount": 50.0
+  }'
+```
+
+**查看收益记录：**
+
+```bash
+# 查看所有收益记录
+curl -s http://localhost:8080/api/yields | jq .
+
+# 查看用户的收益记录
+curl -s http://localhost:8080/api/yields/user/0x用户地址 | jq .
+
+# 查看资产的收益记录
+curl -s http://localhost:8080/api/yields/asset/资产ID | jq .
+```

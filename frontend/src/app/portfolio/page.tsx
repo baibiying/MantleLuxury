@@ -34,6 +34,7 @@ type Holding = {
   totalCost: string;      // 成本
   pnl: string;            // 浮动收益
   roi: string;            // 收益率（小数，例如 0.12）
+  totalYield: string;     // 累计收益
 };
 
 export default function PortfolioPage() {
@@ -43,6 +44,7 @@ export default function PortfolioPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [totalYield, setTotalYield] = useState<string>("0");
 
   useEffect(() => {
     setMounted(true);
@@ -59,13 +61,15 @@ export default function PortfolioPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `${API_BASE}/api/portfolio/${address}`
-        );
-        if (!res.ok) {
-          throw new Error(`加载持仓失败: ${res.status}`);
+        const [holdingsRes, yieldsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/portfolio/${address}`),
+          fetch(`${API_BASE}/api/portfolio/${address}/yields`),
+        ]);
+
+        if (!holdingsRes.ok) {
+          throw new Error(`加载持仓失败: ${holdingsRes.status}`);
         }
-        const data = await res.json();
+        const data = await holdingsRes.json();
         const parsed: Holding[] = data.map((item: any) => ({
           assetId: item.assetId,
           assetType: item.assetType,
@@ -79,8 +83,14 @@ export default function PortfolioPage() {
           totalCost: item.totalCost?.toString() ?? "0",
           pnl: item.pnl?.toString() ?? "0",
           roi: item.roi?.toString() ?? "0",
+          totalYield: item.totalYield?.toString() ?? "0",
         }));
         setHoldings(parsed);
+
+        if (yieldsRes.ok) {
+          const summary = await yieldsRes.json();
+          setTotalYield(summary.totalYield || "0");
+        }
       } catch (e: any) {
         setError(e.message ?? "加载持仓失败");
       } finally {
@@ -115,7 +125,40 @@ export default function PortfolioPage() {
             </p>
             <WalletConnect />
           </div>
-        ) : loading ? (
+        ) : (
+          <>
+            {/* 总收益统计 */}
+            <div className="mb-6 grid gap-4 md:grid-cols-3">
+              <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
+                <div className="relative z-10">
+                  <div className="text-xs text-slate-400 mb-2">累计收益</div>
+                  <div className="text-2xl font-bold text-emerald-400">
+                    {parseFloat(totalYield).toFixed(4)} MNT
+                  </div>
+                </div>
+              </div>
+              <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+                <div className="relative z-10">
+                  <div className="text-xs text-slate-400 mb-2">持仓资产数</div>
+                  <div className="text-2xl font-bold text-sky-400">
+                    {holdings.length}
+                  </div>
+                </div>
+              </div>
+              <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
+                <div className="relative z-10">
+                  <div className="text-xs text-slate-400 mb-2">总持仓成本</div>
+                  <div className="text-2xl font-bold text-amber-400">
+                    {holdings.reduce((sum, h) => sum + parseFloat(h.totalCost || "0"), 0).toFixed(4)} MNT
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {loading ? (
           <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center text-sm text-slate-300">
             正在加载持仓…
           </div>
@@ -138,6 +181,7 @@ export default function PortfolioPage() {
                   <th className="py-3 text-right font-normal">持仓成本 (MNT)</th>
                   <th className="py-3 text-right font-normal">当前市值 (MNT)</th>
                   <th className="py-3 text-right font-normal">浮动收益 (MNT)</th>
+                  <th className="py-3 text-right font-normal">累计收益 (MNT)</th>
                   <th className="py-3 text-right font-normal">收益率</th>
                   <th className="py-3 text-right font-normal">操作</th>
                 </tr>
@@ -164,6 +208,9 @@ export default function PortfolioPage() {
                     <td className="py-3 text-right">{h.totalCost}</td>
                     <td className="py-3 text-right">{h.estimatedValue}</td>
                     <td className="py-3 text-right">{h.pnl}</td>
+                    <td className="py-3 text-right text-emerald-400">
+                      {parseFloat(h.totalYield || "0").toFixed(4)}
+                    </td>
                     <td className="py-3 text-right">
                       {h.roi
                         ? `${(Number(h.roi) * 100).toFixed(2)}%`
@@ -182,6 +229,8 @@ export default function PortfolioPage() {
               </tbody>
             </table>
           </div>
+          )}
+          </>
         )}
       </div>
     </main>

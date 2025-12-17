@@ -1,12 +1,44 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+
+type YieldDistribution = {
+  id: string;
+  assetId: string;
+  yieldType: string;
+  totalAmount: string;
+  isCompleted: boolean;
+  createdAt: string;
+};
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
+  const [recentYields, setRecentYields] = useState<YieldDistribution[]>([]);
+  const [loadingYields, setLoadingYields] = useState(true);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const loadRecentYields = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/yields/recent?limit=3`);
+        if (res.ok) {
+          const data = await res.json();
+          setRecentYields(data);
+        }
+      } catch (err) {
+        console.error("Failed to load recent yields", err);
+      } finally {
+        setLoadingYields(false);
+      }
+    };
+    loadRecentYields();
   }, []);
 
   return (
@@ -76,6 +108,53 @@ export default function Home() {
             <div className="space-y-2">
               <div className="text-3xl font-bold gradient-text">L2</div>
               <div className="text-sm text-slate-400 uppercase tracking-wide">低成本交易</div>
+            </div>
+          </div>
+        )}
+
+        {/* 最近收益分配记录 */}
+        {mounted && !loadingYields && recentYields.length > 0 && (
+          <div className="mt-16 pt-12 border-t border-slate-800/50 max-w-5xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold gradient-text">最近收益分配</h2>
+              <Link
+                href="/yields"
+                className="text-sm text-sky-400 hover:text-sky-300 transition"
+              >
+                查看全部 →
+              </Link>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              {recentYields.map((yieldItem) => (
+                <div
+                  key={yieldItem.id}
+                  className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          yieldItem.isCompleted
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40"
+                            : "bg-amber-500/20 text-amber-300 border border-amber-400/40"
+                        }`}
+                      >
+                        {yieldItem.isCompleted ? "已完成" : "进行中"}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {yieldItem.yieldType === "appreciation" ? "升值收益" : "租赁收益"}
+                      </span>
+                    </div>
+                    <div className="text-xl font-bold text-emerald-400 mb-2">
+                      {parseFloat(yieldItem.totalAmount).toFixed(4)} MNT
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {new Date(yieldItem.createdAt).toLocaleDateString("zh-CN")}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
