@@ -44,4 +44,10 @@ blockchain:
   private-key: 773d526fabccd1b26abef51ed7bdcda523409069ecfecd4269cb757c282a599e # 从环境变量读取私钥，或直接配置（不要提交到 Git）
   yield-distribution-contract: 0x988304593FC2e89e56FFAD9393Af0B97c37d9E5D  # YieldDistribution 合约地址
 
+# 管理员配置
+admin:
+  # 管理员钱包地址列表（小写，用逗号分隔）
+  # 这些地址可以访问管理后台功能
+  wallet-addresses: "0x70a0af9d47a0f6314c4eef2a68666b096701ebdf"
+
 
