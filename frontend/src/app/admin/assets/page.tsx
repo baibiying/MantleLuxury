@@ -33,9 +33,25 @@ type AssetReview = {
   updatedAt: string;
 };
 
+type AssetAuthentication = {
+  id: string;
+  assetId: string;
+  authenticationStatus: string;
+  authenticatorName: string;
+  authenticatorType: string;
+  verificationDate: string | null;
+  reportUrl: string | null;
+  reportHash: string | null;
+  verifierSignature: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type AssetDetail = {
   asset: any;
   reviews: AssetReview[];
+  authentications?: AssetAuthentication[];
 };
 
 type Stats = {
@@ -62,6 +78,15 @@ export default function AdminAssetsPage() {
   const [actionType, setActionType] = useState("initial_review");
   const [nextStep, setNextStep] = useState("");
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  // 资产真伪认证表单
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authName, setAuthName] = useState("");
+  const [authType, setAuthType] = useState("third_party");
+  const [authReportUrl, setAuthReportUrl] = useState("");
+  const [authReportHash, setAuthReportHash] = useState("");
+  const [authSignature, setAuthSignature] = useState("");
+  const [authNotes, setAuthNotes] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -162,6 +187,26 @@ export default function AdminAssetsPage() {
     }
   };
 
+  const loadAuthentications = async (assetId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/asset-authentications/asset/${assetId}`);
+      if (!res.ok) {
+        return;
+      }
+      const data: AssetAuthentication[] = await res.json();
+      setSelectedAsset((prev) =>
+        prev
+          ? {
+              ...prev,
+              authentications: data,
+            }
+          : prev
+      );
+    } catch {
+      // ignore
+    }
+  };
+
   const handleCreateReview = async () => {
     if (!address || !selectedAsset) return;
     if (!reviewStatus) {
@@ -201,6 +246,84 @@ export default function AdminAssetsPage() {
       loadData();
     } catch (e: any) {
       setError(e.message ?? "创建审核记录失败");
+    }
+  };
+
+  const handleCreateAuthentication = async () => {
+    if (!selectedAsset) return;
+    if (!authName.trim()) {
+      setError("请输入鉴定机构名称");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/asset-authentications`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          assetId: selectedAsset.asset.id,
+          authenticatorName: authName.trim(),
+          authenticatorType: authType,
+          reportUrl: authReportUrl.trim() || null,
+          reportHash: authReportHash.trim() || null,
+          verifierSignature: authSignature.trim() || null,
+          notes: authNotes.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "创建认证记录失败");
+      }
+      setSuccess("✅ 认证记录已创建（状态：待审核）");
+      setTimeout(() => setSuccess(null), 3000);
+      setShowAuthModal(false);
+      setAuthName("");
+      setAuthType("third_party");
+      setAuthReportUrl("");
+      setAuthReportHash("");
+      setAuthSignature("");
+      setAuthNotes("");
+      await loadAuthentications(selectedAsset.asset.id);
+    } catch (e: any) {
+      setError(e.message ?? "创建认证记录失败");
+    }
+  };
+
+  const handleReviewAuthentication = async (
+    authenticationId: string,
+    status: "verified" | "rejected"
+  ) => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/asset-authentications/${authenticationId}/review`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status,
+            notes: null,
+          }),
+        }
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "更新认证状态失败");
+      }
+      setSuccess(
+        status === "verified" ? "✅ 认证已标记为通过" : "✅ 认证已标记为拒绝"
+      );
+      setTimeout(() => setSuccess(null), 3000);
+      if (selectedAsset) {
+        await Promise.all([
+          loadAssetDetail(selectedAsset.asset.id),
+          loadAuthentications(selectedAsset.asset.id),
+        ]);
+      }
+    } catch (e: any) {
+      setError(e.message ?? "更新认证状态失败");
     }
   };
 
@@ -556,6 +679,129 @@ export default function AdminAssetsPage() {
                       )}
                     </div>
 
+                    {/* 真伪认证记录 */}
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold">真伪认证记录</h3>
+                        <button
+                          onClick={() => {
+                            setShowAuthModal(true);
+                          }}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-sm font-medium transition-colors"
+                        >
+                          + 添加认证记录
+                        </button>
+                      </div>
+                      {!selectedAsset.authentications ||
+                      selectedAsset.authentications.length === 0 ? (
+                        <div className="text-center py-6 text-slate-400 text-sm">
+                          暂无认证记录
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {selectedAsset.authentications.map((auth) => (
+                            <div
+                              key={auth.id}
+                              className="p-4 bg-slate-800/50 rounded-lg border border-slate-700"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <div className="text-sm font-medium text-slate-200">
+                                    {auth.authenticatorName}
+                                  </div>
+                                  <div className="text-xs text-slate-400 mt-1">
+                                    {auth.authenticatorType === "official_brand"
+                                      ? "官方品牌认证"
+                                      : auth.authenticatorType === "third_party"
+                                      ? "第三方机构认证"
+                                      : "AI 系统认证"}
+                                  </div>
+                                  {auth.verificationDate && (
+                                    <div className="text-xs text-slate-500 mt-1">
+                                      鉴定日期：
+                                      {new Date(
+                                        auth.verificationDate
+                                      ).toLocaleDateString("zh-CN")}
+                                    </div>
+                                  )}
+                                  {auth.reportUrl && (
+                                    <a
+                                      href={auth.reportUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-sky-400 hover:text-sky-300 mt-1 inline-block"
+                                    >
+                                      查看认证报告 →
+                                    </a>
+                                  )}
+                                  {auth.reportHash && (
+                                    <div className="text-xs text-slate-500 mt-1 font-mono">
+                                      报告哈希：
+                                      {auth.reportHash.slice(0, 18)}...
+                                    </div>
+                                  )}
+                                  {auth.notes && (
+                                    <div className="text-xs text-slate-400 mt-1 whitespace-pre-line">
+                                      备注：{auth.notes}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <span
+                                    className={`inline-block mb-2 text-xs rounded-full px-2 py-1 border ${
+                                      auth.authenticationStatus === "verified"
+                                        ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/10"
+                                        : auth.authenticationStatus ===
+                                          "rejected"
+                                        ? "border-red-400/60 text-red-200 bg-red-500/10"
+                                        : "border-amber-400/60 text-amber-200 bg-amber-500/10"
+                                    }`}
+                                  >
+                                    {auth.authenticationStatus === "verified"
+                                      ? "已认证"
+                                      : auth.authenticationStatus ===
+                                        "rejected"
+                                      ? "已拒绝"
+                                      : "待审核"}
+                                  </span>
+                                  <div className="flex flex-col gap-1">
+                                    <button
+                                      onClick={() =>
+                                        handleReviewAuthentication(
+                                          auth.id,
+                                          "verified"
+                                        )
+                                      }
+                                      disabled={
+                                        auth.authenticationStatus === "verified"
+                                      }
+                                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-400 rounded text-white text-xs font-medium transition-colors"
+                                    >
+                                      标记为通过
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleReviewAuthentication(
+                                          auth.id,
+                                          "rejected"
+                                        )
+                                      }
+                                      disabled={
+                                        auth.authenticationStatus === "rejected"
+                                      }
+                                      className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-400 rounded text-white text-xs font-medium transition-colors"
+                                    >
+                                      标记为拒绝
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {/* 操作按钮 */}
                     <div className="flex gap-3">
                       <Link
@@ -658,6 +904,120 @@ export default function AdminAssetsPage() {
                       </button>
                       <button
                         onClick={() => setShowReviewModal(false)}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 添加真伪认证记录模态框 */}
+            {showAuthModal && selectedAsset && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold">添加真伪认证记录</h2>
+                    <button
+                      onClick={() => setShowAuthModal(false)}
+                      className="text-slate-400 hover:text-slate-200"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        鉴定机构名称 *
+                      </label>
+                      <input
+                        type="text"
+                        value={authName}
+                        onChange={(e) => setAuthName(e.target.value)}
+                        placeholder="例如：某某鉴定中心 / 品牌官方"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        鉴定类型
+                      </label>
+                      <select
+                        value={authType}
+                        onChange={(e) => setAuthType(e.target.value)}
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="official_brand">官方品牌认证</option>
+                        <option value="third_party">第三方机构认证</option>
+                        <option value="ai_system">AI 系统辅助认证</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        认证报告链接
+                      </label>
+                      <input
+                        type="text"
+                        value={authReportUrl}
+                        onChange={(e) => setAuthReportUrl(e.target.value)}
+                        placeholder="IPFS / S3 / 其他存储的报告 URL"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        报告哈希（可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={authReportHash}
+                        onChange={(e) => setAuthReportHash(e.target.value)}
+                        placeholder="例如：IPFS CID 或链上记录哈希"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        鉴定师签名/证书信息（可选）
+                      </label>
+                      <textarea
+                        value={authSignature}
+                        onChange={(e) => setAuthSignature(e.target.value)}
+                        placeholder="可以粘贴证书编号、签名摘要等信息"
+                        rows={3}
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        备注（可选）
+                      </label>
+                      <textarea
+                        value={authNotes}
+                        onChange={(e) => setAuthNotes(e.target.value)}
+                        placeholder="补充说明，例如：综合两家机构意见后结论为真品"
+                        rows={3}
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        onClick={handleCreateAuthentication}
+                        className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-medium transition-colors"
+                      >
+                        提交认证记录
+                      </button>
+                      <button
+                        onClick={() => setShowAuthModal(false)}
                         className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors"
                       >
                         取消
