@@ -20,6 +20,19 @@ type Asset = {
   tokenAddress: string | null;
   imageUrls?: string | null;
   totalYield?: string | null; // 累计收益
+  custody?: {
+    id: string;
+    custodyStatus: string;
+    custodyOrganization: string;
+  } | null;
+  insurance?: {
+    id: string;
+    isActive: boolean;
+  } | null;
+  authentications?: Array<{
+    id: string;
+    authenticationStatus: string;
+  }>;
 };
 
 const API_BASE =
@@ -288,25 +301,46 @@ export default function AssetsPage() {
                       </p>
                     )}
                   </div>
-                  <span
-                    className={`text-xs rounded-full px-3 py-1.5 border font-medium ${
-                      asset.status === "fundraising"
-                        ? "border-amber-400/60 text-amber-200 bg-amber-500/20 shadow-lg shadow-amber-500/20"
-                        : asset.status === "funded"
-                        ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/20 shadow-lg shadow-emerald-500/20"
-                        : asset.status === "registered"
-                        ? "border-blue-400/60 text-blue-200 bg-blue-500/20 shadow-lg shadow-blue-500/20"
-                        : "border-slate-500/60 text-slate-200 bg-slate-500/20"
-                    }`}
-                  >
-                    {asset.status === "fundraising"
-                      ? "募集中"
-                      : asset.status === "funded"
-                      ? "已满额"
-                      : asset.status === "registered"
-                      ? "待认证"
-                      : "已结束"}
-                  </span>
+                  {(() => {
+                    // 检查资产是否真正可以投资
+                    const hasVerifiedAuth = asset.authentications && asset.authentications.some(
+                      (auth) => auth.authenticationStatus === "verified"
+                    );
+                    const hasCustody = asset.custody != null;
+                    const hasInsurance = asset.insurance != null && asset.insurance.isActive;
+                    const canInvest = asset.status === "fundraising" && hasVerifiedAuth && hasCustody && hasInsurance;
+                    
+                    // 如果状态是 fundraising 但缺少必要条件，显示"准备中"
+                    const displayStatus = asset.status === "fundraising" && !canInvest
+                      ? "preparing"
+                      : asset.status;
+                    
+                    return (
+                      <span
+                        className={`text-xs rounded-full px-3 py-1.5 border font-medium ${
+                          displayStatus === "fundraising"
+                            ? "border-amber-400/60 text-amber-200 bg-amber-500/20 shadow-lg shadow-amber-500/20"
+                            : displayStatus === "funded"
+                            ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/20 shadow-lg shadow-emerald-500/20"
+                            : displayStatus === "registered"
+                            ? "border-blue-400/60 text-blue-200 bg-blue-500/20 shadow-lg shadow-blue-500/20"
+                            : displayStatus === "preparing"
+                            ? "border-orange-400/60 text-orange-200 bg-orange-500/20 shadow-lg shadow-orange-500/20"
+                            : "border-slate-500/60 text-slate-200 bg-slate-500/20"
+                        }`}
+                      >
+                        {displayStatus === "fundraising"
+                          ? "募集中"
+                          : displayStatus === "funded"
+                          ? "已满额"
+                          : displayStatus === "registered"
+                          ? "待认证"
+                          : displayStatus === "preparing"
+                          ? "准备中"
+                          : "已结束"}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">

@@ -191,6 +191,68 @@ ensure_schema() {
     else
         print_warn "asset_authentications 表创建失败，请手动检查数据库"
     fi
+    
+    # 检查并创建 custodies 表（如果不存在）
+    print_info "检查 custodies 表..."
+    local create_custody_table_sql="
+        CREATE TABLE IF NOT EXISTS custodies (
+            id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+            asset_id CHAR(36) NOT NULL UNIQUE,
+            custody_status VARCHAR(20) NOT NULL DEFAULT 'registered' COMMENT 'registered, in_custody, for_sale, sold, withdrawn',
+            custody_organization VARCHAR(200) NOT NULL COMMENT '托管机构名称',
+            warehouse_location VARCHAR(500) COMMENT '仓储位置（模糊显示）',
+            warehouse_address_hash VARCHAR(66) COMMENT '详细地址哈希（链上存证）',
+            entry_date DATE COMMENT '入库日期',
+            custody_contract_url TEXT COMMENT '托管合同 URL',
+            custody_contract_hash VARCHAR(66) COMMENT '托管合同哈希（链上存证）',
+            facility_standards TEXT COMMENT '设施标准（恒温恒湿、防火防盗等）',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+            INDEX idx_asset_id (asset_id),
+            INDEX idx_custody_status (custody_status),
+            INDEX idx_custody_organization (custody_organization)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    "
+    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$create_custody_table_sql" > /dev/null 2>&1; then
+        print_info "custodies 表检查完成（如不存在已自动创建）"
+    else
+        print_warn "custodies 表创建失败，请手动检查数据库"
+    fi
+    
+    # 检查并创建 insurances 表（如果不存在）
+    print_info "检查 insurances 表..."
+    local create_insurance_table_sql="
+        CREATE TABLE IF NOT EXISTS insurances (
+            id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+            asset_id CHAR(36) NOT NULL,
+            insurance_company VARCHAR(200) NOT NULL COMMENT '保险公司名称',
+            policy_number VARCHAR(100) COMMENT '保单号',
+            coverage_amount DECIMAL(36, 18) NOT NULL COMMENT '保额',
+            coverage_currency VARCHAR(10) NOT NULL DEFAULT 'USD' COMMENT '保额币种',
+            policy_start_date DATE NOT NULL COMMENT '保单生效日期',
+            policy_end_date DATE NOT NULL COMMENT '保单到期日期',
+            premium_amount DECIMAL(36, 18) COMMENT '保费',
+            coverage_type VARCHAR(50) COMMENT '保险类型（全险、盗窃险等）',
+            policy_document_url TEXT COMMENT '保单文档 URL',
+            policy_document_hash VARCHAR(66) COMMENT '保单文档哈希（链上存证）',
+            is_active BOOLEAN NOT NULL DEFAULT TRUE COMMENT '保单是否有效',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+            INDEX idx_asset_id (asset_id),
+            INDEX idx_insurance_company (insurance_company),
+            INDEX idx_is_active (is_active),
+            INDEX idx_policy_end_date (policy_end_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    "
+    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$create_insurance_table_sql" > /dev/null 2>&1; then
+        print_info "insurances 表检查完成（如不存在已自动创建）"
+    else
+        print_warn "insurances 表创建失败，请手动检查数据库"
+    fi
 }
 
 # 显示连接信息

@@ -35,6 +35,25 @@ type Asset = {
     verifierSignature: string | null;
     notes: string | null;
   }>;
+  custody?: {
+    id: string;
+    custodyStatus: string;
+    custodyOrganization: string;
+    warehouseLocation: string | null;
+    entryDate: string | null;
+    facilityStandards: string | null;
+  } | null;
+  insurance?: {
+    id: string;
+    insuranceCompany: string;
+    policyNumber: string | null;
+    coverageAmount: string;
+    coverageCurrency: string;
+    policyStartDate: string;
+    policyEndDate: string;
+    coverageType: string | null;
+    isActive: boolean;
+  } | null;
 };
 
 export default function AssetDetailPage() {
@@ -570,6 +589,102 @@ export default function AssetDetailPage() {
                   </p>
                 </div>
               )}
+
+              {/* 托管与保险信息 */}
+              {(asset.custody || asset.insurance) && (
+                <div className="mt-4 pt-4 border-t border-slate-800">
+                  <h3 className="text-sm font-medium text-slate-300 mb-3">托管与保险</h3>
+                  <div className="space-y-3">
+                    {asset.custody && (
+                      <div className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">
+                              托管机构：{asset.custody.custodyOrganization}
+                            </div>
+                            {asset.custody.warehouseLocation && (
+                              <div className="text-xs text-slate-400 mt-1">
+                                仓储位置：{asset.custody.warehouseLocation}
+                              </div>
+                            )}
+                            {asset.custody.entryDate && (
+                              <div className="text-xs text-slate-400 mt-1">
+                                入库日期：{new Date(asset.custody.entryDate).toLocaleDateString("zh-CN")}
+                              </div>
+                            )}
+                            {asset.custody.facilityStandards && (
+                              <div className="text-xs text-slate-400 mt-1">
+                                设施标准：{asset.custody.facilityStandards}
+                              </div>
+                            )}
+                          </div>
+                          <span
+                            className={`text-xs rounded-full px-2 py-1 border ${
+                              asset.custody.custodyStatus === "in_custody"
+                                ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/10"
+                                : "border-slate-400/60 text-slate-200 bg-slate-500/10"
+                            }`}
+                          >
+                            {asset.custody.custodyStatus === "in_custody"
+                              ? "托管中"
+                              : asset.custody.custodyStatus === "for_sale"
+                              ? "待售"
+                              : asset.custody.custodyStatus === "sold"
+                              ? "已售"
+                              : "已注册"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {asset.insurance && asset.insurance.isActive && (
+                      <div className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">
+                              保险公司：{asset.insurance.insuranceCompany}
+                            </div>
+                            {asset.insurance.policyNumber && (
+                              <div className="text-xs text-slate-400 mt-1">
+                                保单号：{asset.insurance.policyNumber}
+                              </div>
+                            )}
+                            <div className="text-xs text-slate-400 mt-1">
+                              保额：{parseFloat(asset.insurance.coverageAmount).toLocaleString()} {asset.insurance.coverageCurrency}
+                            </div>
+                            {asset.insurance.coverageType && (
+                              <div className="text-xs text-slate-400 mt-1">
+                                保险类型：{asset.insurance.coverageType}
+                              </div>
+                            )}
+                            <div className="text-xs text-slate-400 mt-1">
+                              有效期：{new Date(asset.insurance.policyStartDate).toLocaleDateString("zh-CN")} - {new Date(asset.insurance.policyEndDate).toLocaleDateString("zh-CN")}
+                            </div>
+                          </div>
+                          <span className="text-xs rounded-full px-2 py-1 border border-emerald-400/60 text-emerald-200 bg-emerald-500/10">
+                            有效
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {(!asset.custody && !asset.insurance) && (
+                      <p className="text-xs text-slate-500">
+                        暂无托管和保险信息
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {(!asset.custody && !asset.insurance) && (
+                <div className="mt-4 pt-4 border-t border-slate-800">
+                  <h3 className="text-sm font-medium text-slate-300 mb-2">托管与保险</h3>
+                  <p className="text-xs text-slate-500">
+                    暂无托管和保险信息
+                  </p>
+                </div>
+              )}
               </div>
             </div>
           </div>
@@ -581,12 +696,14 @@ export default function AssetDetailPage() {
             <div className="relative z-10">
             <h2 className="text-xl font-semibold mb-4 gradient-text">投资此资产</h2>
 
-            {/* 检查资产是否有已通过的认证 */}
+            {/* 检查资产是否符合投资条件 */}
             {(() => {
               const hasVerifiedAuth = asset.authentications && asset.authentications.some(
                 (auth) => auth.authenticationStatus === "verified"
               );
-              const canInvest = asset.status === "fundraising" && hasVerifiedAuth;
+              const hasCustody = asset.custody != null;
+              const hasInsurance = asset.insurance != null && asset.insurance.isActive;
+              const canInvest = asset.status === "fundraising" && hasVerifiedAuth && hasCustody && hasInsurance;
               
               if (!canInvest) {
                 if (asset.status === "registered") {
@@ -594,6 +711,33 @@ export default function AssetDetailPage() {
                     <div className="mb-4 p-4 bg-blue-950/40 border border-blue-500/40 rounded-lg">
                       <p className="text-sm text-blue-200">
                         此资产正在等待认证审核，认证通过后才能开始募集。
+                      </p>
+                    </div>
+                  );
+                }
+                if (!hasVerifiedAuth) {
+                  return (
+                    <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
+                      <p className="text-sm text-amber-200">
+                        此资产尚未通过真伪认证，无法投资。
+                      </p>
+                    </div>
+                  );
+                }
+                if (!hasCustody) {
+                  return (
+                    <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
+                      <p className="text-sm text-amber-200">
+                        此资产尚未进入托管，为保障资产安全，无法投资。
+                      </p>
+                    </div>
+                  );
+                }
+                if (!hasInsurance) {
+                  return (
+                    <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
+                      <p className="text-sm text-amber-200">
+                        此资产尚未购买保险，为保障投资者权益，无法投资。
                       </p>
                     </div>
                   );
@@ -636,7 +780,9 @@ export default function AssetDetailPage() {
               const hasVerifiedAuth = asset.authentications && asset.authentications.some(
                 (auth) => auth.authenticationStatus === "verified"
               );
-              const canInvest = asset.status === "fundraising" && hasVerifiedAuth;
+              const hasCustody = asset.custody != null;
+              const hasInsurance = asset.insurance != null && asset.insurance.isActive;
+              const canInvest = asset.status === "fundraising" && hasVerifiedAuth && hasCustody && hasInsurance;
               return canInvest && isConnected && chainId === mantleSepoliaTestnet.id;
             })() && (
               <div className="space-y-4">

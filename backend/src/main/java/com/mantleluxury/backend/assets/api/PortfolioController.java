@@ -9,6 +9,9 @@ import com.mantleluxury.backend.assets.repository.UserHoldingRepository;
 import com.mantleluxury.backend.assets.repository.UserInvestmentRepository;
 import com.mantleluxury.backend.assets.repository.YieldDistributionRepository;
 import com.mantleluxury.backend.assets.service.AmlService;
+import com.mantleluxury.backend.assets.service.CustodyService;
+import com.mantleluxury.backend.assets.service.InsuranceService;
+import com.mantleluxury.backend.assets.service.AssetAuthenticationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,17 +30,26 @@ public class PortfolioController {
     private final UserInvestmentRepository investmentRepository;
     private final YieldDistributionRepository yieldDistributionRepository;
     private final AmlService amlService;
+    private final CustodyService custodyService;
+    private final InsuranceService insuranceService;
+    private final AssetAuthenticationService authenticationService;
 
     public PortfolioController(UserHoldingRepository holdingRepository,
                                AssetRepository assetRepository,
                                UserInvestmentRepository investmentRepository,
                                YieldDistributionRepository yieldDistributionRepository,
-                               AmlService amlService) {
+                               AmlService amlService,
+                               CustodyService custodyService,
+                               InsuranceService insuranceService,
+                               AssetAuthenticationService authenticationService) {
         this.holdingRepository = holdingRepository;
         this.assetRepository = assetRepository;
         this.investmentRepository = investmentRepository;
         this.yieldDistributionRepository = yieldDistributionRepository;
         this.amlService = amlService;
+        this.custodyService = custodyService;
+        this.insuranceService = insuranceService;
+        this.authenticationService = authenticationService;
     }
 
     @GetMapping("/{userAddress}")
@@ -187,6 +199,34 @@ public class PortfolioController {
             // AML：黑名单 + 投资额度
             amlService.checkAddress(userAddress);
             amlService.checkInvestmentLimits(userAddress, new BigDecimal(amountStr));
+
+            // 合规性检查：资产必须通过认证、有托管和保险
+            Asset asset = assetRepository.findById(assetId)
+                    .orElseThrow(() -> new RuntimeException("Asset not found: " + assetId));
+            
+            // 检查资产状态
+            if (!"fundraising".equals(asset.getStatus())) {
+                return ResponseEntity.badRequest()
+                        .body("Asset is not in fundraising status. Current status: " + asset.getStatus());
+            }
+            
+            // 检查是否有已通过的认证
+            if (!authenticationService.hasVerifiedAuthentication(assetId)) {
+                return ResponseEntity.badRequest()
+                        .body("Asset has not been verified. Investment is not allowed.");
+            }
+            
+            // 检查是否有托管记录
+            if (!custodyService.getCustodyByAssetId(assetId).isPresent()) {
+                return ResponseEntity.badRequest()
+                        .body("Asset is not in custody. Investment is not allowed for security reasons.");
+            }
+            
+            // 检查是否有有效保险
+            if (!insuranceService.getActiveInsuranceByAssetId(assetId).isPresent()) {
+                return ResponseEntity.badRequest()
+                        .body("Asset does not have active insurance. Investment is not allowed to protect investor interests.");
+            }
 
             UserInvestment inv = new UserInvestment();
             inv.setUserAddress(userAddress);

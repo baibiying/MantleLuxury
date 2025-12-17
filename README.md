@@ -355,3 +355,299 @@ echo "✅ 资产 $ASSET_ID 已认证通过，状态已更新为 fundraising"
 - 创建认证记录后，状态仍为 `registered`（待审核）
 - 审核通过认证后，资产状态会自动更新为 `fundraising`（募集中），此时用户可以投资
 - 只有状态为 `fundraising` 且有已通过认证的资产才能被投资
+
+---
+
+### 7. 资产托管管理
+
+#### 创建托管记录
+
+为资产创建托管记录（资产实物进入托管机构）：
+
+**API 端点：** `POST /api/custodies`
+
+**请求参数：**
+- `assetId`: 资产 ID（必需）
+- `custodyOrganization`: 托管机构名称（必需）
+- `warehouseLocation`: 仓储位置（模糊显示，如"香港-XX区"）
+- `warehouseAddressHash`: 详细地址哈希（链上存证）
+- `entryDate`: 入库日期（格式：YYYY-MM-DD）
+- `custodyContractUrl`: 托管合同 URL
+- `custodyContractHash`: 托管合同哈希（链上存证）
+- `facilityStandards`: 设施标准（恒温恒湿、防火防盗等）
+- `notes`: 备注信息
+
+**示例：**
+
+```bash
+# 为资产创建托管记录（完整参数）
+curl -X POST http://localhost:8080/api/custodies \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetId": "80ef25bb-db72-4cc5-8d7d-9d6609c64de9",
+    "custodyOrganization": "香港国际仓储中心",
+    "warehouseLocation": "香港-中环区",
+    "warehouseAddressHash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "entryDate": "2025-01-15",
+    "custodyContractUrl": "https://ipfs.io/ipfs/QmCustodyContract123",
+    "custodyContractHash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+    "facilityStandards": "恒温恒湿（20°C，湿度 50%），24/7 监控，防火防盗系统",
+    "notes": "资产已安全入库，状态良好"
+  }'
+
+# 为资产创建托管记录（简化版，仅必需参数）
+curl -X POST http://localhost:8080/api/custodies \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetId": "80ef25bb-db72-4cc5-8d7d-9d6609c64de9",
+    "custodyOrganization": "香港国际仓储中心",
+    "warehouseLocation": "香港-中环区",
+    "entryDate": "2025-01-15",
+    "facilityStandards": "恒温恒湿（20°C，湿度 50%），24/7 监控，防火防盗系统"
+  }'
+
+# 使用变量快速创建（替换 ASSET_ID 为实际资产 ID）
+ASSET_ID="80ef25bb-db72-4cc5-8d7d-9d6609c64de9"
+curl -X POST http://localhost:8080/api/custodies \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"assetId\": \"$ASSET_ID\",
+    \"custodyOrganization\": \"香港国际仓储中心\",
+    \"warehouseLocation\": \"香港-中环区\",
+    \"entryDate\": \"$(date +%Y-%m-%d)\",
+    \"facilityStandards\": \"恒温恒湿（20°C，湿度 50%），24/7 监控，防火防盗系统\",
+    \"notes\": \"资产已安全入库，状态良好\"
+  }"
+```
+
+#### 更新托管状态
+
+更新资产的托管状态：
+
+**API 端点：** `POST /api/custodies/{assetId}/status`
+
+**请求参数：**
+- `status`: 托管状态，可选值：
+  - `"registered"` - 已注册
+  - `"in_custody"` - 托管中
+  - `"for_sale"` - 待售
+  - `"sold"` - 已售
+  - `"withdrawn"` - 已提取
+
+**示例：**
+
+```bash
+# 更新托管状态为"托管中"
+curl -X POST http://localhost:8080/api/custodies/{资产ID}/status \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "in_custody"
+  }'
+```
+
+#### 查看托管记录
+
+```bash
+# 查看资产的托管记录
+curl -s http://localhost:8080/api/custodies/asset/{资产ID} | jq .
+
+# 查看所有托管记录
+curl -s http://localhost:8080/api/custodies | jq .
+```
+
+**前端显示：**
+
+托管信息会自动显示在资产详情页面（`/assets/{id}`）的"托管与保险"部分，包括：
+- 托管机构名称
+- 仓储位置（模糊显示）
+- 入库日期
+- 设施标准
+- 托管状态
+
+---
+
+### 8. 资产保险管理
+
+#### 创建保险记录
+
+为资产购买保险（保额需不低于资产估值）：
+
+**API 端点：** `POST /api/insurances`
+
+**请求参数：**
+- `assetId`: 资产 ID（必需）
+- `insuranceCompany`: 保险公司名称（必需）
+- `policyNumber`: 保单号
+- `coverageAmount`: 保额（必需，需不低于资产估值）
+- `coverageCurrency`: 保额币种（默认：USD）
+- `policyStartDate`: 保单生效日期（格式：YYYY-MM-DD，默认：今天）
+- `policyEndDate`: 保单到期日期（格式：YYYY-MM-DD，必需）
+- `premiumAmount`: 保费
+- `coverageType`: 保险类型（默认：全险）
+- `policyDocumentUrl`: 保单文档 URL
+- `policyDocumentHash`: 保单文档哈希（链上存证）
+- `notes`: 备注信息
+
+**示例：**
+
+```bash
+# 为资产购买全险（完整参数）
+curl -X POST http://localhost:8080/api/insurances \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetId": "80ef25bb-db72-4cc5-8d7d-9d6609c64de9",
+    "insuranceCompany": "香港保险有限公司",
+    "policyNumber": "POL-2025-001234",
+    "coverageAmount": 50000,
+    "coverageCurrency": "USD",
+    "policyStartDate": "2025-01-15",
+    "policyEndDate": "2026-01-15",
+    "premiumAmount": 500,
+    "coverageType": "全险",
+    "policyDocumentUrl": "https://ipfs.io/ipfs/QmInsuranceDoc123",
+    "policyDocumentHash": "0x9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba",
+    "notes": "保单已生效，覆盖盗窃、火灾、自然灾害等风险"
+  }'
+
+# 为资产购买全险（简化版，仅必需参数）
+curl -X POST http://localhost:8080/api/insurances \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetId": "80ef25bb-db72-4cc5-8d7d-9d6609c64de9",
+    "insuranceCompany": "香港保险有限公司",
+    "coverageAmount": 50000,
+    "coverageCurrency": "USD",
+    "policyEndDate": "2026-01-15",
+    "coverageType": "全险"
+  }'
+
+# 使用变量快速创建（替换 ASSET_ID 为实际资产 ID，兼容 macOS）
+ASSET_ID="80ef25bb-db72-4cc5-8d7d-9d6609c64de9"
+curl -X POST http://localhost:8080/api/insurances \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"assetId\": \"$ASSET_ID\",
+    \"insuranceCompany\": \"香港保险有限公司\",
+    \"policyNumber\": \"POL-$(date +%Y)-$(printf '%06d' $RANDOM)\",
+    \"coverageAmount\": 50000,
+    \"coverageCurrency\": \"USD\",
+    \"policyStartDate\": \"$(date +%Y-%m-%d)\",
+    \"policyEndDate\": \"$(date -v+1y +%Y-%m-%d 2>/dev/null || date -d '+1 year' +%Y-%m-%d)\",
+    \"premiumAmount\": 500,
+    \"coverageType\": \"全险\",
+    \"notes\": \"保单已生效，覆盖盗窃、火灾、自然灾害等风险\"
+  }"
+```
+
+#### 续保
+
+为资产续保（创建新的保险记录，将旧的设为非活跃）：
+
+**API 端点：** `POST /api/insurances/renew`
+
+**请求参数：** 与创建保险记录相同
+
+**示例：**
+
+```bash
+# 续保
+curl -X POST http://localhost:8080/api/insurances/renew \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assetId": "80ef25bb-db72-4cc5-8d7d-9d6609c64de9",
+    "insuranceCompany": "香港保险有限公司",
+    "policyNumber": "POL-2026-001234",
+    "coverageAmount": 55000,
+    "coverageCurrency": "USD",
+    "policyStartDate": "2026-01-15",
+    "policyEndDate": "2027-01-15",
+    "premiumAmount": 550,
+    "coverageType": "全险"
+  }'
+```
+
+#### 查看保险记录
+
+```bash
+# 查看资产的有效保险记录
+curl -s http://localhost:8080/api/insurances/asset/{资产ID} | jq .
+
+# 查看资产的所有保险记录（包括历史记录）
+curl -s http://localhost:8080/api/insurances/asset/{资产ID}/all | jq .
+
+# 查看即将到期的保险（30天内）
+curl -s "http://localhost:8080/api/insurances/expiring?daysBeforeExpiry=30" | jq .
+```
+
+**前端显示：**
+
+保险信息会自动显示在资产详情页面（`/assets/{id}`）的"托管与保险"部分，包括：
+- 保险公司名称
+- 保单号
+- 保额和币种
+- 保险类型
+- 保单有效期
+- 保单状态（有效/已过期）
+
+---
+
+### 快速托管和保险脚本
+
+以下脚本可以帮助你快速为指定资产创建托管和保险记录。请替换 `ASSET_ID` 为你的实际资产 ID。
+
+```bash
+# 替换为你的实际资产 ID
+ASSET_ID="YOUR_ASSET_ID_HERE"
+
+echo "为资产 $ASSET_ID 创建托管记录..."
+CUSTODY_RESPONSE=$(curl -s -X POST http://localhost:8080/api/custodies \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"assetId\": \"$ASSET_ID\",
+    \"custodyOrganization\": \"香港国际仓储中心\",
+    \"warehouseLocation\": \"香港-中环区\",
+    \"warehouseAddressHash\": \"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\",
+    \"entryDate\": \"$(date +%Y-%m-%d)\",
+    \"custodyContractUrl\": \"https://ipfs.io/ipfs/QmCustodyContract123\",
+    \"custodyContractHash\": \"0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890\",
+    \"facilityStandards\": \"恒温恒湿（20°C，湿度 50%），24/7 监控，防火防盗系统\",
+    \"notes\": \"资产已安全入库，状态良好\"
+  }")
+
+CUSTODY_ID=$(echo $CUSTODY_RESPONSE | jq -r '.id')
+
+if [ "$CUSTODY_ID" == "null" ] || [ -z "$CUSTODY_ID" ]; then
+  echo "错误：未能创建托管记录或解析托管ID。响应：$CUSTODY_RESPONSE"
+  exit 1
+fi
+
+echo "托管记录已创建，ID: $CUSTODY_ID"
+
+echo "为资产 $ASSET_ID 创建保险记录..."
+INSURANCE_RESPONSE=$(curl -s -X POST http://localhost:8080/api/insurances \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"assetId\": \"$ASSET_ID\",
+    \"insuranceCompany\": \"香港保险有限公司\",
+    \"policyNumber\": \"POL-$(date +%Y)-$(printf '%06d' $RANDOM)\",
+    \"coverageAmount\": 50000,
+    \"coverageCurrency\": \"USD\",
+    \"policyStartDate\": \"$(date +%Y-%m-%d)\",
+    \"policyEndDate\": \"$(date -v+1y +%Y-%m-%d 2>/dev/null || date -d '+1 year' +%Y-%m-%d)\",
+    \"premiumAmount\": 500,
+    \"coverageType\": \"全险\",
+    \"policyDocumentUrl\": \"https://ipfs.io/ipfs/QmInsuranceDoc123\",
+    \"policyDocumentHash\": \"0x9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba\",
+    \"notes\": \"保单已生效，覆盖盗窃、火灾、自然灾害等风险\"
+  }")
+
+INSURANCE_ID=$(echo $INSURANCE_RESPONSE | jq -r '.id')
+
+if [ "$INSURANCE_ID" == "null" ] || [ -z "$INSURANCE_ID" ]; then
+  echo "错误：未能创建保险记录或解析保险ID。响应：$INSURANCE_RESPONSE"
+  exit 1
+fi
+
+echo "保险记录已创建，ID: $INSURANCE_ID"
+echo "✅ 资产 $ASSET_ID 的托管和保险记录已创建完成。"
+```

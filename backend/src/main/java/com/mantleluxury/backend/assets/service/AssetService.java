@@ -4,10 +4,14 @@ import com.mantleluxury.backend.assets.api.AssetDto;
 import com.mantleluxury.backend.assets.api.AssetSubmitRequest;
 import com.mantleluxury.backend.assets.domain.Asset;
 import com.mantleluxury.backend.assets.domain.AssetAuthentication;
+import com.mantleluxury.backend.assets.domain.Custody;
+import com.mantleluxury.backend.assets.domain.Insurance;
 import com.mantleluxury.backend.assets.domain.YieldDistribution;
 import com.mantleluxury.backend.assets.repository.AssetRepository;
 import com.mantleluxury.backend.assets.repository.YieldDistributionRepository;
 import com.mantleluxury.backend.assets.service.AssetAuthenticationService;
+import com.mantleluxury.backend.assets.service.CustodyService;
+import com.mantleluxury.backend.assets.service.InsuranceService;
 import com.mantleluxury.backend.blockchain.service.TokenDeploymentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +35,8 @@ public class AssetService {
     private final TokenDeploymentService tokenDeploymentService;
     private final YieldDistributionRepository yieldDistributionRepository;
     private final AssetAuthenticationService authenticationService;
+    private final CustodyService custodyService;
+    private final InsuranceService insuranceService;
     private final org.springframework.core.io.ResourceLoader resourceLoader;
     
     public AssetService(
@@ -38,12 +44,16 @@ public class AssetService {
             TokenDeploymentService tokenDeploymentService,
             YieldDistributionRepository yieldDistributionRepository,
             AssetAuthenticationService authenticationService,
+            CustodyService custodyService,
+            InsuranceService insuranceService,
             org.springframework.core.io.ResourceLoader resourceLoader
     ) {
         this.assetRepository = assetRepository;
         this.tokenDeploymentService = tokenDeploymentService;
         this.yieldDistributionRepository = yieldDistributionRepository;
         this.authenticationService = authenticationService;
+        this.custodyService = custodyService;
+        this.insuranceService = insuranceService;
         this.resourceLoader = resourceLoader;
     }
     
@@ -245,6 +255,22 @@ public class AssetService {
                     .collect(Collectors.toList());
         }
         
+        // 获取托管信息
+        Map<String, Object> custody = null;
+        if (asset.getId() != null) {
+            custody = custodyService.getCustodyByAssetId(asset.getId())
+                    .map(this::custodyToDto)
+                    .orElse(null);
+        }
+        
+        // 获取保险信息
+        Map<String, Object> insurance = null;
+        if (asset.getId() != null) {
+            insurance = insuranceService.getActiveInsuranceByAssetId(asset.getId())
+                    .map(this::insuranceToDto)
+                    .orElse(null);
+        }
+        
         return new AssetDto(
                 asset.getId().toString(),
                 asset.getAssetType(),
@@ -259,7 +285,9 @@ public class AssetService {
                 asset.getDescription(),   // 描述
                 asset.getImageUrls(),     // 图片
                 totalYield,                // 累计收益
-                authentications           // 认证信息
+                authentications,           // 认证信息
+                custody,                   // 托管信息
+                insurance                  // 保险信息
         );
     }
     
@@ -280,6 +308,51 @@ public class AssetService {
         dto.put("notes", auth.getNotes());
         dto.put("createdAt", auth.getCreatedAt());
         dto.put("updatedAt", auth.getUpdatedAt());
+        return dto;
+    }
+    
+    /**
+     * 将托管实体转换为 DTO
+     */
+    private Map<String, Object> custodyToDto(Custody custody) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", custody.getId());
+        dto.put("assetId", custody.getAssetId());
+        dto.put("custodyStatus", custody.getCustodyStatus());
+        dto.put("custodyOrganization", custody.getCustodyOrganization());
+        dto.put("warehouseLocation", custody.getWarehouseLocation());
+        dto.put("warehouseAddressHash", custody.getWarehouseAddressHash());
+        dto.put("entryDate", custody.getEntryDate());
+        dto.put("custodyContractUrl", custody.getCustodyContractUrl());
+        dto.put("custodyContractHash", custody.getCustodyContractHash());
+        dto.put("facilityStandards", custody.getFacilityStandards());
+        dto.put("notes", custody.getNotes());
+        dto.put("createdAt", custody.getCreatedAt());
+        dto.put("updatedAt", custody.getUpdatedAt());
+        return dto;
+    }
+    
+    /**
+     * 将保险实体转换为 DTO
+     */
+    private Map<String, Object> insuranceToDto(Insurance insurance) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", insurance.getId());
+        dto.put("assetId", insurance.getAssetId());
+        dto.put("insuranceCompany", insurance.getInsuranceCompany());
+        dto.put("policyNumber", insurance.getPolicyNumber());
+        dto.put("coverageAmount", insurance.getCoverageAmount());
+        dto.put("coverageCurrency", insurance.getCoverageCurrency());
+        dto.put("policyStartDate", insurance.getPolicyStartDate());
+        dto.put("policyEndDate", insurance.getPolicyEndDate());
+        dto.put("premiumAmount", insurance.getPremiumAmount());
+        dto.put("coverageType", insurance.getCoverageType());
+        dto.put("policyDocumentUrl", insurance.getPolicyDocumentUrl());
+        dto.put("policyDocumentHash", insurance.getPolicyDocumentHash());
+        dto.put("isActive", insurance.getIsActive());
+        dto.put("notes", insurance.getNotes());
+        dto.put("createdAt", insurance.getCreatedAt());
+        dto.put("updatedAt", insurance.getUpdatedAt());
         return dto;
     }
 }
