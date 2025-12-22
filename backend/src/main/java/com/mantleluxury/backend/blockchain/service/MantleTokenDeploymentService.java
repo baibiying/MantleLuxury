@@ -32,6 +32,7 @@ public class MantleTokenDeploymentService {
     private final Web3j web3j;
     private final Credentials credentials;
     private final boolean enabled;
+    private final String kycRegistryAddress;
 
     // LuxuryToken 合约的字节码（需要从编译后的合约获取）
     // 这里使用简化的方式，实际应该从编译后的 artifacts 读取
@@ -40,11 +41,20 @@ public class MantleTokenDeploymentService {
     public MantleTokenDeploymentService(
             Web3j web3j,
             Credentials credentials,
-            @Value("${blockchain.enabled:false}") boolean enabled
+            @Value("${blockchain.enabled:false}") boolean enabled,
+            @Value("${blockchain.kyc-registry-contract:}") String kycRegistryAddress
     ) {
         this.web3j = web3j;
         this.credentials = credentials;
         this.enabled = enabled;
+        this.kycRegistryAddress = kycRegistryAddress;
+    }
+    
+    /**
+     * 获取 KYCRegistry 合约地址
+     */
+    private String getKYCRegistryAddress() {
+        return kycRegistryAddress;
     }
 
     /**
@@ -155,15 +165,24 @@ public class MantleTokenDeploymentService {
             pricePerTokenWei = BigInteger.ONE;
         }
         
+        // 获取 KYCRegistry 合约地址（从配置中读取）
+        String kycRegistryAddress = getKYCRegistryAddress();
+        
         // 设置环境变量
         processBuilder.environment().put("TOKEN_NAME", name);
         processBuilder.environment().put("TOKEN_SYMBOL", symbol);
         processBuilder.environment().put("ASSET_ID", assetId);
         processBuilder.environment().put("METADATA_HASH", metadataHash);
-        // totalSupply 以“份”为单位（与合约 decimals=18 对应），直接传给脚本，由脚本内部 parseEther 放大 10^18
+        // totalSupply 以"份"为单位（与合约 decimals=18 对应），直接传给脚本，由脚本内部 parseEther 放大 10^18
         processBuilder.environment().put("INITIAL_SUPPLY", totalSupply.toString());
         processBuilder.environment().put("PRICE_PER_TOKEN", pricePerTokenWei.toString());
         processBuilder.environment().put("OWNER_ADDRESS", credentials.getAddress());
+        if (kycRegistryAddress != null && !kycRegistryAddress.isEmpty()) {
+            processBuilder.environment().put("KYC_REGISTRY_ADDRESS", kycRegistryAddress);
+            logger.info("Using KYCRegistry address: {}", kycRegistryAddress);
+        } else {
+            logger.warn("KYCRegistry address not configured. Token will be deployed without KYC check.");
+        }
         
         // 设置工作目录
         processBuilder.directory(contractsDir);

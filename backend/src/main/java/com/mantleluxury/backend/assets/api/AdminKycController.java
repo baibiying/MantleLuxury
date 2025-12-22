@@ -31,15 +31,18 @@ public class AdminKycController {
     private final UserRepository userRepository;
     private final AmlBlacklistRepository blacklistRepository;
     private final AdminConfig adminConfig;
+    private final com.mantleluxury.backend.blockchain.service.KYCRegistryService kycRegistryService;
 
     public AdminKycController(
             UserRepository userRepository,
             AmlBlacklistRepository blacklistRepository,
-            AdminConfig adminConfig
+            AdminConfig adminConfig,
+            com.mantleluxury.backend.blockchain.service.KYCRegistryService kycRegistryService
     ) {
         this.userRepository = userRepository;
         this.blacklistRepository = blacklistRepository;
         this.adminConfig = adminConfig;
+        this.kycRegistryService = kycRegistryService;
     }
 
     /**
@@ -169,12 +172,23 @@ public class AdminKycController {
         }
         userRepository.save(user);
 
+        // 同步 KYC 状态到链上 KYCRegistry 合约
+        try {
+            String transactionHash = kycRegistryService.setKYCStatus(walletAddress, status);
+            if (transactionHash != null) {
+                logger.info("KYC status synced to blockchain. Transaction hash: {}", transactionHash);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to sync KYC status to blockchain for {}: {}", walletAddress, e.getMessage(), e);
+            // 不抛出异常，允许链下状态更新成功，但记录错误
+        }
+
         logger.info("KYC reviewed for {}: {}", walletAddress, status);
-        return ResponseEntity.ok(Map.of(
-                "walletAddress", walletAddress,
-                "status", status,
-                "message", "KYC status updated successfully"
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("walletAddress", walletAddress);
+        response.put("status", status);
+        response.put("message", "KYC status updated successfully");
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -236,6 +250,13 @@ public class AdminKycController {
             if ("approved".equals(user.getKycStatus())) {
                 user.setKycStatus("rejected");
                 userRepository.save(user);
+                
+                // 同步到链上（设置为 Blacklisted）
+                try {
+                    kycRegistryService.setKYCStatus(walletAddress, "blacklisted");
+                } catch (Exception e) {
+                    logger.error("Failed to sync blacklist status to blockchain for {}: {}", walletAddress, e.getMessage(), e);
+                }
             }
         });
 

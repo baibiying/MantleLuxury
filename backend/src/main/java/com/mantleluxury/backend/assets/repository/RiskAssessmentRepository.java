@@ -14,3 +14,5 @@ public interface RiskAssessmentRepository extends JpaRepository<RiskAssessment, 
     Optional<RiskAssessment> findFirstByWalletAddressOrderByCreatedAtDesc(String walletAddress);
 }
 
+
+

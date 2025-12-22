@@ -26,6 +26,7 @@ async function main() {
   const initialSupplyStr = process.env.INITIAL_SUPPLY || "1000";
   const pricePerTokenStr = process.env.PRICE_PER_TOKEN || "1000000000000000000"; // 默认 1 MNT (wei)
   const owner = process.env.OWNER_ADDRESS || deployer.address;
+  const kycRegistry = process.env.KYC_REGISTRY_ADDRESS || ethers.ZeroAddress; // KYCRegistry 合约地址
 
   // 转换参数
   // assetId 和 metadataHash 应该是 0x 开头的 66 字符（32 字节的 hex）
@@ -58,6 +59,13 @@ async function main() {
   console.log("  Initial Supply:", initialSupply.toString());
   console.log("  Price Per Token (wei):", pricePerToken.toString());
   console.log("  Owner:", owner);
+  console.log("  KYC Registry:", kycRegistry);
+  
+  // 验证 KYC Registry 地址
+  if (kycRegistry === ethers.ZeroAddress) {
+    console.warn("⚠️  Warning: KYC Registry address is not set. Token will be deployed without KYC check.");
+    console.warn("   Please set KYC_REGISTRY_ADDRESS environment variable or deploy KYCRegistry first.");
+  }
 
   const LuxuryToken = await ethers.getContractFactory("LuxuryToken");
   const token = await LuxuryToken.deploy(
@@ -67,7 +75,8 @@ async function main() {
     metadataHash,
     initialSupply,
     pricePerToken,
-    owner
+    owner,
+    kycRegistry
   );
 
   await token.waitForDeployment();
@@ -81,6 +90,8 @@ async function main() {
   console.log("Price Per Token:", (await token.pricePerToken()).toString());
   console.log("Sales Enabled:", await token.salesEnabled());
   console.log("Owner:", await token.owner());
+  console.log("KYC Registry:", await token.kycRegistry());
+  console.log("KYC Check Enabled:", await token.kycCheckEnabled());
   
   // 输出 JSON 格式，方便后端解析
   console.log("\nJSON Output:");
@@ -91,7 +102,9 @@ async function main() {
     totalSupply: (await token.totalSupply()).toString(),
     pricePerToken: (await token.pricePerToken()).toString(),
     salesEnabled: await token.salesEnabled(),
-    owner: await token.owner()
+    owner: await token.owner(),
+    kycRegistry: await token.kycRegistry(),
+    kycCheckEnabled: await token.kycCheckEnabled()
   }));
 }
 
