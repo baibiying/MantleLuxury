@@ -45,7 +45,8 @@ export default function AssetsPage() {
   const [onchainRemaining, setOnchainRemaining] = useState<Record<string, string>>({});
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortKey, setSortKey] = useState<"price" | "recent">("recent");
+  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [sortKey, setSortKey] = useState<"price" | "recent" | "yield">("recent");
   const [priceMin, setPriceMin] = useState<string>("");
   const [priceMax, setPriceMax] = useState<string>("");
 
@@ -133,10 +134,33 @@ export default function AssetsPage() {
     );
   }
 
+  // 提取所有品牌（用于筛选下拉框）
+  const allBrands = Array.from(new Set(assets.map(a => a.brand).filter(Boolean))).sort();
+
+  // 计算预期收益率（基于累计收益和总供应量）
+  const calculateExpectedYield = (asset: Asset): number => {
+    if (!asset.totalYield || !asset.totalSupply || !asset.pricePerShare) {
+      return 0;
+    }
+    const totalYield = parseFloat(asset.totalYield);
+    const totalSupply = parseFloat(asset.totalSupply);
+    const pricePerShare = parseFloat(asset.pricePerShare);
+    
+    if (totalSupply === 0 || pricePerShare === 0) {
+      return 0;
+    }
+    
+    // 预期收益率 = (累计收益 / 总供应量) / 每份价格 * 100
+    // 这表示每份代币的平均收益相对于价格的百分比
+    const yieldPerShare = totalYield / totalSupply;
+    return (yieldPerShare / pricePerShare) * 100;
+  };
+
   // 过滤与排序
   const filtered = assets
     .filter((a) => (typeFilter === "all" ? true : a.assetType === typeFilter))
     .filter((a) => (statusFilter === "all" ? true : a.status === statusFilter))
+    .filter((a) => (brandFilter === "all" ? true : a.brand === brandFilter))
     .filter((a) => {
       if (priceMin) {
         const pmin = parseFloat(priceMin);
@@ -151,6 +175,12 @@ export default function AssetsPage() {
     .sort((a, b) => {
       if (sortKey === "price") {
         return parseFloat(a.pricePerShare) - parseFloat(b.pricePerShare);
+      }
+      if (sortKey === "yield") {
+        // 按预期收益率从高到低排序
+        const yieldA = calculateExpectedYield(a);
+        const yieldB = calculateExpectedYield(b);
+        return yieldB - yieldA;
       }
       // recent: 默认按加载顺序（假定后端按创建时间）
       return 0;
@@ -207,33 +237,64 @@ export default function AssetsPage() {
         </header>
 
         {/* 筛选与排序 */}
-        <section className="mb-4 grid gap-3 md:grid-cols-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-400">资产类型</label>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="all">全部</option>
-              <option value="watch">名表</option>
-              <option value="jewelry">珠宝</option>
-            </select>
+        <section className="mb-4 space-y-3">
+          {/* 第一行：资产类型、品牌、状态、排序 */}
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-400">资产类型</label>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="all">全部</option>
+                <option value="watch">名表</option>
+                <option value="jewelry">珠宝</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-400">品牌</label>
+              <select
+                value={brandFilter}
+                onChange={(e) => setBrandFilter(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="all">全部品牌</option>
+                {allBrands.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-400">状态</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="all">全部</option>
+                <option value="fundraising">募集中</option>
+                <option value="funded">已满额</option>
+                <option value="sold">已结束</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-slate-400">排序</label>
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as any)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="recent">上架时间（默认）</option>
+                <option value="price">价格（从低到高）</option>
+                <option value="yield">预期收益率（从高到低）</option>
+              </select>
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-400">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="all">全部</option>
-              <option value="fundraising">募集中</option>
-              <option value="funded">已满额</option>
-              <option value="sold">已结束</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
+          {/* 第二行：价格区间 */}
+          <div className="flex flex-col gap-1 max-w-md">
             <label className="text-xs text-slate-400">价格区间 (MNT)</label>
             <div className="flex gap-2">
               <input
@@ -251,17 +312,6 @@ export default function AssetsPage() {
                 className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
               />
             </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-400">排序</label>
-            <select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as any)}
-              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="recent">上架时间（默认）</option>
-              <option value="price">价格（从低到高）</option>
-            </select>
           </div>
         </section>
 
@@ -369,6 +419,20 @@ export default function AssetsPage() {
                       </dd>
                     </div>
                   )}
+                  {(() => {
+                    const expectedYield = calculateExpectedYield(asset);
+                    if (expectedYield > 0) {
+                      return (
+                        <div className="space-y-1 col-span-2">
+                          <dt className="text-slate-500 text-xs">预期收益率</dt>
+                          <dd className="font-semibold text-amber-400">
+                            {expectedYield.toFixed(2)}%
+                          </dd>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </dl>
               </div>
             </Link>
