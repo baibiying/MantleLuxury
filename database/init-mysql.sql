@@ -208,6 +208,42 @@ CREATE TABLE IF NOT EXISTS asset_reviews (
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- event_indexer_state 表（事件索引器状态）
+CREATE TABLE IF NOT EXISTS event_indexer_state (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    contract_type VARCHAR(50) NOT NULL COMMENT 'LuxuryToken, KYCRegistry, YieldDistribution',
+    contract_address VARCHAR(42) NOT NULL COMMENT '合约地址',
+    last_processed_block BIGINT NOT NULL DEFAULT 0 COMMENT '最后处理的区块号',
+    last_processed_timestamp TIMESTAMP NULL COMMENT '最后处理的时间戳',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE COMMENT '是否启用索引',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_contract (contract_type, contract_address),
+    INDEX idx_contract_type (contract_type),
+    INDEX idx_last_processed_block (last_processed_block)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- blockchain_events 表（链上事件记录，用于审计和调试）
+CREATE TABLE IF NOT EXISTS blockchain_events (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    event_type VARCHAR(50) NOT NULL COMMENT 'TokensPurchased, KYCStatusUpdated, DistributionCreated, Claimed',
+    contract_address VARCHAR(42) NOT NULL,
+    transaction_hash VARCHAR(66) NOT NULL,
+    block_number BIGINT NOT NULL,
+    block_timestamp TIMESTAMP NULL,
+    log_index INT NOT NULL,
+    event_data JSON COMMENT '事件数据（JSON格式）',
+    processed BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否已处理',
+    processed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_tx_log (transaction_hash, log_index),
+    INDEX idx_event_type (event_type),
+    INDEX idx_contract_address (contract_address),
+    INDEX idx_block_number (block_number),
+    INDEX idx_processed (processed),
+    INDEX idx_transaction_hash (transaction_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 显示创建的表
 SHOW TABLES;
 

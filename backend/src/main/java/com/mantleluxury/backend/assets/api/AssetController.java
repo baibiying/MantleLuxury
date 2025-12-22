@@ -35,6 +35,17 @@ public class AssetController {
         return ResponseEntity.ok(assetService.getAllAssets());
     }
 
+    /**
+     * 获取精选资产（用于首页轮播）
+     * 返回募集中、已认证、有托管和保险的资产，按创建时间倒序
+     */
+    @GetMapping("/featured")
+    public ResponseEntity<List<AssetDto>> getFeaturedAssets(
+            @RequestParam(defaultValue = "6") int limit
+    ) {
+        return ResponseEntity.ok(assetService.getFeaturedAssets(limit));
+    }
+
     // 测试端点，用于验证 POST 请求是否正常工作
     @PostMapping("/test")
     public ResponseEntity<String> testPost() {

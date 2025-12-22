@@ -155,6 +155,45 @@ public class AssetService {
     }
 
     /**
+     * 获取精选资产（用于首页轮播）
+     * 筛选条件：
+     * 1. 状态为 fundraising（募集中）
+     * 2. 有已通过的认证
+     * 3. 有托管和保险
+     * 4. 按创建时间倒序（最新的在前）
+     * 5. 限制返回数量
+     */
+    public List<AssetDto> getFeaturedAssets(int limit) {
+        return assetRepository.findByStatus("fundraising").stream()
+                .filter(asset -> {
+                    // 检查是否有已通过的认证
+                    if (asset.getId() == null) return false;
+                    List<AssetAuthentication> auths = authenticationService.getAssetAuthentications(asset.getId());
+                    boolean hasVerifiedAuth = auths.stream()
+                            .anyMatch(auth -> "verified".equals(auth.getAuthenticationStatus()));
+                    if (!hasVerifiedAuth) return false;
+                    
+                    // 检查是否有托管
+                    boolean hasCustody = custodyService.getCustodyByAssetId(asset.getId()).isPresent();
+                    if (!hasCustody) return false;
+                    
+                    // 检查是否有有效保险
+                    boolean hasInsurance = insuranceService.getActiveInsuranceByAssetId(asset.getId()).isPresent();
+                    return hasInsurance;
+                })
+                .sorted((a, b) -> {
+                    // 按创建时间倒序（最新的在前）
+                    if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
+                    if (a.getCreatedAt() == null) return 1;
+                    if (b.getCreatedAt() == null) return -1;
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                })
+                .limit(limit)
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 按合约地址删除资产
      */
     @Transactional

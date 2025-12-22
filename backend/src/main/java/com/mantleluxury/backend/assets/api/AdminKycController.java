@@ -233,36 +233,36 @@ public class AdminKycController {
             return ResponseEntity.badRequest().body("walletAddress is required");
         }
 
-        walletAddress = walletAddress.toLowerCase();
+        final String normalizedAddress = walletAddress.toLowerCase();
 
         // 检查是否已在黑名单中
-        if (blacklistRepository.findByWalletAddress(walletAddress).isPresent()) {
+        if (blacklistRepository.findByWalletAddress(normalizedAddress).isPresent()) {
             return ResponseEntity.badRequest().body("Address already in blacklist");
         }
 
         AmlBlacklist blacklist = new AmlBlacklist();
-        blacklist.setWalletAddress(walletAddress);
+        blacklist.setWalletAddress(normalizedAddress);
         blacklist.setReason(reason);
         blacklistRepository.save(blacklist);
 
         // 如果用户已通过 KYC，撤销其 KYC 状态
-        userRepository.findByWalletAddress(walletAddress).ifPresent(user -> {
+        userRepository.findByWalletAddress(normalizedAddress).ifPresent(user -> {
             if ("approved".equals(user.getKycStatus())) {
                 user.setKycStatus("rejected");
                 userRepository.save(user);
                 
                 // 同步到链上（设置为 Blacklisted）
                 try {
-                    kycRegistryService.setKYCStatus(walletAddress, "blacklisted");
+                    kycRegistryService.setKYCStatus(normalizedAddress, "blacklisted");
                 } catch (Exception e) {
-                    logger.error("Failed to sync blacklist status to blockchain for {}: {}", walletAddress, e.getMessage(), e);
+                    logger.error("Failed to sync blacklist status to blockchain for {}: {}", normalizedAddress, e.getMessage(), e);
                 }
             }
         });
 
-        logger.info("Added {} to blacklist, reason: {}", walletAddress, reason);
+        logger.info("Added {} to blacklist, reason: {}", normalizedAddress, reason);
         return ResponseEntity.ok(Map.of(
-                "walletAddress", walletAddress,
+                "walletAddress", normalizedAddress,
                 "message", "Address added to blacklist successfully"
         ));
     }

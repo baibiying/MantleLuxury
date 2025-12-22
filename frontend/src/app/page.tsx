@@ -23,11 +23,29 @@ type OverviewStats = {
   yieldDistributions: number;
 };
 
+type FeaturedAsset = {
+  id: string;
+  assetType: string;
+  brand: string;
+  model: string;
+  year: number | null;
+  pricePerShare: string;
+  totalSupply: string;
+  remainingSupply: string;
+  status: string;
+  tokenAddress: string | null;
+  imageUrls?: string | null;
+  totalYield?: string | null;
+};
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [recentYields, setRecentYields] = useState<YieldDistribution[]>([]);
   const [loadingYields, setLoadingYields] = useState(true);
   const [overview, setOverview] = useState<OverviewStats | null>(null);
+  const [featuredAssets, setFeaturedAssets] = useState<FeaturedAsset[]>([]);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -68,6 +86,33 @@ export default function Home() {
     };
     loadOverview();
   }, []);
+
+  useEffect(() => {
+    const loadFeaturedAssets = async () => {
+      setLoadingFeatured(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/assets/featured?limit=6`);
+        if (res.ok) {
+          const data = await res.json();
+          setFeaturedAssets(data);
+        }
+      } catch (err) {
+        console.error("Failed to load featured assets", err);
+      } finally {
+        setLoadingFeatured(false);
+      }
+    };
+    loadFeaturedAssets();
+  }, []);
+
+  // 自动轮播
+  useEffect(() => {
+    if (featuredAssets.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % featuredAssets.length);
+    }, 5000); // 每5秒切换一次
+    return () => clearInterval(interval);
+  }, [featuredAssets.length]);
 
   // 格式化大数字
   const formatLargeNumber = (num: number): string => {
@@ -157,6 +202,153 @@ export default function Home() {
             </a>
           </div>
         </section>
+
+        {/* 精选资产轮播 */}
+        {mounted && !loadingFeatured && featuredAssets.length > 0 && (
+          <section className="max-w-7xl mx-auto px-6 py-16">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold gradient-text mb-3">精选资产</h2>
+              <p className="text-slate-400">正在募集的优质奢侈品资产</p>
+            </div>
+            <div className="relative">
+              {/* 轮播容器 */}
+              <div className="overflow-hidden rounded-2xl">
+                <div
+                  className="flex transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                >
+                  {featuredAssets.map((asset) => {
+                    const imageUrl = asset.imageUrls
+                      ? (() => {
+                          try {
+                            const arr = JSON.parse(asset.imageUrls);
+                            if (Array.isArray(arr) && arr.length > 0) {
+                              const url = arr[0];
+                              return url.startsWith('/uploads/') ? `${API_BASE}${url}` : url;
+                            }
+                          } catch {}
+                          return null;
+                        })()
+                      : asset.assetType === "watch"
+                      ? "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"
+                      : "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=800&q=80";
+
+                    return (
+                      <div
+                        key={asset.id}
+                        className="min-w-full flex-shrink-0"
+                      >
+                        <Link href={`/assets/${asset.id}`}>
+                          <div className="group relative h-[500px] md:h-[600px] rounded-2xl overflow-hidden cursor-pointer">
+                            {/* 背景图片 */}
+                            <div
+                              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                              style={{ backgroundImage: `url(${imageUrl})` }}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/95 via-slate-900/80 to-slate-900/60"></div>
+                            </div>
+                            
+                            {/* 内容 */}
+                            <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                                    {asset.assetType === "watch" ? "名表" : "珠宝"}
+                                  </span>
+                                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-500/20 text-sky-300 border border-sky-400/40">
+                                    募集中
+                                  </span>
+                                </div>
+                                <h3 className="text-4xl md:text-5xl font-bold text-white">
+                                  {asset.brand} {asset.model}
+                                </h3>
+                                {asset.year && (
+                                  <p className="text-lg text-slate-300">{asset.year} 年</p>
+                                )}
+                                <div className="flex items-center gap-6 pt-4">
+                                  <div>
+                                    <div className="text-sm text-slate-400 mb-1">每份价格</div>
+                                    <div className="text-2xl font-bold text-sky-400">
+                                      {parseFloat(asset.pricePerShare).toFixed(2)} MNT
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm text-slate-400 mb-1">剩余份额</div>
+                                    <div className="text-2xl font-bold text-emerald-400">
+                                      {parseFloat(asset.remainingSupply).toFixed(0)} 份
+                                    </div>
+                                  </div>
+                                  {asset.totalYield && parseFloat(asset.totalYield) > 0 && (
+                                    <div>
+                                      <div className="text-sm text-slate-400 mb-1">累计收益</div>
+                                      <div className="text-2xl font-bold text-amber-400">
+                                        {parseFloat(asset.totalYield).toFixed(4)} MNT
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="pt-4">
+                                  <span className="inline-flex items-center gap-2 text-sky-400 font-semibold group-hover:gap-3 transition-all">
+                                    查看详情
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 导航按钮 */}
+              {featuredAssets.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setCurrentSlide((prev) => (prev - 1 + featuredAssets.length) % featuredAssets.length)}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full glass-effect border border-slate-700/50 hover:border-slate-600/50 flex items-center justify-center text-white transition-all hover:bg-slate-800/80 z-10"
+                    aria-label="上一张"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setCurrentSlide((prev) => (prev + 1) % featuredAssets.length)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full glass-effect border border-slate-700/50 hover:border-slate-600/50 flex items-center justify-center text-white transition-all hover:bg-slate-800/80 z-10"
+                    aria-label="下一张"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
+
+              {/* 指示器 */}
+              {featuredAssets.length > 1 && (
+                <div className="flex justify-center gap-2 mt-6">
+                  {featuredAssets.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`h-2 rounded-full transition-all ${
+                        index === currentSlide
+                          ? "w-8 bg-sky-500"
+                          : "w-2 bg-slate-700 hover:bg-slate-600"
+                      }`}
+                      aria-label={`跳转到第 ${index + 1} 张`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* 平台数据展示区域 */}
         {mounted && overview && (
