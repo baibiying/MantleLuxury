@@ -879,6 +879,222 @@ export default function AssetDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* 风险提示与合规说明 */}
+        <div className="mt-8 card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-red-500/5"></div>
+          <div className="relative z-10">
+            <h2 className="text-2xl font-semibold mb-6 gradient-text">风险提示与合规说明</h2>
+            
+            <div className="space-y-6">
+              {/* 重要风险提示 */}
+              <div className="p-5 bg-red-950/20 border border-red-500/30 rounded-xl">
+                <div className="flex items-start gap-3 mb-3">
+                  <svg className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <h3 className="text-lg font-semibold text-red-300 mb-2">重要风险提示</h3>
+                    <p className="text-sm text-red-200/80 leading-relaxed">
+                      投资奢侈品 RWA 代币存在多种风险，包括但不限于市场风险、流动性风险、技术风险、监管风险等。
+                      请仔细阅读以下风险揭示，充分了解投资风险后再做出投资决策。
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 风险类型 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200">投资风险类型</h3>
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* 市场风险 */}
+                  <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-amber-300 mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                      </svg>
+                      市场风险
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      奢侈品市场价格受多种因素影响，包括品牌价值、市场供需、经济环境等。
+                      资产价值可能出现波动，投资本金可能遭受损失。
+                    </p>
+                  </div>
+
+                  {/* 流动性风险 */}
+                  <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-amber-300 mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                      流动性风险
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      代币可能缺乏足够的市场流动性，导致难以在需要时以合理价格出售。
+                      资产退出可能需要较长时间，或需等待资产整体出售。
+                    </p>
+                  </div>
+
+                  {/* 技术风险 */}
+                  <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-amber-300 mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                      </svg>
+                      技术风险
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      区块链技术、智能合约、钱包安全等存在技术风险。
+                      可能面临黑客攻击、智能合约漏洞、私钥丢失等风险。
+                    </p>
+                  </div>
+
+                  {/* 监管风险 */}
+                  <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-amber-300 mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      监管风险
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      各国对数字资产和 RWA 的监管政策可能发生变化。
+                      监管变化可能影响代币交易、持有或收益分配的合法性。
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 合规要求 */}
+              <div className="pt-4 border-t border-slate-800">
+                <h3 className="text-lg font-semibold text-slate-200 mb-4">合规要求</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3 bg-slate-800/30 rounded-lg">
+                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-200 mb-1">KYC / AML 要求</h4>
+                      <p className="text-xs text-slate-400">
+                        所有投资者必须完成 KYC（了解你的客户）和 AML（反洗钱）审核。
+                        未通过审核的用户无法购买或持有代币。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 bg-slate-800/30 rounded-lg">
+                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-200 mb-1">投资者适当性</h4>
+                      <p className="text-xs text-slate-400">
+                        本产品适合具有一定风险承受能力和投资经验的投资者。
+                        请根据自身情况评估是否适合投资。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 bg-slate-800/30 rounded-lg">
+                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-200 mb-1">税务责任</h4>
+                      <p className="text-xs text-slate-400">
+                        投资者需自行承担投资收益的税务申报责任。
+                        平台提供交易记录导出功能，方便用户完成税务申报。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 免责声明 */}
+              <div className="pt-4 border-t border-slate-800">
+                <h3 className="text-lg font-semibold text-slate-200 mb-3">免责声明</h3>
+                <div className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg">
+                  <p className="text-xs text-slate-400 leading-relaxed space-y-2">
+                    <span className="block">
+                      1. 本平台不对任何投资损失承担责任。投资决策由投资者自行做出，投资风险由投资者自行承担。
+                    </span>
+                    <span className="block">
+                      2. 平台提供的资产信息、估值报告等仅供参考，不构成投资建议。
+                    </span>
+                    <span className="block">
+                      3. 代币价格可能因市场因素波动，过往表现不代表未来收益。
+                    </span>
+                    <span className="block">
+                      4. 投资者应充分了解区块链技术和数字资产的特点，谨慎投资。
+                    </span>
+                    <span className="block">
+                      5. 如遇监管政策变化，平台可能暂停或终止相关服务。
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {/* 法律文件链接 */}
+              <div className="pt-4 border-t border-slate-800">
+                <h3 className="text-lg font-semibold text-slate-200 mb-3">相关法律文件</h3>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <a
+                    href="/settings"
+                    className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg hover:border-slate-600/50 transition-colors group"
+                  >
+                    <div className="text-sm font-medium text-slate-200 mb-1 group-hover:text-sky-300 transition-colors">
+                      使用条款
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      平台服务使用条款和条件
+                    </div>
+                  </a>
+                  <a
+                    href="/settings"
+                    className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg hover:border-slate-600/50 transition-colors group"
+                  >
+                    <div className="text-sm font-medium text-slate-200 mb-1 group-hover:text-sky-300 transition-colors">
+                      风险揭示书
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      完整的投资风险提示和免责声明
+                    </div>
+                  </a>
+                  <a
+                    href="/settings"
+                    className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg hover:border-slate-600/50 transition-colors group"
+                  >
+                    <div className="text-sm font-medium text-slate-200 mb-1 group-hover:text-sky-300 transition-colors">
+                      投资者适当性说明
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      适合性评估和投资建议
+                    </div>
+                  </a>
+                </div>
+              </div>
+
+              {/* 确认提示 */}
+              <div className="pt-4 border-t border-slate-800">
+                <div className="p-4 bg-blue-950/20 border border-blue-500/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-300 mb-1">投资确认</h4>
+                      <p className="text-xs text-blue-200/80">
+                        点击"确认投资"即表示您已充分理解并接受上述所有风险提示和合规要求，
+                        同意承担投资风险，并确认您符合投资者适当性要求。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
