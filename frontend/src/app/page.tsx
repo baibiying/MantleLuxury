@@ -18,9 +18,17 @@ type YieldDistribution = {
 type OverviewStats = {
   totalUsers: number;
   kycApprovedUsers: number;
+  activeInvestors: number;
+  totalAssets: number;
+  fundraisingAssets: number;
+  fundedAssets: number;
+  soldAssets: number;
   aum: string;
   totalYield: string;
+  pendingYield: string;
   yieldDistributions: number;
+  totalTransactions: number;
+  avgInvestment: string;
 };
 
 type FeaturedAsset = {
@@ -129,6 +137,10 @@ export default function Home() {
     const elements = document.querySelectorAll(".count-up");
     elements.forEach((el) => {
       const target = parseInt(el.getAttribute("data-target") || "0");
+      if (target === 0) {
+        el.textContent = "0";
+        return;
+      }
       const duration = 2000; // 2秒
       const increment = target / (duration / 16); // 60fps
       let current = 0;
@@ -357,12 +369,12 @@ export default function Home() {
               <h2 className="text-4xl font-bold gradient-text mb-3">平台数据</h2>
               <p className="text-slate-400">实时更新的关键指标</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            {/* 主要指标 - 第一行 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               {/* 注册用户数 */}
               <div className="group relative stats-card glass-effect rounded-2xl border border-slate-700/50 p-6 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
-                {/* 图标放在右上角边缘 */}
                 <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center border border-blue-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
                   <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
@@ -385,7 +397,6 @@ export default function Home() {
               <div className="group relative stats-card glass-effect rounded-2xl border border-slate-700/50 p-6 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
-                {/* 图标放在右上角边缘 */}
                 <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 flex items-center justify-center border border-emerald-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
                   <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 16l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/>
@@ -408,7 +419,6 @@ export default function Home() {
               <div className="group relative stats-card glass-effect rounded-2xl border border-slate-700/50 p-6 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
-                {/* 图标放在右上角边缘 */}
                 <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-600/20 flex items-center justify-center border border-amber-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
                   <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M20 8h-3V6c0-1.1-.9-2-2-2H9C7.9 4 7 4.9 7 6v2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6h6v2H9V6zm11 14H4V10h16v10zm-5.5-6.5L13 16l-2.5-2.5 1.41-1.41L13 13.17l2.09-2.09L16.5 11.5z"/>
@@ -431,7 +441,6 @@ export default function Home() {
               <div className="group relative stats-card glass-effect rounded-2xl border border-slate-700/50 p-6 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-transparent to-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
-                {/* 图标放在右上角边缘 */}
                 <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500/20 to-pink-600/20 flex items-center justify-center border border-pink-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
                   <svg className="w-5 h-5 text-pink-400" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M7.5 21H2v-5.5h5.5V21zM13.5 21H8V10.5h5.5V21zM19.5 21H14v-9.5h5.5V21zM19.5 8.5H14V3h5.5v5.5z"/>
@@ -448,6 +457,57 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-rose-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              </div>
+            </div>
+
+            {/* 次要指标 - 第二行 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {/* 活跃投资者 */}
+              <div className="glass-effect rounded-xl border border-slate-700/50 p-4 text-center">
+                <div className="text-xs text-slate-400 mb-1">活跃投资者</div>
+                <div className="text-2xl font-bold text-sky-400 count-up" data-target={overview.activeInvestors || 0}>
+                  {overview.activeInvestors || 0}
+                </div>
+              </div>
+
+              {/* 上架资产 */}
+              <div className="glass-effect rounded-xl border border-slate-700/50 p-4 text-center">
+                <div className="text-xs text-slate-400 mb-1">上架资产</div>
+                <div className="text-2xl font-bold text-purple-400 count-up" data-target={overview.totalAssets || 0}>
+                  {overview.totalAssets || 0}
+                </div>
+              </div>
+
+              {/* 募集中 */}
+              <div className="glass-effect rounded-xl border border-slate-700/50 p-4 text-center">
+                <div className="text-xs text-slate-400 mb-1">募集中</div>
+                <div className="text-2xl font-bold text-amber-400 count-up" data-target={overview.fundraisingAssets || 0}>
+                  {overview.fundraisingAssets || 0}
+                </div>
+              </div>
+
+              {/* 已满额 */}
+              <div className="glass-effect rounded-xl border border-slate-700/50 p-4 text-center">
+                <div className="text-xs text-slate-400 mb-1">已满额</div>
+                <div className="text-2xl font-bold text-emerald-400 count-up" data-target={overview.fundedAssets || 0}>
+                  {overview.fundedAssets || 0}
+                </div>
+              </div>
+
+              {/* 总交易次数 */}
+              <div className="glass-effect rounded-xl border border-slate-700/50 p-4 text-center">
+                <div className="text-xs text-slate-400 mb-1">总交易</div>
+                <div className="text-2xl font-bold text-indigo-400 count-up" data-target={overview.totalTransactions || 0}>
+                  {overview.totalTransactions || 0}
+                </div>
+              </div>
+
+              {/* 收益分配次数 */}
+              <div className="glass-effect rounded-xl border border-slate-700/50 p-4 text-center">
+                <div className="text-xs text-slate-400 mb-1">收益分配</div>
+                <div className="text-2xl font-bold text-rose-400 count-up" data-target={overview.yieldDistributions || 0}>
+                  {overview.yieldDistributions || 0}
+                </div>
               </div>
             </div>
           </section>
