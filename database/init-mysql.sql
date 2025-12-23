@@ -14,6 +14,19 @@ CREATE TABLE IF NOT EXISTS users (
     kyc_status VARCHAR(20) NOT NULL DEFAULT 'none' COMMENT 'none, pending, approved, rejected',
     kyc_submitted_at TIMESTAMP NULL,
     kyc_approved_at TIMESTAMP NULL,
+    kyc_rejected_at TIMESTAMP NULL,
+    kyc_rejection_reason TEXT COMMENT 'KYC驳回原因',
+    -- KYC基本信息
+    full_name VARCHAR(200) COMMENT '姓名',
+    id_number VARCHAR(50) COMMENT '证件号',
+    id_type VARCHAR(20) COMMENT '证件类型：id_card, passport, driver_license',
+    address TEXT COMMENT '地址',
+    phone VARCHAR(20) COMMENT '联系电话',
+    -- 证件上传
+    id_document_front_url TEXT COMMENT '证件正面照片URL',
+    id_document_back_url TEXT COMMENT '证件背面照片URL',
+    selfie_url TEXT COMMENT '自拍照片URL（人脸识别）',
+    -- 通知偏好
     email_notifications BOOLEAN DEFAULT TRUE COMMENT '是否接收邮件通知',
     yield_notifications BOOLEAN DEFAULT TRUE COMMENT '是否接收收益分配通知',
     announcement_notifications BOOLEAN DEFAULT TRUE COMMENT '是否接收重要公告通知',

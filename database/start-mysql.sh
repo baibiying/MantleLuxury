@@ -195,6 +195,146 @@ ensure_schema() {
         PREPARE alterIfNotExists FROM @preparedStatement;
         EXECUTE alterIfNotExists;
         DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 kyc_rejected_at 列
+        SET @columnname = 'kyc_rejected_at';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TIMESTAMP NULL COMMENT ''KYC驳回时间''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 kyc_rejection_reason 列
+        SET @columnname = 'kyc_rejection_reason';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TEXT COMMENT ''KYC驳回原因''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 full_name 列
+        SET @columnname = 'full_name';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(200) COMMENT ''姓名''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 id_number 列
+        SET @columnname = 'id_number';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(50) COMMENT ''证件号''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 id_type 列
+        SET @columnname = 'id_type';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(20) COMMENT ''证件类型：id_card, passport, driver_license''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 address 列
+        SET @columnname = 'address';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TEXT COMMENT ''地址''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 phone 列
+        SET @columnname = 'phone';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(20) COMMENT ''联系电话''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 id_document_front_url 列
+        SET @columnname = 'id_document_front_url';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TEXT COMMENT ''证件正面照片URL''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 id_document_back_url 列
+        SET @columnname = 'id_document_back_url';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TEXT COMMENT ''证件背面照片URL''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- 检查并添加 selfie_url 列
+        SET @columnname = 'selfie_url';
+        SET @preparedStatement = (SELECT IF(
+            (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = @dbname
+             AND TABLE_NAME = @tablename
+             AND COLUMN_NAME = @columnname) > 0,
+            'SELECT 1',
+            CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TEXT COMMENT ''自拍照片URL（人脸识别）''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
     "
     if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$users_sql" > /dev/null 2>&1; then
         print_info "users 表列检查完成（如有缺失已自动补齐）"

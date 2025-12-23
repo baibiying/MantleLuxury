@@ -28,6 +28,38 @@ public class User {
     @Column(name = "kyc_approved_at")
     private LocalDateTime kycApprovedAt;
 
+    @Column(name = "kyc_rejected_at")
+    private LocalDateTime kycRejectedAt;
+
+    @Column(name = "kyc_rejection_reason", columnDefinition = "TEXT")
+    private String kycRejectionReason;
+
+    // KYC基本信息
+    @Column(name = "full_name", length = 200)
+    private String fullName;
+
+    @Column(name = "id_number", length = 50)
+    private String idNumber;
+
+    @Column(name = "id_type", length = 20)
+    private String idType; // id_card, passport, driver_license
+
+    @Column(name = "address", columnDefinition = "TEXT")
+    private String address;
+
+    @Column(name = "phone", length = 20)
+    private String phone;
+
+    // 证件上传
+    @Column(name = "id_document_front_url", columnDefinition = "TEXT")
+    private String idDocumentFrontUrl;
+
+    @Column(name = "id_document_back_url", columnDefinition = "TEXT")
+    private String idDocumentBackUrl;
+
+    @Column(name = "selfie_url", columnDefinition = "TEXT")
+    private String selfieUrl;
+
     @Column(name = "email_notifications")
     private Boolean emailNotifications;
 
@@ -155,6 +187,86 @@ public class User {
 
     public void setAnnouncementNotifications(Boolean announcementNotifications) {
         this.announcementNotifications = announcementNotifications;
+    }
+
+    public LocalDateTime getKycRejectedAt() {
+        return kycRejectedAt;
+    }
+
+    public void setKycRejectedAt(LocalDateTime kycRejectedAt) {
+        this.kycRejectedAt = kycRejectedAt;
+    }
+
+    public String getKycRejectionReason() {
+        return kycRejectionReason;
+    }
+
+    public void setKycRejectionReason(String kycRejectionReason) {
+        this.kycRejectionReason = kycRejectionReason;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getIdNumber() {
+        return idNumber;
+    }
+
+    public void setIdNumber(String idNumber) {
+        this.idNumber = idNumber;
+    }
+
+    public String getIdType() {
+        return idType;
+    }
+
+    public void setIdType(String idType) {
+        this.idType = idType;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getIdDocumentFrontUrl() {
+        return idDocumentFrontUrl;
+    }
+
+    public void setIdDocumentFrontUrl(String idDocumentFrontUrl) {
+        this.idDocumentFrontUrl = idDocumentFrontUrl;
+    }
+
+    public String getIdDocumentBackUrl() {
+        return idDocumentBackUrl;
+    }
+
+    public void setIdDocumentBackUrl(String idDocumentBackUrl) {
+        this.idDocumentBackUrl = idDocumentBackUrl;
+    }
+
+    public String getSelfieUrl() {
+        return selfieUrl;
+    }
+
+    public void setSelfieUrl(String selfieUrl) {
+        this.selfieUrl = selfieUrl;
     }
 }
 

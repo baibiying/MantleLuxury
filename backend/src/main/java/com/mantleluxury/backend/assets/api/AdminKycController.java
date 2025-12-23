@@ -129,6 +129,14 @@ public class AdminKycController {
         result.put("kycStatus", user.getKycStatus());
         result.put("kycSubmittedAt", user.getKycSubmittedAt());
         result.put("kycApprovedAt", user.getKycApprovedAt());
+        result.put("kycRejectedAt", user.getKycRejectedAt());
+        result.put("kycRejectionReason", user.getKycRejectionReason());
+        result.put("fullName", user.getFullName());
+        result.put("idNumber", user.getIdNumber());
+        result.put("idType", user.getIdType());
+        result.put("address", user.getAddress());
+        result.put("phone", user.getPhone());
+        result.put("email", user.getEmail());
         result.put("createdAt", user.getCreatedAt());
         
         // 检查黑名单状态
@@ -169,6 +177,12 @@ public class AdminKycController {
         user.setKycStatus(status);
         if (status.equals("approved")) {
             user.setKycApprovedAt(LocalDateTime.now());
+            user.setKycRejectedAt(null);
+            user.setKycRejectionReason(null);
+        } else if (status.equals("rejected")) {
+            user.setKycRejectedAt(LocalDateTime.now());
+            String rejectionReason = request.get("rejectionReason");
+            user.setKycRejectionReason(rejectionReason);
         }
         userRepository.save(user);
 
