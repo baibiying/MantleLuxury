@@ -6,6 +6,7 @@ import com.mantleluxury.backend.assets.domain.UserInvestment;
 import com.mantleluxury.backend.assets.repository.AssetRepository;
 import com.mantleluxury.backend.assets.repository.UserInvestmentRepository;
 import com.mantleluxury.backend.assets.repository.YieldDistributionRepository;
+import com.mantleluxury.backend.blockchain.repository.BlockchainEventRepository;
 import com.mantleluxury.backend.config.AdminConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,17 +39,20 @@ public class AdminReportController {
     private final YieldDistributionRepository yieldDistributionRepository;
     private final UserInvestmentRepository userInvestmentRepository;
     private final AdminConfig adminConfig;
+    private final BlockchainEventRepository blockchainEventRepository;
 
     public AdminReportController(
             AssetRepository assetRepository,
             YieldDistributionRepository yieldDistributionRepository,
             UserInvestmentRepository userInvestmentRepository,
-            AdminConfig adminConfig
+            AdminConfig adminConfig,
+            BlockchainEventRepository blockchainEventRepository
     ) {
         this.assetRepository = assetRepository;
         this.yieldDistributionRepository = yieldDistributionRepository;
         this.userInvestmentRepository = userInvestmentRepository;
         this.adminConfig = adminConfig;
+        this.blockchainEventRepository = blockchainEventRepository;
     }
 
     private ResponseEntity<byte[]> forbidden(String message) {
@@ -108,8 +112,8 @@ public class AdminReportController {
             ));
             writer.write("\n\n");
 
-            // 明细 - 收益分配
-            writer.write("=== Yield Distributions ===\n");
+            // 明细 - 收益分配（数据库）
+            writer.write("=== Yield Distributions (Database) ===\n");
             writer.write("Distribution ID,Yield Type,Total Amount,Distributed Amount,Is Completed,Created At,Completed At,Transaction Hash\n");
             for (YieldDistribution d : distributions) {
                 writer.write(String.join(",",
@@ -123,6 +127,60 @@ public class AdminReportController {
                         quote(d.getTransactionHash() != null ? d.getTransactionHash() : "")
                 ));
                 writer.write("\n");
+            }
+
+            // 添加链上事件数据（从 blockchain_events 表）
+            try {
+                if (asset.getTokenAddress() != null && !asset.getTokenAddress().isEmpty()) {
+                    List<com.mantleluxury.backend.blockchain.domain.BlockchainEvent> distributionEvents = 
+                        blockchainEventRepository.findByContractAddress(yieldDistributionRepository.findAll().stream()
+                            .filter(y -> assetId.equals(y.getAssetId()))
+                            .map(y -> y.getTokenAddress())
+                            .findFirst()
+                            .orElse(""))
+                        .stream()
+                        .filter(e -> "DistributionCreated".equals(e.getEventType()))
+                        .toList();
+                    
+                    if (!distributionEvents.isEmpty()) {
+                        writer.write("\n=== Yield Distributions (On-Chain Events from Database) ===\n");
+                        writer.write("Event Type,Contract Address,Transaction Hash,Block Number,Block Timestamp,Event Data\n");
+                        for (com.mantleluxury.backend.blockchain.domain.BlockchainEvent event : distributionEvents) {
+                            writer.write(String.join(",",
+                                    quote(event.getEventType()),
+                                    quote(event.getContractAddress()),
+                                    quote(event.getTransactionHash()),
+                                    String.valueOf(event.getBlockNumber()),
+                                    event.getBlockTimestamp() != null ? event.getBlockTimestamp().toString() : "",
+                                    quote(event.getEventData() != null ? event.getEventData() : "")
+                            ));
+                            writer.write("\n");
+                        }
+
+                        // 添加收益领取记录
+                        List<com.mantleluxury.backend.blockchain.domain.BlockchainEvent> claimEvents = 
+                            blockchainEventRepository.findByEventType("Claimed");
+                        if (!claimEvents.isEmpty()) {
+                            writer.write("\n=== Yield Claims (On-Chain Events) ===\n");
+                            writer.write("Event Type,Contract Address,Transaction Hash,Block Number,Block Timestamp,Event Data\n");
+                            for (com.mantleluxury.backend.blockchain.domain.BlockchainEvent event : claimEvents) {
+                                writer.write(String.join(",",
+                                        quote(event.getEventType()),
+                                        quote(event.getContractAddress()),
+                                        quote(event.getTransactionHash()),
+                                        String.valueOf(event.getBlockNumber()),
+                                        event.getBlockTimestamp() != null ? event.getBlockTimestamp().toString() : "",
+                                        quote(event.getEventData() != null ? event.getEventData() : "")
+                                ));
+                                writer.write("\n");
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to fetch on-chain events from database for asset {}", assetId, e);
+                writer.write("\n=== On-Chain Events ===\n");
+                writer.write("Error: " + e.getMessage() + "\n");
             }
 
             writer.write("\n=== User Investments ===\n");
@@ -216,7 +274,7 @@ public class AdminReportController {
                 writer.write("\n");
             }
 
-            writer.write("\n=== Yield Distributions (Asset Level) ===\n");
+            writer.write("\n=== Yield Distributions (Asset Level - Database) ===\n");
             writer.write("Distribution ID,Asset ID,Token Address,Yield Type,Total Amount,Distributed Amount,Is Completed,Created At,Completed At\n");
             for (YieldDistribution d : yields) {
                 writer.write(String.join(",",
@@ -231,6 +289,38 @@ public class AdminReportController {
                         d.getCompletedAt() != null ? d.getCompletedAt().toString() : ""
                 ));
                 writer.write("\n");
+            }
+
+            // 添加用户相关的链上收益领取记录（从 blockchain_events 表）
+            try {
+                List<com.mantleluxury.backend.blockchain.domain.BlockchainEvent> userClaimEvents = 
+                    blockchainEventRepository.findByEventType("Claimed")
+                        .stream()
+                        .filter(e -> e.getEventData() != null && e.getEventData().contains(normalizedUser.toLowerCase()))
+                        .toList();
+                
+                if (!userClaimEvents.isEmpty()) {
+                    writer.write("\n=== User Yield Claims (On-Chain Events) ===\n");
+                    writer.write("Event Type,Contract Address,Transaction Hash,Block Number,Block Timestamp,Event Data\n");
+                    for (com.mantleluxury.backend.blockchain.domain.BlockchainEvent event : userClaimEvents) {
+                        writer.write(String.join(",",
+                                quote(event.getEventType()),
+                                quote(event.getContractAddress()),
+                                quote(event.getTransactionHash()),
+                                String.valueOf(event.getBlockNumber()),
+                                event.getBlockTimestamp() != null ? event.getBlockTimestamp().toString() : "",
+                                quote(event.getEventData() != null ? event.getEventData() : "")
+                        ));
+                        writer.write("\n");
+                    }
+                } else {
+                    writer.write("\n=== User Yield Claims (On-Chain Events) ===\n");
+                    writer.write("No on-chain claim events found for this user.\n");
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to fetch on-chain yield claims from database for user {}", normalizedUser, e);
+                writer.write("\n=== On-Chain Events ===\n");
+                writer.write("Error: " + e.getMessage() + "\n");
             }
 
             writer.flush();

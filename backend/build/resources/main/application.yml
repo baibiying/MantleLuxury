@@ -52,4 +52,16 @@ admin:
   # 这些地址可以访问管理后台功能
   wallet-addresses: "0x70a0af9d47a0f6314c4eef2a68666b096701ebdf"
 
+# The Graph 配置（已弃用 - Hosted Service 已关闭，Studio 不支持 Mantle）
+# 现在使用后端自建的事件索引器（EventIndexerService）
+thegraph:
+  enabled: false  # 已禁用，使用 EventIndexerService 替代
+  endpoint: ""
+  timeout-seconds: 10
+
+# 事件索引器配置（后端自建）
+event-indexer:
+  enabled: true  # 是否启用事件索引器（自动监听链上事件）
+  sync-interval-seconds: 30  # 同步间隔（秒）
+
 
