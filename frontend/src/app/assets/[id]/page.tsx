@@ -129,8 +129,18 @@ export default function AssetDetailPage() {
         }
         
         setAsset(data);
+        setError(null);
+        setRetryCount(0); // 成功后重置重试计数
       } catch (e: any) {
-        setError(e.message ?? "Failed to load asset");
+        const errorMessage = e.message ?? "加载资产失败";
+        setError(errorMessage);
+        // 如果是网络错误且重试次数少于3次，自动重试
+        if (retryCount < 3 && (errorMessage.includes("fetch") || errorMessage.includes("network"))) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            fetchAsset();
+          }, 2000 * (retryCount + 1)); // 递增延迟：2s, 4s, 6s
+        }
       } finally {
         setLoading(false);
       }
@@ -139,7 +149,7 @@ export default function AssetDetailPage() {
     if (params.id) {
       fetchAsset();
     }
-  }, [params.id]);
+  }, [params.id, retryCount]);
 
   // 加载当前钱包的 KYC / AML 状态
   useEffect(() => {
@@ -373,8 +383,11 @@ export default function AssetDetailPage() {
     return (
       <main className="min-h-screen gradient-bg text-slate-50 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="loading-spinner mx-auto"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-sky-400"></div>
           <p className="text-sm text-slate-300">加载资产详情中…</p>
+          {retryCount > 0 && (
+            <p className="text-xs text-slate-500">正在重试 ({retryCount}/3)...</p>
+          )}
         </div>
       </main>
     );
@@ -388,26 +401,63 @@ export default function AssetDetailPage() {
           <p className="text-lg font-semibold text-red-200">
             {error ? "加载失败" : "资产不存在"}
           </p>
-          <p className="text-sm text-red-300 break-all">{error || "未找到该资产"}</p>
-          <button
-            onClick={() => router.push("/assets")}
-            className="mt-4 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-xl text-white text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/50"
-          >
-            返回资产列表
-          </button>
+          <p className="text-sm text-red-300 break-all mb-4">{error || "未找到该资产"}</p>
+          <div className="flex gap-3 justify-center">
+            {error && (
+              <button
+                onClick={() => {
+                  setError(null);
+                  setLoading(true);
+                  // 重新加载
+                  const fetchAsset = async () => {
+                    try {
+                      const res = await fetch(`${API_BASE}/api/assets/${params.id}`);
+                      if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
+                      const data: Asset = await res.json();
+                      setAsset(data);
+                      setError(null);
+                    } catch (e: any) {
+                      setError(e.message ?? "加载资产失败");
+                    } finally {
+                      setLoading(false);
+                    }
+                  };
+                  fetchAsset();
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white text-sm font-medium transition-colors"
+              >
+                重试
+              </button>
+            )}
+            <button
+              onClick={() => router.push("/assets")}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm font-medium transition-colors"
+            >
+              返回资产列表
+            </button>
+          </div>
         </div>
       </main>
     );
   }
 
-  const heroImage = (() => {
+  // 确保 asset 存在后再处理
+  if (!asset) {
+    return null;
+  }
+
+  // 计算 hero image URL
+  const getHeroImage = () => {
     if (asset.imageUrls) {
       try {
         const arr = JSON.parse(asset.imageUrls);
         if (Array.isArray(arr) && arr.length > 0) {
           const url = arr[0];
           // 如果是相对路径，拼接后端地址
-          return url.startsWith('/uploads/') ? `${API_BASE}${url}` : url;
+          if (url.startsWith('/uploads/')) {
+            return `${API_BASE}${url}`;
+          }
+          return url;
         }
       } catch {
         // ignore
@@ -420,7 +470,9 @@ export default function AssetDetailPage() {
       return "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=1200&q=80";
     }
     return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";
-  })();
+  };
+  
+  const heroImage = getHeroImage();
 
   return (
     <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">

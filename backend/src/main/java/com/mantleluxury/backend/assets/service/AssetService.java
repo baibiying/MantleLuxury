@@ -13,6 +13,7 @@ import com.mantleluxury.backend.assets.service.AssetAuthenticationService;
 import com.mantleluxury.backend.assets.service.CustodyService;
 import com.mantleluxury.backend.assets.service.InsuranceService;
 import com.mantleluxury.backend.blockchain.service.TokenDeploymentService;
+import com.mantleluxury.backend.blockchain.service.TokenQueryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class AssetService {
     private final CustodyService custodyService;
     private final InsuranceService insuranceService;
     private final org.springframework.core.io.ResourceLoader resourceLoader;
+    private final TokenQueryService tokenQueryService;
     
     public AssetService(
             AssetRepository assetRepository,
@@ -46,7 +48,8 @@ public class AssetService {
             AssetAuthenticationService authenticationService,
             CustodyService custodyService,
             InsuranceService insuranceService,
-            org.springframework.core.io.ResourceLoader resourceLoader
+            org.springframework.core.io.ResourceLoader resourceLoader,
+            TokenQueryService tokenQueryService
     ) {
         this.assetRepository = assetRepository;
         this.tokenDeploymentService = tokenDeploymentService;
@@ -55,6 +58,7 @@ public class AssetService {
         this.custodyService = custodyService;
         this.insuranceService = insuranceService;
         this.resourceLoader = resourceLoader;
+        this.tokenQueryService = tokenQueryService;
     }
     
     /**
@@ -63,6 +67,23 @@ public class AssetService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Asset submitAsset(AssetSubmitRequest request) {
+        // 数据验证
+        if (request.brand() == null || request.brand().trim().isEmpty()) {
+            throw new IllegalArgumentException("品牌名称不能为空");
+        }
+        if (request.model() == null || request.model().trim().isEmpty()) {
+            throw new IllegalArgumentException("型号不能为空");
+        }
+        if (request.totalSupply() == null || request.totalSupply().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("总份数必须大于0");
+        }
+        if (request.pricePerShare() == null || request.pricePerShare().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("每份价格必须大于0");
+        }
+        if (request.totalSupply().multiply(request.pricePerShare()).compareTo(new BigDecimal("10000000")) > 0) {
+            throw new IllegalArgumentException("资产总价值过高，请检查总份数和每份价格");
+        }
+        
         // 准备资产数据（但不保存到数据库）
         Asset asset = new Asset();
         asset.setAssetType(request.assetType());
@@ -269,11 +290,27 @@ public class AssetService {
      * 转换为 DTO
      */
     private AssetDto toDto(Asset asset) {
-        // 计算剩余可购份数（简化版：假设已售出为 0）
-        // TODO: 后续应该从链上读取实际已售出数量
-        BigDecimal remainingSupply = asset.getTotalSupply() != null 
-                ? asset.getTotalSupply() 
-                : BigDecimal.ZERO;
+        // 计算剩余可购份数：优先从链上读取，失败则使用数据库中的总供应量
+        BigDecimal remainingSupply;
+        if (asset.getTokenAddress() != null && !asset.getTokenAddress().isEmpty()) {
+            try {
+                BigInteger availableTokens = tokenQueryService.getAvailableTokens(asset.getTokenAddress());
+                if (availableTokens != null) {
+                    remainingSupply = tokenQueryService.weiToTokens(availableTokens);
+                    logger.debug("Read remaining supply from chain for asset {}: {}", asset.getId(), remainingSupply);
+                } else {
+                    // 链上读取失败，使用数据库中的总供应量作为后备
+                    remainingSupply = asset.getTotalSupply() != null ? asset.getTotalSupply() : BigDecimal.ZERO;
+                    logger.debug("Failed to read from chain, using database value for asset {}: {}", asset.getId(), remainingSupply);
+                }
+            } catch (Exception e) {
+                logger.warn("Error reading available tokens from chain for asset {}: {}", asset.getId(), e.getMessage());
+                remainingSupply = asset.getTotalSupply() != null ? asset.getTotalSupply() : BigDecimal.ZERO;
+            }
+        } else {
+            // 没有合约地址，使用数据库中的总供应量
+            remainingSupply = asset.getTotalSupply() != null ? asset.getTotalSupply() : BigDecimal.ZERO;
+        }
         
         // 计算累计收益（统计所有收益记录，包括未完成的）
         BigDecimal totalYield = BigDecimal.ZERO;

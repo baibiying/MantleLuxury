@@ -61,7 +61,8 @@ public class AssetController {
                 amlService.checkAddress(request.submittedBy());
             }
 
-            System.out.println("Received asset submission request: " + request);
+            logger.info("Received asset submission request: assetType={}, brand={}, model={}, submittedBy={}", 
+                    request.assetType(), request.brand(), request.model(), request.submittedBy());
             var asset = assetService.submitAsset(request);
             AssetDto dto = assetService.getAssetById(asset.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(dto);

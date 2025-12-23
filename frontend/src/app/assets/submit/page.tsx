@@ -102,6 +102,37 @@ export default function AssetSubmitPage() {
       setError("请先完成 KYC / AML 审核再提交资产");
       return;
     }
+    
+    // 数据验证
+    if (!formData.brand || !formData.brand.trim()) {
+      setError("请输入品牌名称");
+      return;
+    }
+    if (!formData.model || !formData.model.trim()) {
+      setError("请输入型号");
+      return;
+    }
+    if (!formData.totalSupply || parseFloat(formData.totalSupply) <= 0) {
+      setError("请输入有效的总份数（必须大于0）");
+      return;
+    }
+    if (!formData.pricePerShare || parseFloat(formData.pricePerShare) <= 0) {
+      setError("请输入有效的每份价格（必须大于0）");
+      return;
+    }
+    if (formData.imageUrls.length === 0) {
+      setError("请至少上传一张资产图片");
+      return;
+    }
+    
+    // 验证总份数和价格的关系
+    const totalSupply = parseFloat(formData.totalSupply);
+    const pricePerShare = parseFloat(formData.pricePerShare);
+    if (totalSupply * pricePerShare > 10000000) { // 总价值超过1000万美元
+      setError("资产总价值过高，请检查总份数和每份价格");
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setSuccess(false);

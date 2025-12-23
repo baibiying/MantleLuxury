@@ -43,7 +43,7 @@ blockchain:
   rpc-url: https://rpc.sepolia.mantle.xyz
   private-key: 773d526fabccd1b26abef51ed7bdcda523409069ecfecd4269cb757c282a599e # 从环境变量读取私钥，或直接配置（不要提交到 Git）
   yield-distribution-contract: "0x988304593FC2e89e56FFAD9393Af0B97c37d9E5D"  # YieldDistribution 合约地址
-  kyc-registry-contract: "0xaB2528c5022e8E9c7c06EE5a1A09d255D50e269f"  # KYCRegistry 合约地址
+  kyc-registry-contract: "0x519AD3F043581620e67567c896508b8Da33fF91D"  # KYCRegistry 合约地址（最新部署）
   custody-manager-contract: "0xF1c527a19b65E3e9Ab9AD7499cc8167C63c3ca87"  # CustodyManager 合约地址
 
 # 管理员配置
