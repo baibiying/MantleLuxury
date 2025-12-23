@@ -6,6 +6,7 @@ import { Web3Provider } from "@/providers/Web3Provider";
 import GridBackground from "@/components/GridBackground";
 import ParticleEffect from "@/components/ParticleEffect";
 import DataStream from "@/components/DataStream";
+import MouseTrail from "@/components/MouseTrail";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,7 +39,7 @@ export default function RootLayout({
             <GridBackground />
             <ParticleEffect />
             <DataStream />
-            <div className="scanline"></div>
+            <MouseTrail />
             
             <header className="w-full border-b border-cyan-500/30 bg-gradient-to-r from-black via-slate-950 to-black backdrop-blur z-20 shadow-lg shadow-cyan-900/30 relative">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent"></div>
