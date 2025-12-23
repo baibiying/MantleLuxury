@@ -172,7 +172,7 @@ export default function Home() {
 
       <div className="relative z-10">
         {/* Hero 区域 */}
-        <section className="max-w-7xl mx-auto px-6 py-20 text-center">
+        <section className="max-w-5xl mx-auto px-6 py-20 text-center">
           <div className="space-y-6 mb-12">
             <p className="text-xs uppercase tracking-[0.25em] text-slate-400 font-medium">
               MantleLuxury
@@ -191,7 +191,7 @@ export default function Home() {
 
         {/* 精选资产轮播 */}
         {mounted && !loadingFeatured && featuredAssets.length > 0 && (
-          <section className="max-w-7xl mx-auto px-6 py-16">
+          <section className="max-w-5xl mx-auto px-6 py-16">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold gradient-text mb-3">精选资产</h2>
               <p className="text-slate-400">正在募集的优质奢侈品资产</p>
@@ -338,7 +338,7 @@ export default function Home() {
 
         {/* 平台数据展示区域 */}
         {mounted && overview && (
-          <section className="max-w-7xl mx-auto px-6 py-16">
+          <section className="max-w-5xl mx-auto px-6 py-16">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold gradient-text mb-3">平台数据</h2>
               <p className="text-slate-400">实时更新的关键指标</p>
@@ -489,7 +489,7 @@ export default function Home() {
 
         {/* 平台特性展示 */}
         {mounted && (
-          <section className="max-w-7xl mx-auto px-6 py-16 border-t border-slate-800/50">
+          <section className="max-w-5xl mx-auto px-6 py-16 border-t border-slate-800/50">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold gradient-text mb-3">平台优势</h2>
               <p className="text-slate-400">为什么选择 MantleLuxury</p>
@@ -516,7 +516,7 @@ export default function Home() {
 
         {/* 最近收益分配记录 */}
         {mounted && !loadingYields && recentYields.length > 0 && (
-          <section className="max-w-7xl mx-auto px-6 py-16 border-t border-slate-800/50">
+          <section className="max-w-5xl mx-auto px-6 py-16 border-t border-slate-800/50">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-4xl font-bold gradient-text mb-2">最近收益分配</h2>

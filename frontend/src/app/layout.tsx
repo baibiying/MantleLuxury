@@ -41,17 +41,23 @@ export default function RootLayout({
             <DataStream />
             <MouseTrail />
             
+            {/* Header - 上方为 Logo，下方为整行导航栏 */}
             <header className="w-full border-b border-cyan-500/30 bg-gradient-to-r from-black via-slate-950 to-black backdrop-blur z-20 shadow-lg shadow-cyan-900/30 relative">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent"></div>
-              <div className="relative z-10 max-w-7xl mx-auto px-5 py-4 flex items-center justify-between gap-8">
-                <Link href="/" className="flex items-center gap-3 text-base font-semibold text-cyan-100 hover:text-cyan-50 transition-colors">
-                  <span className="relative inline-flex h-10 w-10 items-center justify-center">
-                    <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 blur-lg opacity-70 animate-pulse" />
-                    <span className="relative z-10 text-xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]">M</span>
-                  </span>
-                  <span className="tracking-wide text-lg gradient-text">MantleLuxury</span>
-                </Link>
-                <nav className="flex items-center gap-4 text-sm">
+              <div className="relative z-10 max-w-7xl mx-auto px-6 py-4 flex flex-col gap-4">
+                {/* Logo */}
+                <div className="flex items-center justify-start">
+                  <Link href="/" className="flex items-center gap-4 text-base font-semibold text-cyan-100 hover:text-cyan-50 transition-colors">
+                    <span className="relative inline-flex h-16 w-16 items-center justify-center">
+                      <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 blur-lg opacity-70 animate-pulse" />
+                      <span className="relative z-10 text-4xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]">M</span>
+                    </span>
+                    <span className="tracking-wide text-3xl font-bold gradient-text">MantleLuxury</span>
+                  </Link>
+                </div>
+                
+                {/* 导航栏 */}
+                <nav className="flex items-center gap-3 text-sm justify-center overflow-x-auto">
                   {[
                     { href: "/assets", label: "资产列表" },
                     { href: "/assets/submit", label: "提交资产" },
@@ -68,7 +74,7 @@ export default function RootLayout({
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="relative overflow-hidden rounded-full border border-cyan-500/30 px-5 py-2.5 text-cyan-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400 hover:text-cyan-100 hover:shadow-[0_0_15px_rgba(0,255,255,0.5)]"
+                      className="relative overflow-hidden rounded-full border border-cyan-500/30 px-4 py-2 text-cyan-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400 hover:text-cyan-100 hover:shadow-[0_0_15px_rgba(0,255,255,0.5)] whitespace-nowrap flex-shrink-0"
                     >
                       <span className="absolute inset-0 bg-gradient-to-r from-cyan-600/20 via-cyan-500/20 to-cyan-400/20 opacity-0 transition-opacity duration-300 hover:opacity-100" />
                       <span className="relative z-10">{item.label}</span>
