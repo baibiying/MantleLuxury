@@ -57,16 +57,32 @@ body {
 }
 
 .gradient-bg {
-  background: linear-gradient(-45deg, #0f172a, #1e293b, #0f172a, #1e3a8a);
+  background: linear-gradient(-45deg, #000000, #0a0a0a, #001122, #003366, #000000);
   background-size: 400% 400%;
   animation: gradient 15s ease infinite;
+  position: relative;
+}
+
+.gradient-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 20%, rgba(0, 255, 0, 0.05) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .glass-effect {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 0 20px rgba(0, 255, 255, 0.05),
+    0 0 40px rgba(0, 255, 255, 0.1);
 }
 
 .float-animation {
@@ -87,14 +103,16 @@ body {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
 }
 
-/* 加载动画 */
+/* 加载动画 - 区块链风格 */
 .loading-spinner {
-  border: 3px solid rgba(148, 163, 184, 0.3);
-  border-top: 3px solid #3b82f6;
+  border: 3px solid rgba(0, 255, 255, 0.2);
+  border-top: 3px solid #00ffff;
+  border-right: 3px solid rgba(0, 255, 255, 0.5);
   border-radius: 50%;
   width: 40px;
   height: 40px;
   animation: spin 1s linear infinite;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
 }
 
 @keyframes spin {
@@ -116,16 +134,29 @@ body {
 .particle {
   position: absolute;
   border-radius: 50%;
-  background: rgba(59, 130, 246, 0.3);
+  background: radial-gradient(circle, rgba(0, 255, 255, 0.4), rgba(0, 255, 255, 0));
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
   animation: float 20s infinite;
 }
 
-/* 渐变文字 */
+/* 渐变文字 - 区块链风格 */
 .gradient-text {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+  background: linear-gradient(135deg, #00ffff, #0ff, #00ff88, #8b5cf6, #00ffff);
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: gradient-text-shift 4s ease infinite;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.5));
+}
+
+@keyframes gradient-text-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 /* 平台数据卡片动画 */
@@ -136,10 +167,13 @@ body {
 
 .stats-card:hover {
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(148, 163, 184, 0.2),
-    0 0 40px rgba(59, 130, 246, 0.1);
-  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(0, 255, 255, 0.4),
+    0 0 40px rgba(0, 255, 255, 0.3),
+    0 0 60px rgba(0, 255, 255, 0.2),
+    inset 0 0 30px rgba(0, 255, 255, 0.1);
+  border-color: rgba(0, 255, 255, 0.6);
 }
 
 .stats-card::before {
@@ -148,12 +182,22 @@ body {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3), rgba(236, 72, 153, 0.3));
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.4), rgba(0, 255, 136, 0.3), rgba(139, 92, 246, 0.3), rgba(0, 255, 255, 0.4));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.4s;
+  animation: border-glow 3s ease-in-out infinite;
+}
+
+@keyframes border-glow {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .stats-card:hover::before {
@@ -190,54 +234,109 @@ body {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* 科技感增强样式 */
+/* 区块链风格增强样式 */
 @keyframes neon-glow {
   0%, 100% {
     text-shadow: 
-      0 0 3px rgba(255, 255, 255, 0.8),
-      0 0 6px rgba(59, 130, 246, 0.6),
-      0 0 9px rgba(59, 130, 246, 0.4),
-      0 0 12px rgba(59, 130, 246, 0.2);
+      0 0 5px rgba(0, 255, 255, 0.8),
+      0 0 10px rgba(0, 255, 255, 0.6),
+      0 0 15px rgba(0, 255, 255, 0.4),
+      0 0 20px rgba(0, 255, 255, 0.2);
   }
   50% {
     text-shadow: 
-      0 0 2px rgba(255, 255, 255, 0.9),
-      0 0 4px rgba(59, 130, 246, 0.7),
-      0 0 6px rgba(59, 130, 246, 0.5),
-      0 0 8px rgba(59, 130, 246, 0.3);
+      0 0 3px rgba(0, 255, 255, 0.9),
+      0 0 6px rgba(0, 255, 255, 0.7),
+      0 0 9px rgba(0, 255, 255, 0.5),
+      0 0 12px rgba(0, 255, 255, 0.3);
   }
 }
 
+/* 区块链风格卡片悬停效果 */
+.card-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.5),
+    0 10px 10px -5px rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(0, 255, 255, 0.3),
+    inset 0 0 20px rgba(0, 255, 255, 0.05);
+  border-color: rgba(0, 255, 255, 0.5);
+}
+
 .neon-text {
-  color: #ffffff !important;
+  color: #00ffff !important;
   font-weight: 700;
   text-shadow: 
-    0 0 2px rgba(255, 255, 255, 0.9),
-    0 0 4px rgba(59, 130, 246, 0.7),
-    0 0 6px rgba(59, 130, 246, 0.5);
-  animation: neon-glow 3s ease-in-out infinite;
-  /* 增加文字对比度 */
+    0 0 5px #00ffff,
+    0 0 10px #00ffff,
+    0 0 15px #00ffff,
+    0 0 20px #00ffff,
+    0 0 35px #00ffff,
+    0 0 40px #00ffff;
+  animation: neon-glow-cyan 2s ease-in-out infinite;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 霓虹边框效果 */
+@keyframes neon-glow-cyan {
+  0%, 100% {
+    text-shadow: 
+      0 0 5px #00ffff,
+      0 0 10px #00ffff,
+      0 0 15px #00ffff,
+      0 0 20px #00ffff,
+      0 0 35px #00ffff,
+      0 0 40px #00ffff;
+  }
+  50% {
+    text-shadow: 
+      0 0 2px #00ffff,
+      0 0 5px #00ffff,
+      0 0 8px #00ffff,
+      0 0 12px #00ffff,
+      0 0 20px #00ffff,
+      0 0 25px #00ffff;
+  }
+}
+
+/* 霓虹边框效果 - 区块链风格 */
 .neon-border {
   position: relative;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(0, 255, 255, 0.4);
   box-shadow: 
-    0 0 5px rgba(59, 130, 246, 0.5),
-    inset 0 0 5px rgba(59, 130, 246, 0.1);
+    0 0 10px rgba(0, 255, 255, 0.6),
+    0 0 20px rgba(0, 255, 255, 0.4),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
   transition: all 0.3s ease;
+  animation: border-pulse 2s ease-in-out infinite;
+}
+
+@keyframes border-pulse {
+  0%, 100% {
+    border-color: rgba(0, 255, 255, 0.4);
+    box-shadow: 
+      0 0 10px rgba(0, 255, 255, 0.6),
+      0 0 20px rgba(0, 255, 255, 0.4),
+      inset 0 0 10px rgba(0, 255, 255, 0.1);
+  }
+  50% {
+    border-color: rgba(0, 255, 255, 0.8);
+    box-shadow: 
+      0 0 20px rgba(0, 255, 255, 0.8),
+      0 0 40px rgba(0, 255, 255, 0.6),
+      0 0 60px rgba(0, 255, 255, 0.4),
+      inset 0 0 20px rgba(0, 255, 255, 0.2);
+  }
 }
 
 .neon-border:hover {
-  border-color: rgba(59, 130, 246, 0.8);
+  border-color: rgba(0, 255, 255, 1);
   box-shadow: 
-    0 0 10px rgba(59, 130, 246, 0.8),
-    0 0 20px rgba(59, 130, 246, 0.6),
-    0 0 30px rgba(59, 130, 246, 0.4),
-    inset 0 0 10px rgba(59, 130, 246, 0.2);
+    0 0 15px rgba(0, 255, 255, 1),
+    0 0 30px rgba(0, 255, 255, 0.8),
+    0 0 45px rgba(0, 255, 255, 0.6),
+    0 0 60px rgba(0, 255, 255, 0.4),
+    inset 0 0 15px rgba(0, 255, 255, 0.3);
 }
 
 /* 全息效果 */
@@ -290,20 +389,24 @@ body {
   }
 }
 
-/* 代码风格边框 */
+/* 代码风格边框 - 区块链风格 */
 .code-border {
   position: relative;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.05);
 }
 
 .code-border::before,
 .code-border::after {
   content: "";
   position: absolute;
-  width: 10px;
-  height: 10px;
-  border: 2px solid rgba(59, 130, 246, 0.6);
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 255, 255, 0.8);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
 }
 
 .code-border::before {
@@ -344,13 +447,21 @@ body {
   animation: dataFlow 3s ease-in-out infinite;
 }
 
-/* 扫描线效果 */
+/* 扫描线效果 - 增强版 */
 @keyframes scanline {
   0% {
     transform: translateY(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
   }
   100% {
     transform: translateY(100vh);
+    opacity: 0;
   }
 }
 
@@ -359,14 +470,17 @@ body {
   top: 0;
   left: 0;
   width: 100%;
-  height: 2px;
+  height: 3px;
   background: linear-gradient(
     to bottom,
     transparent,
-    rgba(59, 130, 246, 0.5),
+    rgba(0, 255, 255, 0.8),
+    rgba(0, 255, 255, 1),
+    rgba(0, 255, 255, 0.8),
     transparent
   );
-  animation: scanline 8s linear infinite;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+  animation: scanline 6s linear infinite;
   pointer-events: none;
   z-index: 9999;
 }
@@ -403,11 +517,15 @@ body {
   animation: pulse-light 2s ease-in-out infinite;
 }
 
-/* 科技感按钮 */
+/* 科技感按钮 - 区块链风格 */
 .tech-button {
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.05);
 }
 
 .tech-button::before {
@@ -418,7 +536,7 @@ body {
   width: 0;
   height: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: radial-gradient(circle, rgba(0, 255, 255, 0.3), transparent);
   transform: translate(-50%, -50%);
   transition: width 0.6s, height 0.6s;
 }
@@ -432,12 +550,27 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(59, 130, 246, 0.5);
+  border: 1px solid rgba(0, 255, 255, 0.8);
   opacity: 0;
   transition: opacity 0.3s;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.6),
+    inset 0 0 15px rgba(0, 255, 255, 0.1);
 }
 
 .tech-button:hover::after {
   opacity: 1;
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.8),
+    0 0 40px rgba(0, 255, 255, 0.6),
+    inset 0 0 20px rgba(0, 255, 255, 0.2);
+}
+
+.tech-button:hover {
+  border-color: rgba(0, 255, 255, 1);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.8),
+    0 0 40px rgba(0, 255, 255, 0.6),
+    inset 0 0 20px rgba(0, 255, 255, 0.2);
+  transform: translateY(-2px);
 }

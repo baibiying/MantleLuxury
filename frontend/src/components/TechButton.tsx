@@ -27,9 +27,9 @@ export default function TechButton({
   const baseClasses = "tech-button relative font-semibold transition-all duration-300 neon-border";
   
   const variantClasses = {
-    primary: "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70",
-    secondary: "glass-effect text-slate-200 hover:bg-slate-800/80 border-slate-700/50 hover:border-slate-600/50",
-    outline: "border-2 border-sky-500/50 text-sky-400 hover:border-sky-400 hover:text-sky-300 hover:bg-sky-500/10",
+    primary: "bg-gradient-to-r from-cyan-500 via-cyan-600 to-cyan-500 hover:from-cyan-400 hover:via-cyan-500 hover:to-cyan-400 text-white shadow-lg shadow-cyan-500/50 hover:shadow-cyan-500/70",
+    secondary: "glass-effect text-cyan-200 hover:bg-black/60 border-cyan-500/30 hover:border-cyan-400/50",
+    outline: "border-2 border-cyan-500/50 text-cyan-400 hover:border-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10",
   }[variant];
 
   const sizeClasses = {

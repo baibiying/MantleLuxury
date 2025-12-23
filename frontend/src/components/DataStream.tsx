@@ -27,16 +27,16 @@ export default function DataStream() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden opacity-10">
+    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden opacity-15">
       {streams.map((stream) => (
         <div
           key={stream.id}
-          className="absolute font-mono text-xs text-cyan-400 whitespace-nowrap"
+          className="absolute font-mono text-xs text-cyan-300 whitespace-nowrap"
           style={{
             left: `${stream.left}%`,
             top: `${stream.id * 12}%`,
             animation: `streamDown ${20 / stream.speed}s linear infinite`,
-            textShadow: "0 0 10px rgba(59, 130, 246, 0.5)",
+            textShadow: "0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5)",
           }}
         >
           {stream.text}

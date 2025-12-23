@@ -40,14 +40,15 @@ export default function RootLayout({
             <DataStream />
             <div className="scanline"></div>
             
-            <header className="w-full border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 backdrop-blur z-20 shadow-lg shadow-sky-900/20 relative">
-              <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between gap-8">
-                <Link href="/" className="flex items-center gap-3 text-base font-semibold text-slate-50">
+            <header className="w-full border-b border-cyan-500/30 bg-gradient-to-r from-black via-slate-950 to-black backdrop-blur z-20 shadow-lg shadow-cyan-900/30 relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent"></div>
+              <div className="relative z-10 max-w-7xl mx-auto px-5 py-4 flex items-center justify-between gap-8">
+                <Link href="/" className="flex items-center gap-3 text-base font-semibold text-cyan-100 hover:text-cyan-50 transition-colors">
                   <span className="relative inline-flex h-10 w-10 items-center justify-center">
-                    <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-sky-500 via-purple-500 to-blue-500 blur-lg opacity-60" />
-                    <span className="relative z-10 text-xl font-black">M</span>
+                    <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 blur-lg opacity-70 animate-pulse" />
+                    <span className="relative z-10 text-xl font-black text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]">M</span>
                   </span>
-                  <span className="tracking-wide text-lg">MantleLuxury</span>
+                  <span className="tracking-wide text-lg gradient-text">MantleLuxury</span>
                 </Link>
                 <nav className="flex items-center gap-4 text-sm">
                   {[
@@ -66,9 +67,9 @@ export default function RootLayout({
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="relative overflow-hidden rounded-full border border-slate-700/60 px-5 py-2.5 text-slate-200 transition duration-300 hover:-translate-y-0.5 hover:border-sky-500/70 hover:text-sky-100"
+                      className="relative overflow-hidden rounded-full border border-cyan-500/30 px-5 py-2.5 text-cyan-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400 hover:text-cyan-100 hover:shadow-[0_0_15px_rgba(0,255,255,0.5)]"
                     >
-                      <span className="absolute inset-0 bg-gradient-to-r from-sky-600/10 via-purple-500/10 to-blue-600/10 opacity-0 transition-opacity duration-300 hover:opacity-100" />
+                      <span className="absolute inset-0 bg-gradient-to-r from-cyan-600/20 via-cyan-500/20 to-cyan-400/20 opacity-0 transition-opacity duration-300 hover:opacity-100" />
                       <span className="relative z-10">{item.label}</span>
                     </Link>
                   ))}

@@ -162,7 +162,7 @@ export default function Home() {
     <main className="min-h-screen gradient-bg text-slate-50 relative overflow-hidden">
       {/* 背景装饰 - 增强科技感 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl float-animation pulse-light"></div>
+        <div className="absolute top-20 left-10 w-72 h-72 bg-cyan-500/15 rounded-full blur-3xl float-animation pulse-light" style={{ boxShadow: '0 0 100px rgba(0, 255, 255, 0.3)' }}></div>
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl float-animation pulse-light" style={{ animationDelay: '2s' }}></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl glow-effect"></div>
         {/* 额外的光效 */}
@@ -183,38 +183,9 @@ export default function Home() {
               <span className="neon-text">投资平台</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-3xl mx-auto">
-              基于 <span className="text-sky-400 font-semibold">Mantle L2</span> 的奢侈品实物资产代币化平台，
+              基于 <span className="text-cyan-400 font-semibold drop-shadow-[0_0_8px_rgba(0,255,255,0.6)]">Mantle L2</span> 的奢侈品实物资产代币化平台，
               将名表、珠宝等资产拆分为可交易的份额，让更多投资者以更低门槛参与高端奢侈品投资。
             </p>
-          </div>
-
-          {/* 主要操作按钮 */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
-            <a
-              href="/assets"
-              className="tech-button group relative px-10 py-4 bg-gradient-to-r from-sky-500 to-blue-600 rounded-full text-base font-semibold text-white hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70 neon-border"
-            >
-              <span className="relative z-10">浏览可投资资产</span>
-              <span className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-            </a>
-            <a
-              href="/assets/submit"
-              className="tech-button px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 neon-border"
-            >
-              <span className="relative z-10">提交资产</span>
-            </a>
-            <a
-              href="/portfolio"
-              className="tech-button px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 neon-border"
-            >
-              <span className="relative z-10">我的持仓</span>
-            </a>
-            <a
-              href="/kyc"
-              className="tech-button px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 neon-border"
-            >
-              <span className="relative z-10">KYC / AML</span>
-            </a>
           </div>
         </section>
 
@@ -270,7 +241,7 @@ export default function Home() {
                                   <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
                                     {asset.assetType === "watch" ? "名表" : "珠宝"}
                                   </span>
-                                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-500/20 text-sky-300 border border-sky-400/40">
+                                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_10px_rgba(0,255,255,0.3)]">
                                     募集中
                                   </span>
                                 </div>
@@ -283,7 +254,7 @@ export default function Home() {
                                 <div className="flex items-center gap-6 pt-4">
                                   <div>
                                     <div className="text-sm text-slate-400 mb-1">每份价格</div>
-                                    <div className="text-2xl font-bold text-sky-400">
+                                    <div className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">
                                       {parseFloat(asset.pricePerShare).toFixed(2)} MNT
                                     </div>
                                   </div>
@@ -303,7 +274,7 @@ export default function Home() {
                                   )}
                                 </div>
                                 <div className="pt-4">
-                                  <span className="inline-flex items-center gap-2 text-sky-400 font-semibold group-hover:gap-3 transition-all">
+                                  <span className="inline-flex items-center gap-2 text-cyan-400 font-semibold group-hover:gap-3 transition-all drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">
                                     查看详情
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -353,7 +324,7 @@ export default function Home() {
                       onClick={() => setCurrentSlide(index)}
                       className={`h-2 rounded-full transition-all ${
                         index === currentSlide
-                          ? "w-8 bg-sky-500"
+                          ? "w-8 bg-cyan-500"
                           : "w-2 bg-slate-700 hover:bg-slate-600"
                       }`}
                       aria-label={`跳转到第 ${index + 1} 张`}
@@ -376,10 +347,10 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               {/* 注册用户数 */}
               <div className="group relative stats-card glass-effect rounded-2xl border border-slate-700/50 p-6 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
-                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center border border-blue-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
-                  <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/8 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" style={{ boxShadow: '0 0 60px rgba(0, 255, 255, 0.3)' }}></div>
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center border border-cyan-400/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                  <svg className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.6)]" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                   </svg>
                 </div>
@@ -388,12 +359,12 @@ export default function Home() {
                     <div className="text-xl md:text-2xl font-bold text-slate-100 tracking-wide">
                       注册用户
                     </div>
-                    <div className="text-4xl md:text-5xl font-bold text-blue-400 count-up" data-target={overview.totalUsers}>
+                    <div className="text-4xl md:text-5xl font-bold text-cyan-400 count-up drop-shadow-[0_0_12px_rgba(0,255,255,0.6)]" data-target={overview.totalUsers}>
                       {overview.totalUsers}
                     </div>
                   </div>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               </div>
 
               {/* KYC 通过数 */}
@@ -468,7 +439,7 @@ export default function Home() {
               {/* 活跃投资者 */}
               <div className="glass-effect rounded-xl border border-slate-700/50 p-4 text-center">
                 <div className="text-xs text-slate-400 mb-1">活跃投资者</div>
-                <div className="text-2xl font-bold text-sky-400 count-up" data-target={overview.activeInvestors || 0}>
+                <div className="text-2xl font-bold text-cyan-400 count-up drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]" data-target={overview.activeInvestors || 0}>
                   {overview.activeInvestors || 0}
                 </div>
               </div>
@@ -553,7 +524,7 @@ export default function Home() {
               </div>
               <Link
                 href="/yields"
-                className="text-sm text-sky-400 hover:text-sky-300 transition flex items-center gap-2"
+                className="text-sm text-cyan-400 hover:text-cyan-300 transition flex items-center gap-2 drop-shadow-[0_0_6px_rgba(0,255,255,0.5)]"
               >
                 查看全部 <span>→</span>
               </Link>
@@ -564,7 +535,7 @@ export default function Home() {
                   key={yieldItem.id}
                   className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5"></div>
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
                       <span
