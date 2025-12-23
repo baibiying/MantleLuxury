@@ -651,3 +651,12 @@ fi
 echo "保险记录已创建，ID: $INSURANCE_ID"
 echo "✅ 资产 $ASSET_ID 的托管和保险记录已创建完成。"
 ```
+
+---
+
+## Team Bios and Contact Info
+
+### Abby Bai
+- **Role**: Full Stack Developer & Project Mananger
+- **Email**: baibiying@icloud.com
+- **Phone**: 18600665034
