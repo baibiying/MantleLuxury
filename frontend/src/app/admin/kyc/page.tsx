@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
 import Link from "next/link";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -75,21 +78,29 @@ export default function AdminKycPage() {
     }
     // 通过尝试访问一个需要权限的接口来检查是否是管理员
     try {
+      // 确保地址格式正确（去除可能的端口号或其他后缀）
+      const cleanAddress = address?.split(':')[0] || address;
       const res = await fetch(`${API_BASE}/api/admin/kyc/stats`, {
         headers: {
-          "X-Wallet-Address": address,
+          "X-Wallet-Address": cleanAddress,
         },
       });
       setIsAdmin(res.ok);
       if (!res.ok) {
-        try {
-          const data = await res.json();
-          setError(data.error || "无权限访问管理后台");
-          console.error("Admin check failed:", data);
-        } catch {
-          const text = await res.text();
-          setError(text || "无权限访问管理后台");
-          console.error("Admin check failed (text):", text);
+        // 403 是正常的，表示不是管理员，不需要显示错误
+        if (res.status === 403) {
+          setIsAdmin(false);
+          setError(null); // 清除错误，403 不是真正的错误
+        } else {
+          try {
+            const data = await res.json();
+            setError(data.error || "无权限访问管理后台");
+            console.error("Admin check failed:", data);
+          } catch {
+            const text = await res.text();
+            setError(text || "无权限访问管理后台");
+            console.error("Admin check failed (text):", text);
+          }
         }
       } else {
         setError(null); // 清除之前的错误
@@ -257,110 +268,108 @@ export default function AdminKycPage() {
   // 检查管理员权限
   if (isAdmin === false) {
     return (
-      <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold">KYC / AML 管理</h1>
-              <p className="text-sm text-slate-400 mt-1">
-                管理用户 KYC 状态和 AML 黑名单
-              </p>
-            </div>
-            <WalletConnect />
-          </div>
-          <div className="glass-effect border border-red-500/60 rounded-2xl px-6 py-8 text-center">
-            {!isConnected ? (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  请先连接钱包
-                </p>
-                <p className="text-sm text-slate-300 mb-4">
-                  管理后台仅限管理员访问
-                </p>
-                <WalletConnect />
-              </>
-            ) : (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  无权限访问
-                </p>
-                <p className="text-sm text-slate-300">
-                  当前钱包地址不是管理员，无法访问管理后台
-                </p>
-                {error && (
-                  <p className="text-sm text-red-300 mt-2">{error}</p>
-                )}
-              </>
-            )}
-          </div>
+      <PageContainer
+        title="KYC / AML 管理"
+        subtitle="管理用户 KYC 状态和 AML 黑名单"
+        maxWidth="5xl"
+      >
+        <div className="mb-6 flex items-center justify-end">
+          <WalletConnect />
         </div>
-      </main>
+        <TechCard className="px-6 py-8 text-center">
+          {!isConnected ? (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                请先连接钱包
+              </p>
+              <p className="text-sm text-slate-300 mb-4">
+                管理后台仅限管理员访问
+              </p>
+              <WalletConnect />
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                无权限访问
+              </p>
+              <p className="text-sm text-slate-300">
+                当前钱包地址不是管理员，无法访问管理后台
+              </p>
+              {error && (
+                <p className="text-sm text-red-300 mt-2">{error}</p>
+              )}
+            </>
+          )}
+        </TechCard>
+      </PageContainer>
     );
   }
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">KYC / AML 管理</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              管理用户 KYC 状态和 AML 黑名单（仅管理员）
-            </p>
-          </div>
-          <WalletConnect />
+    <PageContainer
+      title="KYC / AML 管理"
+      subtitle="管理用户 KYC 状态和 AML 黑名单（仅管理员）"
+      maxWidth="5xl"
+    >
+      <div className="mb-6 flex items-center justify-end">
+        <WalletConnect />
+      </div>
+
+      {/* 错误和成功提示 */}
+      {error && (
+        <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-red-200 mb-1">
+            错误
+          </p>
+          <p className="text-xs text-red-300 break-all">{error}</p>
         </div>
-
-        {/* 错误和成功提示 */}
-        {error && (
-          <div className="mb-4 px-4 py-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-4 px-4 py-3 bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-emerald-200">
+      )}
+      {success && (
+        <div className="mb-6 bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-emerald-200">
             {success}
-          </div>
-        )}
+          </p>
+        </div>
+      )}
 
-        {loading ? (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center text-sm text-slate-300">
-            正在加载数据...
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* 统计信息 */}
-            {stats && (
-              <div className="grid gap-4 md:grid-cols-6">
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">总用户数</div>
-                  <div className="text-2xl font-bold">{stats.total}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">未提交</div>
-                  <div className="text-2xl font-bold text-slate-400">{stats.none}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">审核中</div>
-                  <div className="text-2xl font-bold text-amber-400">{stats.pending}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">已通过</div>
-                  <div className="text-2xl font-bold text-emerald-400">{stats.approved}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">已拒绝</div>
-                  <div className="text-2xl font-bold text-red-400">{stats.rejected}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">黑名单</div>
-                  <div className="text-2xl font-bold text-red-500">{stats.blacklisted}</div>
-                </div>
-              </div>
-            )}
+      {loading ? (
+        <TechCard className="px-6 py-8 text-center">
+          <p className="text-sm text-slate-300">正在加载数据...</p>
+        </TechCard>
+      ) : (
+        <div className="space-y-6">
+          {/* 统计信息 */}
+          {stats && (
+            <div className="grid gap-4 md:grid-cols-6">
+              <TechCard className="px-4 py-4">
+                <div className="text-xs text-slate-400 mb-1">总用户数</div>
+                <div className="text-2xl font-bold">{stats.total}</div>
+              </TechCard>
+              <TechCard className="px-4 py-4">
+                <div className="text-xs text-slate-400 mb-1">未提交</div>
+                <div className="text-2xl font-bold text-slate-400">{stats.none}</div>
+              </TechCard>
+              <TechCard className="px-4 py-4">
+                <div className="text-xs text-slate-400 mb-1">审核中</div>
+                <div className="text-2xl font-bold text-amber-400">{stats.pending}</div>
+              </TechCard>
+              <TechCard className="px-4 py-4">
+                <div className="text-xs text-slate-400 mb-1">已通过</div>
+                <div className="text-2xl font-bold text-emerald-400">{stats.approved}</div>
+              </TechCard>
+              <TechCard className="px-4 py-4">
+                <div className="text-xs text-slate-400 mb-1">已拒绝</div>
+                <div className="text-2xl font-bold text-red-400">{stats.rejected}</div>
+              </TechCard>
+              <TechCard className="px-4 py-4">
+                <div className="text-xs text-slate-400 mb-1">黑名单</div>
+                <div className="text-2xl font-bold text-red-500">{stats.blacklisted}</div>
+              </TechCard>
+            </div>
+          )}
 
-            {/* 用户列表 */}
-            <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+          {/* 用户列表 */}
+          <TechCard className="px-6 py-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">用户列表</h2>
                 <div className="flex items-center gap-3">
@@ -426,22 +435,22 @@ export default function AdminKycPage() {
                             <div className="flex items-center justify-end gap-2">
                               {user.kycStatus === "pending" && (
                                 <>
-                                  <button
+                                  <TechButton
                                     onClick={() =>
                                       handleReviewKyc(user.walletAddress, "approved")
                                     }
-                                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 rounded text-white text-xs font-medium transition-colors"
+                                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium"
                                   >
                                     通过
-                                  </button>
-                                  <button
+                                  </TechButton>
+                                  <TechButton
                                     onClick={() =>
                                       handleReviewKyc(user.walletAddress, "rejected")
                                     }
-                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-white text-xs font-medium transition-colors"
+                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium"
                                   >
                                     拒绝
-                                  </button>
+                                  </TechButton>
                                 </>
                               )}
                             </div>
@@ -452,18 +461,18 @@ export default function AdminKycPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+          </TechCard>
 
-            {/* 黑名单管理 */}
-            <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+          {/* 黑名单管理 */}
+          <TechCard className="px-6 py-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">黑名单管理</h2>
-                <button
+                <TechButton
                   onClick={() => setShowAddBlacklist(!showAddBlacklist)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white text-sm font-medium transition-colors"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium"
                 >
                   {showAddBlacklist ? "取消" : "+ 添加黑名单"}
-                </button>
+                </TechButton>
               </div>
 
               {showAddBlacklist && (
@@ -493,12 +502,12 @@ export default function AdminKycPage() {
                         className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500"
                       />
                     </div>
-                    <button
+                    <TechButton
                       onClick={handleAddToBlacklist}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white text-sm font-medium transition-colors"
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium"
                     >
                       确认添加
-                    </button>
+                    </TechButton>
                   </div>
                 </div>
               )}
@@ -536,14 +545,14 @@ export default function AdminKycPage() {
                             {new Date(entry.createdAt).toLocaleString("zh-CN")}
                           </td>
                           <td className="py-3 text-right">
-                            <button
+                            <TechButton
                               onClick={() =>
                                 handleRemoveFromBlacklist(entry.walletAddress)
                               }
-                              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 rounded text-white text-xs font-medium transition-colors"
+                              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium"
                             >
                               移除
-                            </button>
+                            </TechButton>
                           </td>
                         </tr>
                       ))
@@ -551,11 +560,10 @@ export default function AdminKycPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </main>
+          </TechCard>
+        </div>
+      )}
+    </PageContainer>
   );
 }
 

@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
 import Link from "next/link";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -484,106 +487,104 @@ export default function AdminAssetsPage() {
   // 检查管理员权限
   if (isAdmin === false) {
     return (
-      <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold">资产审核后台</h1>
-              <p className="text-sm text-slate-400 mt-1">
-                管理资产提交和审核流程
-              </p>
-            </div>
-            <WalletConnect />
-          </div>
-          <div className="glass-effect border border-red-500/60 rounded-2xl px-6 py-8 text-center">
-            {!isConnected ? (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  请先连接钱包
-                </p>
-                <p className="text-sm text-slate-300 mb-4">
-                  管理后台仅限管理员访问
-                </p>
-                <WalletConnect />
-              </>
-            ) : (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  无权限访问
-                </p>
-                <p className="text-sm text-slate-300">
-                  当前钱包地址不是管理员，无法访问管理后台
-                </p>
-                {error && (
-                  <p className="text-sm text-red-300 mt-2">{error}</p>
-                )}
-              </>
-            )}
-          </div>
+      <PageContainer
+        title="资产审核后台"
+        subtitle="管理资产提交和审核流程"
+        maxWidth="5xl"
+      >
+        <div className="mb-6 flex items-center justify-end">
+          <WalletConnect />
         </div>
-      </main>
+        <TechCard className="px-6 py-8 text-center">
+          {!isConnected ? (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                请先连接钱包
+              </p>
+              <p className="text-sm text-slate-300 mb-4">
+                管理后台仅限管理员访问
+              </p>
+              <WalletConnect />
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                无权限访问
+              </p>
+              <p className="text-sm text-slate-300">
+                当前钱包地址不是管理员，无法访问管理后台
+              </p>
+              {error && (
+                <p className="text-sm text-red-300 mt-2">{error}</p>
+              )}
+            </>
+          )}
+        </TechCard>
+      </PageContainer>
     );
   }
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">资产审核后台</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              管理资产提交和审核流程（仅管理员）
-            </p>
-          </div>
-          <WalletConnect />
+    <PageContainer
+      title="资产审核后台"
+      subtitle="管理资产提交和审核流程（仅管理员）"
+      maxWidth="5xl"
+    >
+      <div className="mb-6 flex items-center justify-end">
+        <WalletConnect />
+      </div>
+
+      {/* 错误和成功提示 */}
+      {error && (
+        <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-red-200 mb-1">
+            错误
+          </p>
+          <p className="text-xs text-red-300 break-all">{error}</p>
         </div>
-
-        {/* 错误和成功提示 */}
-        {error && (
-          <div className="mb-4 px-4 py-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-4 px-4 py-3 bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-emerald-200">
+      )}
+      {success && (
+        <div className="mb-6 bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-emerald-200">
             {success}
-          </div>
-        )}
+          </p>
+        </div>
+      )}
 
-        {loading ? (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center text-sm text-slate-300">
-            正在加载数据...
-          </div>
-        ) : (
-          <div className="space-y-6">
+      {loading ? (
+        <TechCard className="px-6 py-8 text-center">
+          <p className="text-sm text-slate-300">正在加载数据...</p>
+        </TechCard>
+      ) : (
+        <div className="space-y-6">
             {/* 统计信息 */}
             {stats && (
               <div className="grid gap-4 md:grid-cols-5">
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
+                <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">总资产数</div>
                   <div className="text-2xl font-bold">{stats.total}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
+                </TechCard>
+                <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">待认证</div>
                   <div className="text-2xl font-bold text-slate-400">{stats.registered}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
+                </TechCard>
+                <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">募集中</div>
                   <div className="text-2xl font-bold text-blue-400">{stats.fundraising}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
+                </TechCard>
+                <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">已满额</div>
                   <div className="text-2xl font-bold text-emerald-400">{stats.funded}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
+                </TechCard>
+                <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">已售出</div>
                   <div className="text-2xl font-bold text-purple-400">{stats.sold}</div>
-                </div>
+                </TechCard>
               </div>
             )}
 
             {/* 资产列表 */}
-            <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+            <TechCard className="px-6 py-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">资产列表</h2>
                 <div className="flex items-center gap-3">
@@ -676,7 +677,7 @@ export default function AdminAssetsPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </TechCard>
 
             {/* 资产详情模态框 */}
             {selectedAsset && (
@@ -1316,8 +1317,7 @@ export default function AdminAssetsPage() {
             )}
           </div>
         )}
-      </div>
-    </main>
+    </PageContainer>
   );
 }
 

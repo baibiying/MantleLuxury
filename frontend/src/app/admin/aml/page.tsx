@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -59,19 +62,27 @@ export default function AdminAmlPage() {
       return;
     }
     try {
+      // 确保地址格式正确（去除可能的端口号或其他后缀）
+      const cleanAddress = address?.split(':')[0] || address;
       const res = await fetch(`${API_BASE}/api/admin/kyc/stats`, {
         headers: {
-          "X-Wallet-Address": address,
+          "X-Wallet-Address": cleanAddress,
         },
       });
       setIsAdmin(res.ok);
       if (!res.ok) {
-        try {
-          const data = await res.json();
-          setError(data.error || "无权限访问管理后台");
-        } catch {
-          const text = await res.text();
-          setError(text || "无权限访问管理后台");
+        // 403 是正常的，表示不是管理员，不需要显示错误
+        if (res.status === 403) {
+          setIsAdmin(false);
+          setError(null); // 清除错误，403 不是真正的错误
+        } else {
+          try {
+            const data = await res.json();
+            setError(data.error || "无权限访问管理后台");
+          } catch {
+            const text = await res.text();
+            setError(text || "无权限访问管理后台");
+          }
         }
       } else {
         setError(null);
@@ -188,77 +199,75 @@ export default function AdminAmlPage() {
 
   if (isAdmin === false) {
     return (
-      <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold">AML 告警管理</h1>
-              <p className="text-sm text-slate-400 mt-1">
-                查看并处理 AML 风控告警（仅管理员）
-              </p>
-            </div>
-            <WalletConnect />
-          </div>
-          <div className="glass-effect border border-red-500/60 rounded-2xl px-6 py-8 text-center">
-            {!isConnected ? (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  请先连接钱包
-                </p>
-                <p className="text-sm text-slate-300 mb-4">
-                  管理后台仅限管理员访问
-                </p>
-                <WalletConnect />
-              </>
-            ) : (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  无权限访问
-                </p>
-                <p className="text-sm text-slate-300">
-                  当前钱包地址不是管理员，无法访问 AML 告警后台
-                </p>
-                {error && (
-                  <p className="text-sm text-red-300 mt-2">{error}</p>
-                )}
-              </>
-            )}
-          </div>
+      <PageContainer
+        title="AML 告警管理"
+        subtitle="查看并处理 AML 风控告警（仅管理员）"
+        maxWidth="5xl"
+      >
+        <div className="mb-6 flex items-center justify-end">
+          <WalletConnect />
         </div>
-      </main>
+        <TechCard className="px-6 py-8 text-center">
+          {!isConnected ? (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                请先连接钱包
+              </p>
+              <p className="text-sm text-slate-300 mb-4">
+                管理后台仅限管理员访问
+              </p>
+              <WalletConnect />
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                无权限访问
+              </p>
+              <p className="text-sm text-slate-300">
+                当前钱包地址不是管理员，无法访问 AML 告警后台
+              </p>
+              {error && (
+                <p className="text-sm text-red-300 mt-2">{error}</p>
+              )}
+            </>
+          )}
+        </TechCard>
+      </PageContainer>
     );
   }
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">AML 告警管理</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              查看高风险地址与异常交易告警，并记录处理结果。
-            </p>
-          </div>
-          <WalletConnect />
+    <PageContainer
+      title="AML 告警管理"
+      subtitle="查看高风险地址与异常交易告警，并记录处理结果"
+      maxWidth="5xl"
+    >
+      <div className="mb-6 flex items-center justify-end">
+        <WalletConnect />
+      </div>
+
+      {error && (
+        <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-red-200 mb-1">
+            错误
+          </p>
+          <p className="text-xs text-red-300 break-all">{error}</p>
         </div>
-
-        {error && (
-          <div className="mb-4 px-4 py-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-4 px-4 py-3 bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-emerald-200">
+      )}
+      {success && (
+        <div className="mb-6 bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-emerald-200">
             {success}
-          </div>
-        )}
+          </p>
+        </div>
+      )}
 
-        {loading ? (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center text-sm text-slate-300">
-            正在加载告警数据...
-          </div>
-        ) : (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+      {loading ? (
+        <TechCard className="px-6 py-8 text-center">
+          <p className="text-sm text-slate-300">正在加载告警数据...</p>
+        </TechCard>
+      ) : (
+        <TechCard className="px-6 py-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">告警列表</h2>
               <div className="flex items-center gap-3">
@@ -328,16 +337,16 @@ export default function AdminAmlPage() {
                           {new Date(alert.createdAt).toLocaleString("zh-CN")}
                         </td>
                         <td className="py-3 text-right">
-                          <button
+                          <TechButton
                             onClick={() => {
                               setSelectedAlert(alert);
                               setHandleStatus(alert.status);
                               setHandleNotes(alert.handleNotes || "");
                             }}
-                            className="px-3 py-1 bg-sky-600 hover:bg-sky-700 rounded text-white text-xs font-medium transition-colors"
+                            className="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium"
                           >
                             查看 / 处理
-                          </button>
+                          </TechButton>
                         </td>
                       </tr>
                     ))
@@ -345,7 +354,7 @@ export default function AdminAmlPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </TechCard>
         )}
 
         {/* 告警详情与处理模态框 */}
@@ -482,26 +491,25 @@ export default function AdminAmlPage() {
                     />
                   </div>
                   <div className="flex gap-3 pt-2">
-                    <button
+                    <TechButton
                       onClick={handleUpdateAlert}
-                      className="flex-1 px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white font-medium text-sm transition-colors"
+                      className="flex-1 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium text-sm"
                     >
                       保存处理结果
-                    </button>
-                    <button
+                    </TechButton>
+                    <TechButton
                       onClick={() => setSelectedAlert(null)}
-                      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium text-sm transition-colors"
+                      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-sm"
                     >
                       取消
-                    </button>
+                    </TechButton>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         )}
-      </div>
-    </main>
+    </PageContainer>
   );
 }
 

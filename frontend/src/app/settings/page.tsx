@@ -136,7 +136,7 @@ export default function SettingsPage() {
     <PageContainer
       title="账户设置"
       subtitle="管理您的账户信息和通知偏好"
-      maxWidth="2xl"
+      maxWidth="5xl"
     >
       <div className="mb-6 flex items-center justify-end">
           <div>

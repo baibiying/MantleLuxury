@@ -8,6 +8,9 @@ import { parseEther, formatEther } from "viem";
 import { mantleSepoliaTestnet, mantleSepoliaMetaMaskConfig } from "@/lib/web3/config";
 import { luxuryTokenAbi } from "@/lib/web3/contracts";
 import WalletConnect from "@/components/WalletConnect";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 import Model3DViewer from "@/components/Model3DViewer";
 
 const API_BASE =
@@ -381,22 +384,30 @@ export default function AssetDetailPage() {
   // 在客户端挂载之前，显示加载状态
   if (!mounted || loading) {
     return (
-      <main className="min-h-screen gradient-bg text-slate-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
+      <PageContainer
+        title="资产详情"
+        subtitle="加载中..."
+        maxWidth="7xl"
+      >
+        <div className="text-center space-y-4 py-20">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-sky-400"></div>
           <p className="text-sm text-slate-300">加载资产详情中…</p>
           {retryCount > 0 && (
             <p className="text-xs text-slate-500">正在重试 ({retryCount}/3)...</p>
           )}
         </div>
-      </main>
+      </PageContainer>
     );
   }
 
   if (error || !asset) {
     return (
-      <main className="min-h-screen gradient-bg text-slate-50 flex items-center justify-center px-6">
-        <div className="glass-effect border border-red-500/40 rounded-2xl px-8 py-6 max-w-md text-center space-y-4">
+      <PageContainer
+        title="资产详情"
+        subtitle=""
+        maxWidth="7xl"
+      >
+        <div className="glass-effect border border-red-500/40 rounded-2xl px-8 py-6 max-w-md mx-auto text-center space-y-4">
           <div className="text-4xl mb-2">⚠️</div>
           <p className="text-lg font-semibold text-red-200">
             {error ? "加载失败" : "资产不存在"}
@@ -437,7 +448,7 @@ export default function AssetDetailPage() {
             </button>
           </div>
         </div>
-      </main>
+      </PageContainer>
     );
   }
 
@@ -475,16 +486,13 @@ export default function AssetDetailPage() {
   const heroImage = getHeroImage();
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
-      {/* 背景装饰 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="max-w-7xl mx-auto relative z-10">
-        {/* 头部导航 */}
-        <div className="mb-4 flex items-center justify-between">
+    <PageContainer
+      title={asset.name || "资产详情"}
+      subtitle={asset.description || ""}
+      maxWidth="7xl"
+    >
+      {/* 头部导航 */}
+      <div className="mb-4 flex items-center justify-between">
           <button
             onClick={() => router.back()}
             className="text-sm text-slate-400 hover:text-slate-200 transition"
@@ -1254,8 +1262,7 @@ export default function AssetDetailPage() {
             </div>
           </div>
         </div>
-      </div>
-    </main>
+    </PageContainer>
   );
 }
 

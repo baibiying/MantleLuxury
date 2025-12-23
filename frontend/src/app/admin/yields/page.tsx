@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -328,98 +331,96 @@ export default function AdminYieldsPage() {
   // 管理员权限不足时的提示
   if (isAdmin === false) {
     return (
-      <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold">收益分配控制台</h1>
-              <p className="text-sm text-slate-400 mt-1">
-                仅管理员可以创建和管理收益分配
-              </p>
-            </div>
-            <WalletConnect />
-          </div>
-          <div className="glass-effect border border-red-500/60 rounded-2xl px-6 py-8 text-center">
-            {!isConnected ? (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  请先连接钱包
-                </p>
-                <p className="text-sm text-slate-300 mb-4">
-                  收益分配控制台仅限管理员访问
-                </p>
-                <WalletConnect />
-              </>
-            ) : (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  无权限访问
-                </p>
-                <p className="text-sm text-slate-300">
-                  当前钱包地址不是管理员，无法访问收益分配控制台
-                </p>
-                {error && (
-                  <p className="text-sm text-red-300 mt-2">{error}</p>
-                )}
-              </>
-            )}
-          </div>
+      <PageContainer
+        title="收益分配控制台"
+        subtitle="仅管理员可以创建和管理收益分配"
+        maxWidth="5xl"
+      >
+        <div className="mb-6 flex items-center justify-end">
+          <WalletConnect />
         </div>
-      </main>
+        <TechCard className="px-6 py-8 text-center">
+          {!isConnected ? (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                请先连接钱包
+              </p>
+              <p className="text-sm text-slate-300 mb-4">
+                收益分配控制台仅限管理员访问
+              </p>
+              <WalletConnect />
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                无权限访问
+              </p>
+              <p className="text-sm text-slate-300">
+                当前钱包地址不是管理员，无法访问收益分配控制台
+              </p>
+              {error && (
+                <p className="text-sm text-red-300 mt-2">{error}</p>
+              )}
+            </>
+          )}
+        </TechCard>
+      </PageContainer>
     );
   }
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">收益分配控制台</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              为已代币化资产创建和管理收益分配（仅管理员）
-            </p>
-          </div>
-          <WalletConnect />
+    <PageContainer
+      title="收益分配控制台"
+      subtitle="为已代币化资产创建和管理收益分配（仅管理员）"
+      maxWidth="5xl"
+    >
+      <div className="mb-6 flex items-center justify-end">
+        <WalletConnect />
+      </div>
+
+      {/* 全局提示 */}
+      {error && (
+        <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-red-200 mb-1">
+            错误
+          </p>
+          <p className="text-xs text-red-300 break-all">{error}</p>
         </div>
-
-        {/* 全局提示 */}
-        {error && (
-          <div className="mb-4 px-4 py-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-4 px-4 py-3 bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-emerald-200">
+      )}
+      {success && (
+        <div className="mb-6 bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-emerald-200">
             {success}
-          </div>
-        )}
+          </p>
+        </div>
+      )}
 
-        {loading ? (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center text-sm text-slate-300">
-            正在加载数据...
-          </div>
-        ) : (
-          <div className="space-y-6">
+      {loading ? (
+        <TechCard className="px-6 py-8 text-center">
+          <p className="text-sm text-slate-300">正在加载数据...</p>
+        </TechCard>
+      ) : (
+        <div className="space-y-6">
             {/* 统计信息 */}
             {stats && (
               <div className="grid gap-4 md:grid-cols-4">
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
+                <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">总分配次数</div>
                   <div className="text-2xl font-bold">{stats.total}</div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
+                </TechCard>
+                <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">已完成</div>
                   <div className="text-2xl font-bold text-emerald-400">
                     {stats.completed}
                   </div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
+                </TechCard>
+                <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">进行中</div>
                   <div className="text-2xl font-bold text-amber-400">
                     {stats.pending}
                   </div>
-                </div>
-                <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-4 py-4">
+                </TechCard>
+                <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">
                     累计分配金额 / 已分配
                   </div>
@@ -432,12 +433,12 @@ export default function AdminYieldsPage() {
                       {formatAmount(stats.distributedAmount)} MNT
                     </span>
                   </div>
-                </div>
+                </TechCard>
               </div>
             )}
 
             {/* 创建收益分配表单 */}
-            <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+            <TechCard className="px-6 py-6">
               <h2 className="text-lg font-semibold mb-4">创建新的收益分配</h2>
               <p className="text-sm text-slate-400 mb-4">
                 先在链下创建收益分配记录，然后再在链上执行 createDistribution。
@@ -500,10 +501,10 @@ export default function AdminYieldsPage() {
                   </button>
                 </div>
               </form>
-            </div>
+            </TechCard>
 
             {/* 收益分配列表 */}
-            <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+            <TechCard className="px-6 py-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">收益分配记录</h2>
                 <p className="text-xs text-slate-400">
@@ -520,7 +521,7 @@ export default function AdminYieldsPage() {
                   {yields.map((y) => (
                     <div
                       key={y.id}
-                      className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden"
+                      className="px-5 py-4 relative overflow-hidden"
                     >
                       <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
                       <div className="relative z-10">
@@ -659,11 +660,10 @@ export default function AdminYieldsPage() {
                   ))}
                 </div>
               )}
-            </div>
-          </div>
-        )}
-      </div>
-    </main>
+            </TechCard>
+        </div>
+      )}
+    </PageContainer>
   );
 }
 

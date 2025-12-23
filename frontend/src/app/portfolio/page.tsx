@@ -206,7 +206,7 @@ export default function PortfolioPage() {
     <PageContainer
       title="我的持仓"
       subtitle="查看你在 MantleLuxury 平台上持有的资产份额"
-      maxWidth="6xl"
+      maxWidth="5xl"
     >
       <div className="mb-6 flex items-center justify-end">
         <WalletConnect />

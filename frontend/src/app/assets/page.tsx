@@ -6,6 +6,9 @@ import { useChainId, usePublicClient } from "wagmi";
 import { formatEther } from "viem";
 import { mantleSepoliaTestnet } from "@/lib/web3/config";
 import { luxuryTokenAbi } from "@/lib/web3/contracts";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 type Asset = {
   id: string;
@@ -112,25 +115,33 @@ export default function AssetsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen gradient-bg text-slate-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
+      <PageContainer
+        title="可投资资产"
+        subtitle="来自 MantleLuxury 的奢侈品 RWA 资产列表"
+        maxWidth="5xl"
+      >
+        <div className="text-center space-y-4 py-20">
           <div className="loading-spinner mx-auto"></div>
           <p className="text-sm text-slate-300">加载资产列表中…</p>
         </div>
-      </main>
+      </PageContainer>
     );
   }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
-        <div className="bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4 max-w-md">
+      <PageContainer
+        title="可投资资产"
+        subtitle="来自 MantleLuxury 的奢侈品 RWA 资产列表"
+        maxWidth="5xl"
+      >
+        <div className="bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4 max-w-md mx-auto">
           <p className="text-sm font-semibold text-red-200 mb-1">
             加载失败
           </p>
           <p className="text-xs text-red-300 break-all">{error}</p>
         </div>
-      </main>
+      </PageContainer>
     );
   }
 
@@ -209,32 +220,22 @@ export default function AssetsPage() {
   };
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative z-10">
-      {/* 背景装饰 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+    <PageContainer
+      title="可投资资产"
+      subtitle="来自 MantleLuxury 的奢侈品 RWA 资产列表"
+      maxWidth="5xl"
+    >
+      <div className="mb-6 flex items-center justify-between">
+        <div></div>
+        <Link
+          href="/assets/submit"
+          className="tech-button group relative px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl text-white text-sm font-semibold hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50 neon-border"
+        >
+          <span className="relative z-10 flex items-center gap-2">
+            <span className="text-lg">+</span> 提交资产
+          </span>
+        </Link>
       </div>
-
-      <div className="max-w-7xl mx-auto relative z-10">
-        <header className="mb-6 flex items-start justify-between">
-          <div className="space-y-2">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
-              <span className="gradient-text">可投资资产</span>
-            </h1>
-            <p className="text-sm text-slate-300">
-              来自 MantleLuxury 的奢侈品 RWA 资产列表
-            </p>
-          </div>
-          <Link
-            href="/assets/submit"
-            className="tech-button group relative px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl text-white text-sm font-semibold hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50 neon-border"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              <span className="text-lg">+</span> 提交资产
-            </span>
-          </Link>
-        </header>
 
         {/* 筛选与排序 */}
         <section className="mb-4 space-y-3">
@@ -438,7 +439,6 @@ export default function AssetsPage() {
             </Link>
           ))}
         </section>
-      </div>
-    </main>
+    </PageContainer>
   );
 }

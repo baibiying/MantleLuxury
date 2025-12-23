@@ -98,7 +98,9 @@ export default function KycPage() {
         if (data.selfieUrl) setKycData(prev => ({ ...prev, selfieUrl: data.selfieUrl }));
         
         // 检查是否已完成风险测评
-        const riskRes = await fetch(`${API_BASE}/api/risk-assessment/${address}`);
+        // 确保地址格式正确（去除可能的端口号或其他后缀）
+        const cleanAddress = address?.split(':')[0] || address;
+        const riskRes = await fetch(`${API_BASE}/api/risk-assessment/${cleanAddress}`);
         if (riskRes.ok) {
           const riskData = await riskRes.json();
           setRiskAssessmentSubmitted(true);
@@ -122,13 +124,15 @@ export default function KycPage() {
     setLoading(true);
     setError(null);
     try {
+      // 确保地址格式正确（去除可能的端口号或其他后缀）
+      const cleanAddress = address.split(':')[0];
       const res = await fetch(`${API_BASE}/api/risk-assessment/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          walletAddress: address,
+          walletAddress: cleanAddress,
           answers: riskAssessment,
         }),
       });
@@ -237,8 +241,8 @@ export default function KycPage() {
     <PageContainer
       title="KYC / AML 认证"
       subtitle="完成身份认证以开始投资奢侈品 RWA 资产"
+      maxWidth="5xl"
     >
-      <div className="max-w-2xl mx-auto">
         <div className="mb-6 flex items-center justify-end">
           <WalletConnect />
         </div>
@@ -748,7 +752,6 @@ export default function KycPage() {
             )}
           </TechCard>
         )}
-      </div>
     </PageContainer>
   );
 }

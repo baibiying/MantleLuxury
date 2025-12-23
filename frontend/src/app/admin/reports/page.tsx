@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -86,69 +89,65 @@ export default function AdminReportsPage() {
 
   if (isAdmin === false) {
     return (
-      <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold">报表与导出</h1>
-              <p className="text-sm text-slate-400 mt-1">
-                仅管理员可访问的合规与运营报表导出
-              </p>
-            </div>
-            <WalletConnect />
-          </div>
-          <div className="glass-effect border border-red-500/60 rounded-2xl px-6 py-8 text-center">
-            {!isConnected ? (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  请先连接钱包
-                </p>
-                <p className="text-sm text-slate-300 mb-4">
-                  报表后台仅限管理员访问
-                </p>
-                <WalletConnect />
-              </>
-            ) : (
-              <>
-                <p className="text-lg font-semibold text-red-200 mb-2">
-                  无权限访问
-                </p>
-                <p className="text-sm text-slate-300">
-                  当前钱包地址不是管理员，无法访问报表后台
-                </p>
-                {error && (
-                  <p className="text-sm text-red-300 mt-2">{error}</p>
-                )}
-              </>
-            )}
-          </div>
+      <PageContainer
+        title="报表与导出"
+        subtitle="仅管理员可访问的合规与运营报表导出"
+        maxWidth="5xl"
+      >
+        <div className="mb-6 flex items-center justify-end">
+          <WalletConnect />
         </div>
-      </main>
+        <TechCard className="px-6 py-8 text-center">
+          {!isConnected ? (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                请先连接钱包
+              </p>
+              <p className="text-sm text-slate-300 mb-4">
+                报表后台仅限管理员访问
+              </p>
+              <WalletConnect />
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-red-200 mb-2">
+                无权限访问
+              </p>
+              <p className="text-sm text-slate-300">
+                当前钱包地址不是管理员，无法访问报表后台
+              </p>
+              {error && (
+                <p className="text-sm text-red-300 mt-2">{error}</p>
+              )}
+            </>
+          )}
+        </TechCard>
+      </PageContainer>
     );
   }
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">报表与导出</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              导出资产级与用户级 CSV 报表（仅管理员）
-            </p>
-          </div>
-          <WalletConnect />
+    <PageContainer
+      title="报表与导出"
+      subtitle="导出资产级与用户级 CSV 报表（仅管理员）"
+      maxWidth="5xl"
+    >
+      <div className="mb-6 flex items-center justify-end">
+        <WalletConnect />
+      </div>
+
+      {error && (
+        <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-red-200 mb-1">
+            错误
+          </p>
+          <p className="text-xs text-red-300 break-all">{error}</p>
         </div>
+      )}
 
-        {error && (
-          <div className="mb-4 px-4 py-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
-            {error}
-          </div>
-        )}
-
-        <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
           {/* 资产级报表 */}
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+          <TechCard className="px-6 py-6">
             <h2 className="text-lg font-semibold mb-3">资产级收益与投资报表</h2>
             <p className="text-sm text-slate-400 mb-4">
               按资产导出该资产的募集、投资和收益分配情况（CSV），用于审计与合规记录。
@@ -166,7 +165,7 @@ export default function AdminReportsPage() {
                   className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
                 />
               </div>
-              <button
+              <TechButton
                 onClick={() =>
                   assetId.trim() &&
                   download(
@@ -175,15 +174,15 @@ export default function AdminReportsPage() {
                   )
                 }
                 disabled={!assetId.trim()}
-                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg text-white text-sm font-medium transition-colors"
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium"
               >
                 导出资产报表 CSV
-              </button>
+              </TechButton>
             </div>
-          </div>
+          </TechCard>
 
           {/* 用户级报表 */}
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+          <TechCard className="px-6 py-6">
             <h2 className="text-lg font-semibold mb-3">用户级交易与收益报表</h2>
             <p className="text-sm text-slate-400 mb-4">
               按钱包地址导出用户的投资记录与相关收益分配信息，支持按日期区间过滤。
@@ -225,7 +224,7 @@ export default function AdminReportsPage() {
                   />
                 </div>
               </div>
-              <button
+              <TechButton
                 onClick={() => {
                   if (!userAddress.trim()) return;
                   const params = new URLSearchParams();
@@ -240,15 +239,14 @@ export default function AdminReportsPage() {
                   );
                 }}
                 disabled={!userAddress.trim()}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg text-white text-sm font-medium transition-colors"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium"
               >
                 导出用户报表 CSV
-              </button>
+              </TechButton>
             </div>
-          </div>
+          </TechCard>
         </div>
-      </div>
-    </main>
+    </PageContainer>
   );
 }
 

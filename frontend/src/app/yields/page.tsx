@@ -101,7 +101,7 @@ export default function YieldsPage() {
     <PageContainer
       title="收益记录"
       subtitle="查看您的资产升值收益分配记录"
-      maxWidth="7xl"
+      maxWidth="5xl"
     >
       <div className="mb-6 flex items-center justify-end">
         <WalletConnect />
