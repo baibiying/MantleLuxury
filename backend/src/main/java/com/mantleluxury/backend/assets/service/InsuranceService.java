@@ -24,10 +24,16 @@ public class InsuranceService {
 
     private final InsuranceRepository insuranceRepository;
     private final AssetRepository assetRepository;
+    private final CustodyManagerIntegrationService custodyManagerIntegrationService;
 
-    public InsuranceService(InsuranceRepository insuranceRepository, AssetRepository assetRepository) {
+    public InsuranceService(
+            InsuranceRepository insuranceRepository,
+            AssetRepository assetRepository,
+            CustodyManagerIntegrationService custodyManagerIntegrationService
+    ) {
         this.insuranceRepository = insuranceRepository;
         this.assetRepository = assetRepository;
+        this.custodyManagerIntegrationService = custodyManagerIntegrationService;
     }
 
     /**
@@ -95,6 +101,15 @@ public class InsuranceService {
 
         Insurance saved = insuranceRepository.save(insurance);
         logger.info("Created insurance record for asset {}: {}", assetId, saved.getId());
+        
+        // 尝试注册到链上 CustodyManager（如果资产同时有托管和保险）
+        try {
+            custodyManagerIntegrationService.tryRegisterAssetToCustodyManager(assetId);
+        } catch (Exception e) {
+            logger.warn("Failed to register asset to CustodyManager after creating insurance: {}", e.getMessage());
+            // 不抛出异常，避免影响保险记录的创建
+        }
+        
         return saved;
     }
 

@@ -23,10 +23,16 @@ public class CustodyService {
 
     private final CustodyRepository custodyRepository;
     private final AssetRepository assetRepository;
+    private final CustodyManagerIntegrationService custodyManagerIntegrationService;
 
-    public CustodyService(CustodyRepository custodyRepository, AssetRepository assetRepository) {
+    public CustodyService(
+            CustodyRepository custodyRepository,
+            AssetRepository assetRepository,
+            CustodyManagerIntegrationService custodyManagerIntegrationService
+    ) {
         this.custodyRepository = custodyRepository;
         this.assetRepository = assetRepository;
+        this.custodyManagerIntegrationService = custodyManagerIntegrationService;
     }
 
     /**
@@ -74,6 +80,15 @@ public class CustodyService {
 
         Custody saved = custodyRepository.save(custody);
         logger.info("Created custody record for asset {}: {}", assetId, saved.getId());
+        
+        // 尝试注册到链上 CustodyManager（如果资产同时有托管和保险）
+        try {
+            custodyManagerIntegrationService.tryRegisterAssetToCustodyManager(assetId);
+        } catch (Exception e) {
+            logger.warn("Failed to register asset to CustodyManager after creating custody: {}", e.getMessage());
+            // 不抛出异常，避免影响托管记录的创建
+        }
+        
         return saved;
     }
 
