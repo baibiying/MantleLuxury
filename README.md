@@ -4,6 +4,8 @@
 
 ---
 
+> 快速了解：请查看一页纸白皮书 `ONE_PAGER.md`（Problem / Solution / Business Model / Roadmap）。
+
 ## 本地运行说明
 
 ### 1. 数据库（MySQL Docker）
