@@ -1,0 +1,82 @@
+type KYCStatusEvent @entity {
+  id: ID!
+  user: Bytes!
+  oldStatus: Int!
+  newStatus: Int!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type AssetRegisteredEvent @entity {
+  id: ID!
+  assetId: Bytes!
+  tokenAddress: Bytes!
+  custodyHash: Bytes!
+  insuranceHash: Bytes!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type AssetStatusUpdatedEvent @entity {
+  id: ID!
+  assetId: Bytes!
+  oldStatus: Int!
+  newStatus: Int!
+  timestamp: BigInt!
+  txHash: Bytes!
+  blockNumber: BigInt!
+}
+
+type CustodyInfoUpdatedEvent @entity {
+  id: ID!
+  assetId: Bytes!
+  oldHash: Bytes!
+  newHash: Bytes!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type InsuranceInfoUpdatedEvent @entity {
+  id: ID!
+  assetId: Bytes!
+  oldHash: Bytes!
+  newHash: Bytes!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type YieldDistributionCreated @entity {
+  id: ID!
+  distributionId: Bytes!
+  tokenAddress: Bytes!
+  yieldType: Int!
+  totalAmount: BigInt!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type YieldDistributionCompleted @entity {
+  id: ID!
+  distributionId: Bytes!
+  totalDistributed: BigInt!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type YieldClaimed @entity {
+  id: ID!
+  distributionId: Bytes!
+  user: Bytes!
+  amount: BigInt!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+

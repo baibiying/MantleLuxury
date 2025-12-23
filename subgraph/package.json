@@ -1,0 +1,19 @@
+{
+  "name": "mantleluxury-subgraph",
+  "version": "1.0.0",
+  "description": "The Graph subgraph for MantleLuxury (KYC, Custody, YieldDistribution events on Mantle Sepolia).",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy --product hosted-service mantleluxury/mantleluxury-subgraph"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-ts": "^0.32.0"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.64.0",
+    "typescript": "^5.0.0"
+  }
+}
+
+

@@ -1,0 +1,84 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+
+dataSources:
+  - kind: ethereum
+    name: KYCRegistry
+    network: mantle-sepolia
+    source:
+      address: "0x519AD3F043581620e67567c896508b8Da33fF91D"
+      abi: KYCRegistry
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - KYCStatusEvent
+      abis:
+        - name: KYCRegistry
+          file: ../contracts/artifacts/src/KYCRegistry.sol/KYCRegistry.json
+      eventHandlers:
+        - event: KYCStatusUpdated(indexed address,indexed uint8,indexed uint8)
+          handler: handleKYCStatusUpdated
+      file: ./src/kyc.ts
+
+  - kind: ethereum
+    name: CustodyManager
+    network: mantle-sepolia
+    source:
+      address: "0xF1c527a19b65E3e9Ab9AD7499cc8167C63c3ca87"
+      abi: CustodyManager
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - AssetRegisteredEvent
+        - AssetStatusUpdatedEvent
+        - CustodyInfoUpdatedEvent
+        - InsuranceInfoUpdatedEvent
+      abis:
+        - name: CustodyManager
+          file: ../contracts/artifacts/src/CustodyManager.sol/CustodyManager.json
+      eventHandlers:
+        - event: AssetRegistered(indexed bytes32,indexed address,bytes32,bytes32)
+          handler: handleAssetRegistered
+        - event: StatusUpdated(indexed bytes32,indexed uint8,indexed uint8,uint256)
+          handler: handleStatusUpdated
+        - event: CustodyInfoUpdated(indexed bytes32,indexed bytes32,indexed bytes32)
+          handler: handleCustodyInfoUpdated
+        - event: InsuranceInfoUpdated(indexed bytes32,indexed bytes32,indexed bytes32)
+          handler: handleInsuranceInfoUpdated
+      file: ./src/custody.ts
+
+  - kind: ethereum
+    name: YieldDistribution
+    network: mantle-sepolia
+    source:
+      address: "0x988304593FC2e89e56FFAD9393Af0B97c37d9E5D"
+      abi: YieldDistribution
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - YieldDistributionCreated
+        - YieldDistributionCompleted
+        - YieldClaimed
+      abis:
+        - name: YieldDistribution
+          file: ../contracts/artifacts/src/YieldDistribution.sol/YieldDistribution.json
+      eventHandlers:
+        - event: DistributionCreated(indexed bytes32,indexed address,indexed uint8,uint256)
+          handler: handleDistributionCreated
+        - event: DistributionCompleted(indexed bytes32,uint256)
+          handler: handleDistributionCompleted
+        - event: Claimed(indexed bytes32,indexed address,uint256)
+          handler: handleClaimed
+      file: ./src/yield.ts
+
+
