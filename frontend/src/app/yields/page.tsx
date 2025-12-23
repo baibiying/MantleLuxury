@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
 import Link from "next/link";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -96,38 +98,27 @@ export default function YieldsPage() {
   };
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
-      {/* 背景装饰 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+    <PageContainer
+      title="收益记录"
+      subtitle="查看您的资产升值收益分配记录"
+      maxWidth="7xl"
+    >
+      <div className="mb-6 flex items-center justify-end">
+        <WalletConnect />
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
-        <header className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
-              <span className="gradient-text">收益记录</span>
-            </h1>
-            <p className="text-sm text-slate-300">
-              查看您的资产升值收益分配记录
-            </p>
-          </div>
-          <WalletConnect />
-        </header>
-
         {!isConnected || !address ? (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+          <TechCard className="px-6 py-8 text-center">
             <p className="text-sm text-slate-300 mb-3">
               请先连接钱包，查看收益记录。
             </p>
             <WalletConnect />
-          </div>
+          </TechCard>
         ) : (
           <>
             {/* 总收益统计 */}
             <div className="mb-6 grid gap-4 md:grid-cols-3">
-              <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+              <TechCard className="px-6 py-5">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
                 <div className="relative z-10">
                   <div className="text-xs text-slate-400 mb-2">累计收益</div>
@@ -135,8 +126,8 @@ export default function YieldsPage() {
                     {formatAmount(totalYield)} MNT
                   </div>
                 </div>
-              </div>
-              <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+              </TechCard>
+              <TechCard className="px-6 py-5">
                 <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
                 <div className="relative z-10">
                   <div className="text-xs text-slate-400 mb-2">收益记录数</div>
@@ -144,8 +135,8 @@ export default function YieldsPage() {
                     {yields.length}
                   </div>
                 </div>
-              </div>
-              <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+              </TechCard>
+              <TechCard className="px-6 py-5">
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
                 <div className="relative z-10">
                   <div className="text-xs text-slate-400 mb-2">已完成分配</div>
@@ -153,7 +144,7 @@ export default function YieldsPage() {
                     {yields.filter((y) => y.isCompleted).length}
                   </div>
                 </div>
-              </div>
+              </TechCard>
             </div>
 
             {/* 收益记录列表 */}
@@ -278,8 +269,7 @@ export default function YieldsPage() {
             )}
           </>
         )}
-      </div>
-    </main>
+    </PageContainer>
   );
 }
 

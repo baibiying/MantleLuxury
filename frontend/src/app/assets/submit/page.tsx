@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -177,26 +180,16 @@ export default function AssetSubmitPage() {
   };
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
-      {/* 背景装饰 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+    <PageContainer
+      title="提交资产"
+      subtitle="将您的奢侈品资产提交到 MantleLuxury 平台进行代币化"
+      maxWidth="5xl"
+    >
+      <div className="mb-6 flex items-center justify-end">
+        <WalletConnect />
       </div>
-      <div className="max-w-5xl mx-auto">
-        <header className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
-              <span className="gradient-text">提交奢侈品资产</span>
-            </h1>
-            <p className="text-base text-slate-300">
-              将您的奢侈品进行 RWA 代币化，让更多投资者参与分享资产价值。
-            </p>
-          </div>
-          <WalletConnect />
-        </header>
 
-        {success && (
+      {success && (
           <div className="mb-6 bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-6 py-4">
             <p className="text-sm font-semibold text-emerald-200">
               ✓ 资产提交成功！
@@ -217,15 +210,15 @@ export default function AssetSubmitPage() {
         )}
 
         {!isConnected ? (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+          <TechCard className="px-6 py-8 text-center">
             <p className="text-sm text-slate-300 mb-3">
               请先连接钱包，再提交资产。
             </p>
             <WalletConnect />
-          </div>
+          </TechCard>
         ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+          <TechCard className="px-5 py-4">
             {/* 背景渐变 */}
             <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
             <div className="relative z-10">
@@ -324,9 +317,9 @@ export default function AssetSubmitPage() {
               </div>
             </div>
             </div>
-          </section>
+          </TechCard>
 
-          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+          <TechCard className="px-5 py-4">
             {/* 背景渐变 */}
             <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
             <div className="relative z-10">
@@ -370,9 +363,9 @@ export default function AssetSubmitPage() {
               </div>
             </div>
             </div>
-          </section>
+          </TechCard>
 
-          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+          <TechCard className="px-5 py-4">
             {/* 背景渐变 */}
             <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
             <div className="relative z-10">
@@ -452,9 +445,9 @@ export default function AssetSubmitPage() {
               </div>
             </div>
             </div>
-          </section>
+          </TechCard>
 
-          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+          <TechCard className="px-5 py-4">
             <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
             <div className="relative z-10">
               <h2 className="text-xl font-bold mb-4 gradient-text">资产图片</h2>
@@ -536,9 +529,9 @@ export default function AssetSubmitPage() {
                 </div>
               )}
             </div>
-          </section>
+          </TechCard>
 
-          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+          <TechCard className="px-5 py-4">
             <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
             <div className="relative z-10">
               <h2 className="text-xl font-bold mb-4 gradient-text">3D 模型（可选）</h2>
@@ -616,7 +609,7 @@ export default function AssetSubmitPage() {
                 </div>
               )}
             </div>
-          </section>
+          </TechCard>
 
           <div className="flex gap-4">
             <button
@@ -652,8 +645,7 @@ export default function AssetSubmitPage() {
           </p>
         </form>
         )}
-      </div>
-    </main>
+    </PageContainer>
   );
 }
 

@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
 import Link from "next/link";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -130,9 +133,12 @@ export default function SettingsPage() {
   if (!mounted) return null;
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
+    <PageContainer
+      title="账户设置"
+      subtitle="管理您的账户信息和通知偏好"
+      maxWidth="2xl"
+    >
+      <div className="mb-6 flex items-center justify-end">
           <div>
             <h1 className="text-2xl font-semibold">账户与设置</h1>
             <p className="text-sm text-slate-400 mt-1">
@@ -143,12 +149,12 @@ export default function SettingsPage() {
         </div>
 
         {!isConnected || !address ? (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+          <TechCard className="px-6 py-8 text-center">
             <p className="text-sm text-slate-300 mb-3">
               请先连接钱包以查看和修改设置。
             </p>
             <WalletConnect />
-          </div>
+          </TechCard>
         ) : (
           <div className="space-y-6">
             {/* 错误和成功提示 - 放在最上面 */}
@@ -164,7 +170,7 @@ export default function SettingsPage() {
             )}
 
             {/* 邮箱绑定 */}
-            <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+            <TechCard className="px-6 py-6">
               <h2 className="text-lg font-semibold mb-4">邮箱绑定</h2>
               <p className="text-sm text-slate-400 mb-4">
                 绑定邮箱后，我们将通过邮件向你发送重要通知和收益分配信息。
@@ -195,10 +201,10 @@ export default function SettingsPage() {
                   {saving ? "保存中..." : "保存邮箱"}
                 </button>
               </form>
-            </div>
+            </TechCard>
 
             {/* 通知偏好 */}
-            <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+            <TechCard className="px-6 py-6">
               <h2 className="text-lg font-semibold mb-4">通知偏好</h2>
               <p className="text-sm text-slate-400 mb-4">
                 选择你希望接收的通知类型。
@@ -269,10 +275,10 @@ export default function SettingsPage() {
                   {saving ? "保存中..." : "保存通知偏好"}
                 </button>
               </div>
-            </div>
+            </TechCard>
 
             {/* 法律文件 */}
-            <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6">
+            <TechCard className="px-6 py-6">
               <h2 className="text-lg font-semibold mb-4">法律文件</h2>
               <p className="text-sm text-slate-400 mb-4">
                 查看平台使用条款、风险揭示书和投资者适当性说明。
@@ -327,11 +333,10 @@ export default function SettingsPage() {
                   </div>
                 </Link>
               </div>
-            </div>
+            </TechCard>
           </div>
         )}
-      </div>
-    </main>
+    </PageContainer>
   );
 }
 

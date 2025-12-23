@@ -209,7 +209,7 @@ export default function AssetsPage() {
   };
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative">
+    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6 relative z-10">
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
@@ -228,7 +228,7 @@ export default function AssetsPage() {
           </div>
           <Link
             href="/assets/submit"
-            className="group relative px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl text-white text-sm font-semibold hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50"
+            className="tech-button group relative px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl text-white text-sm font-semibold hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50 neon-border"
           >
             <span className="relative z-10 flex items-center gap-2">
               <span className="text-lg">+</span> 提交资产
@@ -320,7 +320,7 @@ export default function AssetsPage() {
             <Link
               key={asset.id}
               href={`/assets/${asset.id}`}
-              className="group card-hover glass-effect rounded-2xl px-6 py-5 border border-slate-700/50 hover:border-sky-500/50 relative overflow-hidden"
+              className="group card-hover glass-effect rounded-2xl px-6 py-5 border border-slate-700/50 hover:border-sky-500/50 relative overflow-hidden neon-border code-border"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               {/* 卡片背景渐变 */}

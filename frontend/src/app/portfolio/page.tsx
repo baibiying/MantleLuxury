@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -200,17 +203,14 @@ export default function PortfolioPage() {
   }
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">我的持仓</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              查看你在 MantleLuxury 平台上持有的资产份额
-            </p>
-          </div>
-          <WalletConnect />
-        </div>
+    <PageContainer
+      title="我的持仓"
+      subtitle="查看你在 MantleLuxury 平台上持有的资产份额"
+      maxWidth="6xl"
+    >
+      <div className="mb-6 flex items-center justify-end">
+        <WalletConnect />
+      </div>
 
         {!isConnected ? (
           <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
@@ -223,7 +223,7 @@ export default function PortfolioPage() {
           <>
             {/* 总收益统计 */}
             <div className="mb-6 grid gap-4 md:grid-cols-3">
-              <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+              <TechCard className="px-6 py-5">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
                 <div className="relative z-10">
                   <div className="text-xs text-slate-400 mb-2">累计收益</div>
@@ -231,8 +231,8 @@ export default function PortfolioPage() {
                     {parseFloat(totalYield).toFixed(4)} MNT
                   </div>
                 </div>
-              </div>
-              <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+              </TechCard>
+              <TechCard className="px-6 py-5">
                 <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
                 <div className="relative z-10">
                   <div className="text-xs text-slate-400 mb-2">持仓资产数</div>
@@ -240,8 +240,8 @@ export default function PortfolioPage() {
                     {holdings.length}
                   </div>
                 </div>
-              </div>
-              <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+              </TechCard>
+              <TechCard className="px-6 py-5">
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
                 <div className="relative z-10">
                   <div className="text-xs text-slate-400 mb-2">总持仓成本</div>
@@ -249,7 +249,7 @@ export default function PortfolioPage() {
                     {holdings.reduce((sum, h) => sum + parseFloat(h.totalCost || "0"), 0).toFixed(4)} MNT
                   </div>
                 </div>
-              </div>
+              </TechCard>
             </div>
 
             {loading ? (
@@ -317,7 +317,7 @@ export default function PortfolioPage() {
                 <div className="mb-6 grid gap-4 md:grid-cols-2">
                   {/* 按类别分布 */}
                   {distribution.byType.length > 0 && (
-                    <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+                    <TechCard className="px-6 py-5">
                       <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
                       <div className="relative z-10">
                         <h3 className="text-lg font-semibold mb-4">资产分布（按类别）</h3>
@@ -353,12 +353,12 @@ export default function PortfolioPage() {
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                    </div>
+                    </TechCard>
                   )}
                   
                   {/* 按品牌分布 */}
                   {distribution.byBrand.length > 0 && (
-                    <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+                    <TechCard className="px-6 py-5">
                       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
                       <div className="relative z-10">
                         <h3 className="text-lg font-semibold mb-4">资产分布（按品牌）</h3>
@@ -394,7 +394,7 @@ export default function PortfolioPage() {
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                    </div>
+                    </TechCard>
                   )}
                 </div>
               );
@@ -485,8 +485,7 @@ export default function PortfolioPage() {
             )}
           </>
         )}
-      </div>
-    </main>
+    </PageContainer>
   );
 }
 

@@ -160,11 +160,14 @@ export default function Home() {
 
   return (
     <main className="min-h-screen gradient-bg text-slate-50 relative overflow-hidden">
-      {/* 背景装饰 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl float-animation"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl float-animation" style={{ animationDelay: '2s' }}></div>
+      {/* 背景装饰 - 增强科技感 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl float-animation pulse-light"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl float-animation pulse-light" style={{ animationDelay: '2s' }}></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl glow-effect"></div>
+        {/* 额外的光效 */}
+        <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-gradient-to-br from-cyan-500/5 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-gradient-to-tr from-purple-500/5 to-transparent"></div>
       </div>
 
       <div className="relative z-10">
@@ -177,7 +180,7 @@ export default function Home() {
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight">
               <span className="gradient-text">奢侈品 RWA</span>
               <br />
-              投资平台
+              <span className="neon-text">投资平台</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-3xl mx-auto">
               基于 <span className="text-sky-400 font-semibold">Mantle L2</span> 的奢侈品实物资产代币化平台，
@@ -189,28 +192,28 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
             <a
               href="/assets"
-              className="group relative px-10 py-4 bg-gradient-to-r from-sky-500 to-blue-600 rounded-full text-base font-semibold text-white hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70"
+              className="tech-button group relative px-10 py-4 bg-gradient-to-r from-sky-500 to-blue-600 rounded-full text-base font-semibold text-white hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70 neon-border"
             >
               <span className="relative z-10">浏览可投资资产</span>
               <span className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
             </a>
             <a
               href="/assets/submit"
-              className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
+              className="tech-button px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 neon-border"
             >
-              提交资产
+              <span className="relative z-10">提交资产</span>
             </a>
             <a
               href="/portfolio"
-              className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
+              className="tech-button px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 neon-border"
             >
-              我的持仓
+              <span className="relative z-10">我的持仓</span>
             </a>
             <a
               href="/kyc"
-              className="px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 border border-slate-700/50 hover:border-slate-600/50"
+              className="tech-button px-9 py-4 glass-effect rounded-full text-base font-semibold text-slate-200 hover:bg-slate-800/80 transition-all duration-300 neon-border"
             >
-              KYC / AML
+              <span className="relative z-10">KYC / AML</span>
             </a>
           </div>
         </section>
@@ -271,7 +274,7 @@ export default function Home() {
                                     募集中
                                   </span>
                                 </div>
-                                <h3 className="text-4xl md:text-5xl font-bold text-white">
+                                <h3 className="text-4xl md:text-5xl font-bold text-white drop-shadow-lg" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.3)' }}>
                                   {asset.brand} {asset.model}
                                 </h3>
                                 {asset.year && (

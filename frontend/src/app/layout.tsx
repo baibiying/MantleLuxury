@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { Web3Provider } from "@/providers/Web3Provider";
+import GridBackground from "@/components/GridBackground";
+import ParticleEffect from "@/components/ParticleEffect";
+import DataStream from "@/components/DataStream";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,8 +33,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Web3Provider>
-          <div className="min-h-screen flex flex-col bg-slate-950">
-            <header className="w-full border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 backdrop-blur z-20 shadow-lg shadow-sky-900/20">
+          <div className="min-h-screen flex flex-col bg-slate-950 relative">
+            {/* 科技感背景效果 */}
+            <GridBackground />
+            <ParticleEffect />
+            <DataStream />
+            <div className="scanline"></div>
+            
+            <header className="w-full border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 backdrop-blur z-20 shadow-lg shadow-sky-900/20 relative">
               <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between gap-8">
                 <Link href="/" className="flex items-center gap-3 text-base font-semibold text-slate-50">
                   <span className="relative inline-flex h-10 w-10 items-center justify-center">

@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
+import PageContainer from "@/components/PageContainer";
+import TechCard from "@/components/TechCard";
+import TechButton from "@/components/TechButton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -231,27 +234,24 @@ export default function KycPage() {
   if (!mounted) return null;
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 px-4 py-6">
+    <PageContainer
+      title="KYC / AML 认证"
+      subtitle="完成身份认证以开始投资奢侈品 RWA 资产"
+    >
       <div className="max-w-2xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">KYC / AML 审核</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              完成 KYC / AML 后即可在 MantleLuxury 平台投资资产。
-            </p>
-          </div>
+        <div className="mb-6 flex items-center justify-end">
           <WalletConnect />
         </div>
 
         {!isConnected || !address ? (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+          <TechCard className="px-6 py-8 text-center">
             <p className="text-sm text-slate-300 mb-3">
               请先连接钱包，再进行 KYC。
             </p>
             <WalletConnect />
-          </div>
+          </TechCard>
         ) : (
-          <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-6 space-y-4">
+          <TechCard className="px-6 py-6 space-y-4">
             {/* 状态显示 */}
             <div className="flex items-center justify-between">
               <div className="text-sm">
@@ -746,9 +746,9 @@ export default function KycPage() {
                 </div>
               </form>
             )}
-          </div>
+          </TechCard>
         )}
       </div>
-    </main>
+    </PageContainer>
   );
 }
