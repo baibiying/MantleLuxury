@@ -54,6 +54,14 @@ type Asset = {
     coverageType: string | null;
     isActive: boolean;
   } | null;
+  valuations?: Array<{
+    id: string;
+    valuationAmount: string;
+    valuationCurrency: string;
+    valuationDate: string | null;
+    valuationAgency: string | null;
+    reportUrl: string | null;
+  }>;
 };
 
 export default function AssetDetailPage() {
@@ -104,6 +112,18 @@ export default function AssetDetailPage() {
           throw new Error(`Request failed with status ${res.status}`);
         }
         const data: Asset = await res.json();
+        
+        // 获取估值报告
+        try {
+          const valuationsRes = await fetch(`${API_BASE}/api/assets/${params.id}/valuations`);
+          if (valuationsRes.ok) {
+            const valuations = await valuationsRes.json();
+            data.valuations = valuations;
+          }
+        } catch (e) {
+          console.error("Failed to fetch valuations:", e);
+        }
+        
         setAsset(data);
       } catch (e: any) {
         setError(e.message ?? "Failed to load asset");
@@ -587,6 +607,53 @@ export default function AssetDetailPage() {
                   <p className="text-xs text-slate-500">
                     暂无认证信息
                   </p>
+                </div>
+              )}
+
+              {/* 估值报告 */}
+              {asset.valuations && asset.valuations.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-800">
+                  <h3 className="text-sm font-medium text-slate-300 mb-3">估值报告</h3>
+                  <div className="space-y-3">
+                    {asset.valuations.map((valuation) => (
+                      <div
+                        key={valuation.id}
+                        className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-lg"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">
+                              {valuation.valuationAgency || "估值机构"}
+                            </div>
+                            {valuation.valuationDate && (
+                              <div className="text-xs text-slate-400 mt-1">
+                                估值日期: {new Date(valuation.valuationDate).toLocaleDateString("zh-CN")}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-semibold text-emerald-400">
+                              {parseFloat(valuation.valuationAmount).toLocaleString("zh-CN", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}{" "}
+                              {valuation.valuationCurrency || "USD"}
+                            </div>
+                          </div>
+                        </div>
+                        {valuation.reportUrl && (
+                          <a
+                            href={valuation.reportUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-sky-400 hover:text-sky-300 inline-block mt-2"
+                          >
+                            查看完整估值报告 →
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

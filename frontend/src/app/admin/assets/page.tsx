@@ -48,10 +48,22 @@ type AssetAuthentication = {
   updatedAt: string;
 };
 
+type Valuation = {
+  id: string;
+  assetId: string;
+  valuationAmount: string;
+  valuationCurrency: string;
+  valuationDate: string | null;
+  valuationAgency: string | null;
+  reportUrl: string | null;
+  createdAt: string;
+};
+
 type AssetDetail = {
   asset: any;
   reviews: AssetReview[];
   authentications?: AssetAuthentication[];
+  valuations?: Valuation[];
 };
 
 type Stats = {
@@ -87,6 +99,14 @@ export default function AdminAssetsPage() {
   const [authReportHash, setAuthReportHash] = useState("");
   const [authSignature, setAuthSignature] = useState("");
   const [authNotes, setAuthNotes] = useState("");
+
+  // 估值报告表单
+  const [showValuationModal, setShowValuationModal] = useState(false);
+  const [valuationAmount, setValuationAmount] = useState("");
+  const [valuationCurrency, setValuationCurrency] = useState("USD");
+  const [valuationDate, setValuationDate] = useState("");
+  const [valuationAgency, setValuationAgency] = useState("");
+  const [valuationReportUrl, setValuationReportUrl] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -199,6 +219,30 @@ export default function AdminAssetsPage() {
           ? {
               ...prev,
               authentications: data,
+            }
+          : prev
+      );
+    } catch {
+      // ignore
+    }
+  };
+
+  const loadValuations = async (assetId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/valuations/asset/${assetId}`, {
+        headers: {
+          "X-Wallet-Address": address || "",
+        },
+      });
+      if (!res.ok) {
+        return;
+      }
+      const data: Valuation[] = await res.json();
+      setSelectedAsset((prev) =>
+        prev
+          ? {
+              ...prev,
+              valuations: data,
             }
           : prev
       );
@@ -320,10 +364,74 @@ export default function AdminAssetsPage() {
         await Promise.all([
           loadAssetDetail(selectedAsset.asset.id),
           loadAuthentications(selectedAsset.asset.id),
+          loadValuations(selectedAsset.asset.id),
         ]);
       }
     } catch (e: any) {
       setError(e.message ?? "更新认证状态失败");
+    }
+  };
+
+  const handleCreateValuation = async () => {
+    if (!selectedAsset || !address) return;
+    if (!valuationAmount.trim() || !valuationAgency.trim()) {
+      setError("请输入估值金额和估值机构");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/valuations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Wallet-Address": address,
+        },
+        body: JSON.stringify({
+          assetId: selectedAsset.asset.id,
+          valuationAmount: valuationAmount.trim(),
+          valuationCurrency: valuationCurrency,
+          valuationDate: valuationDate || null,
+          valuationAgency: valuationAgency.trim(),
+          reportUrl: valuationReportUrl.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "创建估值记录失败");
+      }
+      setSuccess("✅ 估值记录已创建");
+      setTimeout(() => setSuccess(null), 3000);
+      setShowValuationModal(false);
+      setValuationAmount("");
+      setValuationCurrency("USD");
+      setValuationDate("");
+      setValuationAgency("");
+      setValuationReportUrl("");
+      await loadValuations(selectedAsset.asset.id);
+    } catch (e: any) {
+      setError(e.message ?? "创建估值记录失败");
+    }
+  };
+
+  const handleDeleteValuation = async (valuationId: string) => {
+    if (!address || !confirm("确定要删除这条估值记录吗？")) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/valuations/${valuationId}`, {
+        method: "DELETE",
+        headers: {
+          "X-Wallet-Address": address,
+        },
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "删除估值记录失败");
+      }
+      setSuccess("✅ 估值记录已删除");
+      setTimeout(() => setSuccess(null), 3000);
+      if (selectedAsset) {
+        await loadValuations(selectedAsset.asset.id);
+      }
+    } catch (e: any) {
+      setError(e.message ?? "删除估值记录失败");
     }
   };
 
@@ -552,7 +660,11 @@ export default function AdminAssetsPage() {
                           </td>
                           <td className="py-3 text-right">
                             <button
-                              onClick={() => loadAssetDetail(asset.id)}
+                              onClick={async () => {
+                                await loadAssetDetail(asset.id);
+                                await loadAuthentications(asset.id);
+                                await loadValuations(asset.id);
+                              }}
                               className="px-3 py-1 bg-sky-600 hover:bg-sky-700 rounded text-white text-xs font-medium transition-colors"
                             >
                               查看详情
@@ -802,6 +914,79 @@ export default function AdminAssetsPage() {
                       )}
                     </div>
 
+                    {/* 估值报告记录 */}
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold">估值报告记录</h3>
+                        <button
+                          onClick={() => {
+                            setShowValuationModal(true);
+                          }}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-sm font-medium transition-colors"
+                        >
+                          + 添加估值报告
+                        </button>
+                      </div>
+                      {!selectedAsset.valuations ||
+                      selectedAsset.valuations.length === 0 ? (
+                        <div className="text-center py-6 text-slate-400 text-sm">
+                          暂无估值报告
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {selectedAsset.valuations.map((valuation) => (
+                            <div
+                              key={valuation.id}
+                              className="p-4 bg-slate-800/50 rounded-lg border border-slate-700"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <div className="text-sm font-medium text-slate-200">
+                                    {valuation.valuationAgency || "估值机构"}
+                                  </div>
+                                  {valuation.valuationDate && (
+                                    <div className="text-xs text-slate-400 mt-1">
+                                      估值日期：
+                                      {new Date(
+                                        valuation.valuationDate
+                                      ).toLocaleDateString("zh-CN")}
+                                    </div>
+                                  )}
+                                  {valuation.reportUrl && (
+                                    <a
+                                      href={valuation.reportUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-sky-400 hover:text-sky-300 mt-1 inline-block"
+                                    >
+                                      查看估值报告 →
+                                    </a>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-semibold text-emerald-400 mb-2">
+                                    {parseFloat(valuation.valuationAmount).toLocaleString("zh-CN", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}{" "}
+                                    {valuation.valuationCurrency || "USD"}
+                                  </div>
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteValuation(valuation.id)
+                                    }
+                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-white text-xs font-medium transition-colors"
+                                  >
+                                    删除
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {/* 操作按钮 */}
                     <div className="flex gap-3">
                       <Link
@@ -1018,6 +1203,108 @@ export default function AdminAssetsPage() {
                       </button>
                       <button
                         onClick={() => setShowAuthModal(false)}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 添加估值报告模态框 */}
+            {showValuationModal && selectedAsset && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold">添加估值报告</h2>
+                    <button
+                      onClick={() => setShowValuationModal(false)}
+                      className="text-slate-400 hover:text-slate-200"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        估值机构名称 *
+                      </label>
+                      <input
+                        type="text"
+                        value={valuationAgency}
+                        onChange={(e) => setValuationAgency(e.target.value)}
+                        placeholder="例如：某某估值机构"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          估值金额 *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={valuationAmount}
+                          onChange={(e) => setValuationAmount(e.target.value)}
+                          placeholder="例如：50000"
+                          className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          币种
+                        </label>
+                        <select
+                          value={valuationCurrency}
+                          onChange={(e) => setValuationCurrency(e.target.value)}
+                          className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        >
+                          <option value="USD">USD</option>
+                          <option value="MNT">MNT</option>
+                          <option value="CNY">CNY</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        估值日期
+                      </label>
+                      <input
+                        type="date"
+                        value={valuationDate}
+                        onChange={(e) => setValuationDate(e.target.value)}
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        估值报告链接
+                      </label>
+                      <input
+                        type="text"
+                        value={valuationReportUrl}
+                        onChange={(e) => setValuationReportUrl(e.target.value)}
+                        placeholder="IPFS / S3 / 其他存储的报告 URL"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        onClick={handleCreateValuation}
+                        className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-medium transition-colors"
+                      >
+                        提交估值报告
+                      </button>
+                      <button
+                        onClick={() => setShowValuationModal(false)}
                         className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors"
                       >
                         取消
