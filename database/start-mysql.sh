@@ -344,13 +344,85 @@ ensure_schema() {
     
     print_info "检查并补齐 assets 表缺失列..."
     local sql="
-        ALTER TABLE assets
-            ADD COLUMN IF NOT EXISTS submitted_by VARCHAR(42) COMMENT '提交者钱包地址或用户ID',
-            ADD COLUMN IF NOT EXISTS description TEXT COMMENT '资产描述',
-            ADD COLUMN IF NOT EXISTS purchase_price DECIMAL(36, 18) COMMENT '购入价格',
-            ADD COLUMN IF NOT EXISTS purchase_date DATE COMMENT '购入日期',
-            ADD COLUMN IF NOT EXISTS serial_number VARCHAR(200) COMMENT '序列号',
-            ADD COLUMN IF NOT EXISTS image_urls TEXT COMMENT '资产图片 URL 列表（JSON 数组）';
+        SET @dbname = DATABASE();
+        SET @tablename = 'assets';
+        
+        -- submitted_by
+        SET @columnname = 'submitted_by';
+        SET @preparedStatement = (SELECT IF(
+          (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE (TABLE_SCHEMA = @dbname) AND (TABLE_NAME = @tablename) AND (COLUMN_NAME = @columnname)) > 0,
+          'SELECT 1',
+          CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(42) COMMENT ''提交者钱包地址或用户ID''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- description
+        SET @columnname = 'description';
+        SET @preparedStatement = (SELECT IF(
+          (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE (TABLE_SCHEMA = @dbname) AND (TABLE_NAME = @tablename) AND (COLUMN_NAME = @columnname)) > 0,
+          'SELECT 1',
+          CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TEXT COMMENT ''资产描述''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- purchase_price
+        SET @columnname = 'purchase_price';
+        SET @preparedStatement = (SELECT IF(
+          (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE (TABLE_SCHEMA = @dbname) AND (TABLE_NAME = @tablename) AND (COLUMN_NAME = @columnname)) > 0,
+          'SELECT 1',
+          CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' DECIMAL(36, 18) COMMENT ''购入价格''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- purchase_date
+        SET @columnname = 'purchase_date';
+        SET @preparedStatement = (SELECT IF(
+          (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE (TABLE_SCHEMA = @dbname) AND (TABLE_NAME = @tablename) AND (COLUMN_NAME = @columnname)) > 0,
+          'SELECT 1',
+          CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' DATE COMMENT ''购入日期''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- serial_number
+        SET @columnname = 'serial_number';
+        SET @preparedStatement = (SELECT IF(
+          (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE (TABLE_SCHEMA = @dbname) AND (TABLE_NAME = @tablename) AND (COLUMN_NAME = @columnname)) > 0,
+          'SELECT 1',
+          CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(200) COMMENT ''序列号''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- image_urls
+        SET @columnname = 'image_urls';
+        SET @preparedStatement = (SELECT IF(
+          (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE (TABLE_SCHEMA = @dbname) AND (TABLE_NAME = @tablename) AND (COLUMN_NAME = @columnname)) > 0,
+          'SELECT 1',
+          CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TEXT COMMENT ''资产图片 URL 列表（JSON 数组）''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
+        
+        -- model_3d_url
+        SET @columnname = 'model_3d_url';
+        SET @preparedStatement = (SELECT IF(
+          (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE (TABLE_SCHEMA = @dbname) AND (TABLE_NAME = @tablename) AND (COLUMN_NAME = @columnname)) > 0,
+          'SELECT 1',
+          CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TEXT COMMENT ''3D模型文件URL（.glb或.gltf格式）''')
+        ));
+        PREPARE alterIfNotExists FROM @preparedStatement;
+        EXECUTE alterIfNotExists;
+        DEALLOCATE PREPARE alterIfNotExists;
     "
     if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$sql" > /dev/null 2>&1; then
         print_info "assets 表列检查完成（如有缺失已自动补齐）"

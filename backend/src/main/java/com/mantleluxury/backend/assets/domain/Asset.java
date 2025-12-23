@@ -76,6 +76,9 @@ public class Asset {
 
     @Column(name = "image_urls", columnDefinition = "TEXT")
     private String imageUrls; // JSON 数组字符串
+
+    @Column(name = "model_3d_url", columnDefinition = "TEXT")
+    private String model3dUrl; // 3D模型文件URL
     
     @PrePersist
     protected void onCreate() {
@@ -261,6 +264,14 @@ public class Asset {
 
     public void setImageUrls(String imageUrls) {
         this.imageUrls = imageUrls;
+    }
+
+    public String getModel3dUrl() {
+        return model3dUrl;
+    }
+
+    public void setModel3dUrl(String model3dUrl) {
+        this.model3dUrl = model3dUrl;
     }
 }
 

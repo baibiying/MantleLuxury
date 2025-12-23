@@ -21,6 +21,7 @@ type FormData = {
   pricePerShare: string; // USD
   submittedBy: string;
   imageUrls: string[];
+  model3dUrl: string | null;
 };
 
 // 汇率：1 USD = 1 MNT（简化处理，实际应该接入价格预言机）
@@ -49,6 +50,7 @@ export default function AssetSubmitPage() {
     pricePerShare: "",
     submittedBy: "",
     imageUrls: [],
+    model3dUrl: null,
   });
 
   // 当连接的钱包变化时，自动填充提交者地址
@@ -123,6 +125,7 @@ export default function AssetSubmitPage() {
           pricePerShare: formData.pricePerShare ? parseFloat(formData.pricePerShare) : null,
           submittedBy: formData.submittedBy || "anonymous",
           imageUrls: JSON.stringify(formData.imageUrls ?? []),
+          model3dUrl: formData.model3dUrl || null,
         }),
       });
 
@@ -499,6 +502,86 @@ export default function AssetSubmitPage() {
                     </div>
                     );
                   })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-5 py-4 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+            <div className="relative z-10">
+              <h2 className="text-xl font-bold mb-4 gradient-text">3D 模型（可选）</h2>
+              <p className="text-xs text-slate-400 mb-3">
+                上传资产的 3D 模型文件（.glb 或 .gltf 格式），让投资者可以360度查看资产。
+                文件大小不超过 50MB。
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept=".glb,.gltf"
+                  onChange={async (e) => {
+                    if (!e.target.files || e.target.files.length === 0) return;
+                    const file = e.target.files[0];
+                    setUploading(true);
+                    setError(null);
+                    try {
+                      const form = new FormData();
+                      form.append("file", file);
+                      const res = await fetch(`${API_BASE}/api/upload/3d-model`, {
+                        method: "POST",
+                        body: form,
+                      });
+                      if (!res.ok) {
+                        const t = await res.text();
+                        throw new Error(t || "上传失败");
+                      }
+                      const data = await res.json();
+                      if (data.url) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          model3dUrl: data.url,
+                        }));
+                      }
+                    } catch (err: any) {
+                      setError(err.message || "上传失败，请重试");
+                    } finally {
+                      setUploading(false);
+                      // 清空文件选择
+                      e.target.value = "";
+                    }
+                  }}
+                  className="text-sm text-slate-200"
+                  disabled={uploading}
+                />
+                {uploading && (
+                  <span className="text-xs text-slate-300">上传中...</span>
+                )}
+              </div>
+              {formData.model3dUrl && (
+                <div className="mt-4 p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-sm text-slate-300">3D 模型已上传</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          model3dUrl: null,
+                        }))
+                      }
+                      className="text-xs px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded transition-colors"
+                    >
+                      移除
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    {formData.model3dUrl}
+                  </p>
                 </div>
               )}
             </div>

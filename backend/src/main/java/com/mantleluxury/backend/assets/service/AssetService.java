@@ -74,6 +74,7 @@ public class AssetService {
         asset.setPurchaseDate(request.purchaseDate());
         asset.setSerialNumber(request.serialNumber());
         asset.setImageUrls(request.imageUrls());
+        asset.setModel3dUrl(request.model3dUrl());
         asset.setTotalSupply(request.totalSupply());
         asset.setPricePerShare(request.pricePerShare());
         asset.setSubmittedBy(request.submittedBy());
@@ -323,6 +324,7 @@ public class AssetService {
                 asset.getTokenAddress(),  // 合约地址
                 asset.getDescription(),   // 描述
                 asset.getImageUrls(),     // 图片
+                asset.getModel3dUrl(),    // 3D模型URL
                 totalYield,                // 累计收益
                 authentications,           // 认证信息
                 custody,                   // 托管信息

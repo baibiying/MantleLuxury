@@ -22,6 +22,7 @@ public record AssetDto(
         String tokenAddress,   // 合约地址（用于前端调用合约）
         String description,    // 资产描述
         String imageUrls,      // 资产图片（JSON 字符串）
+        String model3dUrl,      // 3D模型文件URL
         BigDecimal totalYield, // 累计收益（升值收益）
         List<Map<String, Object>> authentications,  // 认证信息列表
         Map<String, Object> custody,  // 托管信息

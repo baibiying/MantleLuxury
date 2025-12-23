@@ -18,7 +18,8 @@ public record AssetSubmitRequest(
         BigDecimal totalSupply,    // 代币总份数
         BigDecimal pricePerShare,  // 每份价格
         String submittedBy,        // 提交者钱包地址或用户ID
-        String imageUrls           // 图片 JSON 字符串
+        String imageUrls,          // 图片 JSON 字符串
+        String model3dUrl          // 3D模型文件URL（可选）
 ) {
 }
 

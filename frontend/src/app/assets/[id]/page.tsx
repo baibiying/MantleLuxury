@@ -8,6 +8,7 @@ import { parseEther, formatEther } from "viem";
 import { mantleSepoliaTestnet, mantleSepoliaMetaMaskConfig } from "@/lib/web3/config";
 import { luxuryTokenAbi } from "@/lib/web3/contracts";
 import WalletConnect from "@/components/WalletConnect";
+import Model3DViewer from "@/components/Model3DViewer";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
@@ -25,6 +26,7 @@ type Asset = {
   tokenAddress: string | null;
   description: string | null;
   imageUrls?: string | null;
+  model3dUrl?: string | null;
   authentications?: Array<{
     id: string;
     authenticationStatus: string;
@@ -104,6 +106,7 @@ export default function AssetDetailPage() {
   const [onchainAvailable, setOnchainAvailable] = useState<string | null>(null); // raw token units (uint256)
   const [kycStatus, setKycStatus] = useState<"none" | "pending" | "approved" | "rejected">("none");
   const [kycLoading, setKycLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<"image" | "3d">("image"); // 图片或3D模型查看模式
 
   useEffect(() => {
     async function fetchAsset() {
@@ -447,11 +450,47 @@ export default function AssetDetailPage() {
               {/* 背景渐变 */}
               <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
               <div className="relative z-10">
+              {/* 查看模式切换按钮 */}
+              {asset.model3dUrl && (
+                <div className="mb-3 flex gap-2">
+                  <button
+                    onClick={() => setViewMode("image")}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      viewMode === "image"
+                        ? "bg-sky-600 text-white"
+                        : "bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+                    }`}
+                  >
+                    图片
+                  </button>
+                  <button
+                    onClick={() => setViewMode("3d")}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      viewMode === "3d"
+                        ? "bg-sky-600 text-white"
+                        : "bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+                    }`}
+                  >
+                    3D模型
+                  </button>
+                </div>
+              )}
+              
               <div className="overflow-hidden rounded-xl mb-4 border border-slate-800/60 shadow-inner">
-                <div
-                  className="h-56 w-full bg-cover bg-center"
-                  style={{ backgroundImage: `url(${heroImage})` }}
-                />
+                {viewMode === "3d" && asset.model3dUrl ? (
+                  <div className="h-96 w-full">
+                    <Model3DViewer 
+                      modelUrl={asset.model3dUrl} 
+                      autoRotate={true}
+                      className="rounded-xl"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="h-56 w-full bg-cover bg-center"
+                    style={{ backgroundImage: `url(${heroImage})` }}
+                  />
+                )}
               </div>
               <div className="mb-4">
                 <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">
