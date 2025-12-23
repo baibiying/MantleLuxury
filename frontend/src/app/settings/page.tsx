@@ -278,45 +278,54 @@ export default function SettingsPage() {
                 查看平台使用条款、风险揭示书和投资者适当性说明。
               </p>
               <div className="space-y-3">
-                <a
-                  href="#"
+                <Link
+                  href="/legal/terms-of-use"
                   className="block px-4 py-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-lg border border-slate-700 transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert("使用条款文档（待上传）");
-                  }}
                 >
-                  <div className="font-medium">使用条款</div>
-                  <div className="text-sm text-slate-400 mt-1">
-                    平台服务使用条款和条件
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">使用条款</div>
+                      <div className="text-sm text-slate-400 mt-1">
+                        平台服务使用条款和条件
+                      </div>
+                    </div>
+                    <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
-                </a>
-                <a
-                  href="#"
+                </Link>
+                <Link
+                  href="/legal/risk-disclosure"
                   className="block px-4 py-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-lg border border-slate-700 transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert("风险揭示书（待上传）");
-                  }}
                 >
-                  <div className="font-medium">风险揭示书</div>
-                  <div className="text-sm text-slate-400 mt-1">
-                    投资风险提示和免责声明
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">风险揭示书</div>
+                      <div className="text-sm text-slate-400 mt-1">
+                        投资风险提示和免责声明
+                      </div>
+                    </div>
+                    <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
-                </a>
-                <a
-                  href="#"
+                </Link>
+                <Link
+                  href="/legal/investor-suitability"
                   className="block px-4 py-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-lg border border-slate-700 transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert("投资者适当性说明（待上传）");
-                  }}
                 >
-                  <div className="font-medium">投资者适当性说明</div>
-                  <div className="text-sm text-slate-400 mt-1">
-                    适合性评估和投资建议
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">投资者适当性说明</div>
+                      <div className="text-sm text-slate-400 mt-1">
+                        适合性评估和投资建议
+                      </div>
+                    </div>
+                    <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
-                </a>
+                </Link>
               </div>
             </div>
           </div>

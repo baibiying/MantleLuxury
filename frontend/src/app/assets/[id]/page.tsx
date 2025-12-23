@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { mantleSepoliaTestnet, mantleSepoliaMetaMaskConfig } from "@/lib/web3/config";
@@ -1106,8 +1107,8 @@ export default function AssetDetailPage() {
               <div className="pt-4 border-t border-slate-800">
                 <h3 className="text-lg font-semibold text-slate-200 mb-3">相关法律文件</h3>
                 <div className="grid gap-3 md:grid-cols-3">
-                  <a
-                    href="/settings"
+                  <Link
+                    href="/legal/terms-of-use"
                     className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg hover:border-slate-600/50 transition-colors group"
                   >
                     <div className="text-sm font-medium text-slate-200 mb-1 group-hover:text-sky-300 transition-colors">
@@ -1116,9 +1117,9 @@ export default function AssetDetailPage() {
                     <div className="text-xs text-slate-500">
                       平台服务使用条款和条件
                     </div>
-                  </a>
-                  <a
-                    href="/settings"
+                  </Link>
+                  <Link
+                    href="/legal/risk-disclosure"
                     className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg hover:border-slate-600/50 transition-colors group"
                   >
                     <div className="text-sm font-medium text-slate-200 mb-1 group-hover:text-sky-300 transition-colors">
@@ -1127,9 +1128,9 @@ export default function AssetDetailPage() {
                     <div className="text-xs text-slate-500">
                       完整的投资风险提示和免责声明
                     </div>
-                  </a>
-                  <a
-                    href="/settings"
+                  </Link>
+                  <Link
+                    href="/legal/investor-suitability"
                     className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg hover:border-slate-600/50 transition-colors group"
                   >
                     <div className="text-sm font-medium text-slate-200 mb-1 group-hover:text-sky-300 transition-colors">
@@ -1138,7 +1139,7 @@ export default function AssetDetailPage() {
                     <div className="text-xs text-slate-500">
                       适合性评估和投资建议
                     </div>
-                  </a>
+                  </Link>
                 </div>
               </div>
 
