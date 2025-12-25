@@ -23,3 +23,4 @@ public interface BlockchainEventRepository extends JpaRepository<BlockchainEvent
     Long findMaxBlockNumberByContractAddress(String contractAddress);
 }
 
+

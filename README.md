@@ -656,6 +656,397 @@ echo "✅ 资产 $ASSET_ID 的托管和保险记录已创建完成。"
 
 ---
 
+## 部署说明
+
+### 前置要求
+
+#### 服务器环境
+- **操作系统**: Linux (Ubuntu 20.04+ 推荐) 或 macOS
+- **CPU**: 2 核以上
+- **内存**: 4GB 以上
+- **磁盘**: 20GB 以上可用空间
+
+#### 软件依赖
+- **Java**: JDK 17 或更高版本
+- **Node.js**: v18 或更高版本
+- **npm**: v9 或更高版本
+- **Docker**: v20.10 或更高版本（用于 MySQL）
+- **MySQL**: 8.0 或更高版本（或使用 Docker）
+- **Git**: 用于代码拉取
+
+#### 区块链环境
+- **Mantle 网络**: Mantle Sepolia 测试网或 Mantle 主网
+- **钱包私钥**: 用于部署合约和支付 Gas 费
+- **测试币/主网币**: 确保账户有足够的 MNT 用于交易
+
+### 1. 数据库部署
+
+#### 方式一：使用 Docker（推荐）
+
+```bash
+# 在项目根目录执行
+./database/start-mysql.sh
+```
+
+#### 方式二：使用现有 MySQL 服务器
+
+1. 创建数据库：
+```sql
+CREATE DATABASE mantle_luxury CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+2. 执行初始化脚本：
+```bash
+mysql -u root -p mantle_luxury < database/init-mysql.sql
+```
+
+3. 创建应用用户（可选）：
+```sql
+CREATE USER 'mantle_user'@'%' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON mantle_luxury.* TO 'mantle_user'@'%';
+FLUSH PRIVILEGES;
+```
+
+### 2. 后端部署
+
+#### 2.1 构建后端应用
+
+```bash
+cd backend
+
+# 生成 Gradle Wrapper（如果还没有）
+gradle wrapper
+
+# 构建 JAR 包
+./gradlew clean build -x test
+
+# 生成的 JAR 文件位于: backend/build/libs/mantle-luxury-backend-*.jar
+```
+
+#### 2.2 配置环境变量
+
+创建 `application-prod.yml` 或使用环境变量：
+
+```bash
+# 方式一：使用环境变量（推荐）
+export SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/mantle_luxury?useSSL=false&serverTimezone=UTC
+export SPRING_DATASOURCE_USERNAME=root
+export SPRING_DATASOURCE_PASSWORD=your_secure_password
+export BLOCKCHAIN_PRIVATE_KEY=your_private_key_here
+export BLOCKCHAIN_RPC_URL=https://rpc.sepolia.mantle.xyz  # 或主网 RPC
+export BLOCKCHAIN_YIELD_DISTRIBUTION_CONTRACT=0x...
+export BLOCKCHAIN_KYC_REGISTRY_CONTRACT=0x...
+export BLOCKCHAIN_CUSTODY_MANAGER_CONTRACT=0x...
+export ADMIN_WALLET_ADDRESSES=0x...
+```
+
+#### 2.3 启动后端服务
+
+```bash
+# 方式一：直接运行 JAR
+java -jar -Dspring.profiles.active=prod build/libs/mantle-luxury-backend-*.jar
+
+# 方式二：使用 systemd（Linux）
+sudo nano /etc/systemd/system/mantle-luxury-backend.service
+```
+
+systemd 服务文件示例：
+```ini
+[Unit]
+Description=MantleLuxury Backend Service
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=your_user
+WorkingDirectory=/path/to/MantleLuxury/backend
+ExecStart=/usr/bin/java -jar -Dspring.profiles.active=prod /path/to/MantleLuxury/backend/build/libs/mantle-luxury-backend-*.jar
+Restart=always
+RestartSec=10
+Environment="SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/mantle_luxury"
+Environment="SPRING_DATASOURCE_USERNAME=root"
+Environment="SPRING_DATASOURCE_PASSWORD=your_password"
+Environment="BLOCKCHAIN_PRIVATE_KEY=your_private_key"
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启动服务：
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable mantle-luxury-backend
+sudo systemctl start mantle-luxury-backend
+sudo systemctl status mantle-luxury-backend
+```
+
+### 3. 前端部署
+
+#### 3.1 构建前端应用
+
+```bash
+cd frontend
+
+# 安装依赖
+npm install
+
+# 构建生产版本
+npm run build
+```
+
+#### 3.2 配置环境变量
+
+创建 `.env.production` 文件：
+
+```env
+NEXT_PUBLIC_API_URL=http://your-backend-domain:8080
+NEXT_PUBLIC_CHAIN_ID=5003  # Mantle Sepolia: 5003, Mantle Mainnet: 5000
+NEXT_PUBLIC_RPC_URL=https://rpc.sepolia.mantle.xyz
+```
+
+#### 3.3 部署方式
+
+**方式一：使用 Next.js Standalone（推荐）**
+
+```bash
+# 修改 next.config.js，添加：
+# output: 'standalone'
+
+npm run build
+
+# 启动生产服务器
+node .next/standalone/server.js
+```
+
+**方式二：使用 PM2**
+
+```bash
+# 安装 PM2
+npm install -g pm2
+
+# 启动应用
+pm2 start npm --name "mantle-luxury-frontend" -- start
+
+# 保存配置
+pm2 save
+pm2 startup
+```
+
+**方式三：使用 Docker**
+
+创建 `Dockerfile`（在 `frontend` 目录）：
+
+```dockerfile
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV production
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+RUN npm install --production
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+构建和运行：
+```bash
+docker build -t mantle-luxury-frontend .
+docker run -p 3000:3000 --env-file .env.production mantle-luxury-frontend
+```
+
+**方式四：使用 Nginx 反向代理**
+
+1. 构建静态导出（如果使用静态导出）：
+```bash
+# 在 next.config.js 中设置 output: 'export'
+npm run build
+# 生成的文件在 out/ 目录
+```
+
+2. 配置 Nginx：
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        root /path/to/MantleLuxury/frontend/out;
+        try_files $uri $uri.html $uri/ /index.html;
+    }
+
+    location /api {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+### 4. 智能合约部署
+
+#### 4.1 配置合约环境
+
+```bash
+cd contracts
+
+# 复制环境变量模板
+cp .env.example .env
+
+# 编辑 .env 文件
+nano .env
+```
+
+`.env` 文件内容：
+```env
+MANTLE_TESTNET_RPC_URL=https://rpc.sepolia.mantle.xyz
+# 或主网
+# MANTLE_MAINNET_RPC_URL=https://rpc.mantle.xyz
+PRIVATE_KEY=your_private_key_here
+```
+
+#### 4.2 部署核心合约
+
+```bash
+# 安装依赖
+npm install
+
+# 编译合约
+npm run build
+
+# 部署 KYCRegistry 合约
+npx hardhat run scripts/deployKYCRegistry.ts --network mantleTestnet
+
+# 部署 CustodyManager 合约
+npx hardhat run scripts/deployCustodyManager.ts --network mantleTestnet
+
+# 部署 YieldDistribution 合约
+npx hardhat run scripts/deployYieldDistribution.ts --network mantleTestnet
+```
+
+#### 4.3 更新后端配置
+
+将部署后的合约地址更新到后端配置：
+
+```yaml
+# backend/src/main/resources/application.yml
+blockchain:
+  kyc-registry-contract: 0x...  # 填入 KYCRegistry 合约地址
+  custody-manager-contract: 0x...  # 填入 CustodyManager 合约地址
+  yield-distribution-contract: 0x...  # 填入 YieldDistribution 合约地址
+```
+
+### 5. 验证部署
+
+#### 5.1 检查后端服务
+
+```bash
+# 健康检查
+curl http://localhost:8080/api/health
+
+# 查看日志
+tail -f /var/log/mantle-luxury-backend.log
+# 或使用 systemd
+journalctl -u mantle-luxury-backend -f
+```
+
+#### 5.2 检查前端服务
+
+```bash
+# 访问前端
+curl http://localhost:3000
+
+# 检查 API 连接
+curl http://localhost:3000/api/health
+```
+
+#### 5.3 检查数据库连接
+
+```bash
+# 连接数据库
+mysql -h localhost -u root -p mantle_luxury
+
+# 检查表
+SHOW TABLES;
+```
+
+### 6. 安全建议
+
+1. **私钥管理**：
+   - 使用环境变量或密钥管理服务（如 AWS Secrets Manager、HashiCorp Vault）
+   - 不要将私钥提交到代码仓库
+   - 生产环境使用硬件钱包或多签钱包
+
+2. **数据库安全**：
+   - 使用强密码
+   - 限制数据库访问 IP
+   - 启用 SSL 连接
+   - 定期备份数据库
+
+3. **API 安全**：
+   - 使用 HTTPS
+   - 配置 CORS 白名单
+   - 实施速率限制
+   - 使用 JWT 或 Web3 签名验证
+
+4. **服务器安全**：
+   - 配置防火墙规则
+   - 定期更新系统和依赖
+   - 使用非 root 用户运行服务
+   - 配置日志监控和告警
+
+### 7. 监控与维护
+
+#### 7.1 日志管理
+
+- **后端日志**: 配置日志轮转，保留 30-90 天
+- **前端日志**: 使用 Sentry 或其他错误追踪服务
+- **数据库日志**: 启用慢查询日志
+
+#### 7.2 性能监控
+
+- **API 响应时间**: 使用 Prometheus + Grafana
+- **数据库性能**: 监控连接池、慢查询
+- **区块链 RPC**: 监控延迟和错误率
+
+#### 7.3 备份策略
+
+- **数据库备份**: 每日自动备份，保留 30 天
+- **配置文件备份**: 版本控制管理
+- **合约地址记录**: 保存到安全位置
+
+### 8. 故障排查
+
+#### 常见问题
+
+1. **后端无法连接数据库**：
+   - 检查数据库服务是否运行
+   - 验证连接字符串和凭据
+   - 检查防火墙规则
+
+2. **合约部署失败**：
+   - 检查账户余额（Gas 费）
+   - 验证 RPC 节点可用性
+   - 检查私钥格式
+
+3. **前端无法连接后端**：
+   - 检查 CORS 配置
+   - 验证 API URL 配置
+   - 检查网络连接
+
+4. **事件索引器不工作**：
+   - 检查 `event-indexer.enabled` 配置
+   - 查看后端日志
+   - 验证 RPC 连接
+
+---
+
 ## Team Bios and Contact Info
 
 ### Abby Bai

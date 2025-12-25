@@ -19,3 +19,4 @@ public interface ValuationRepository extends JpaRepository<Valuation, String> {
     List<Valuation> findByValuationDateAfter(LocalDate date);
 }
 
+
