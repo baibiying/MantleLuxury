@@ -25,15 +25,20 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-# 从构建阶段复制所有 JAR 文件（使用通配符以匹配实际文件名）
-COPY --from=build /app/build/libs/*.jar app.jar
+# 从构建阶段复制整个 build/libs 目录，以匹配 Railway 配置中的路径
+COPY --from=build /app/build/libs/ ./build/libs/
 
-# 验证 JAR 文件是否复制成功
-RUN ls -la app.jar || (echo "JAR file not copied!" && exit 1)
+# 验证 JAR 文件是否存在
+RUN ls -la build/libs/ && \
+    test -f build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar || \
+    (echo "ERROR: JAR file not found!" && ls -la build/libs/ && exit 1)
 
 # 暴露端口
 EXPOSE 8080
 
 # 启动应用（支持 Railway 的 PORT 环境变量）
-ENTRYPOINT ["sh", "-c", "java -jar -Dserver.port=${PORT:-8080} app.jar"]
+# 注意：Railway 可能会使用 Procfile 或 railway.json 中的 startCommand
+# 如果使用 Dockerfile 的 ENTRYPOINT，使用这个命令
+# 如果 Railway 使用配置文件中的命令，确保路径匹配
+ENTRYPOINT ["sh", "-c", "java -jar -Dserver.port=${PORT:-8080} build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar"]
 
