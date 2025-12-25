@@ -32,14 +32,62 @@
 
 ### 1.3 初始化数据库表结构
 
-1. 在数据库服务的 "Data" 标签页，点击 "Connect" 获取连接信息
-2. 使用 MySQL 客户端（如 MySQL Workbench、DBeaver 或命令行）连接到数据库
-3. 执行 `database/init-mysql.sql` 脚本创建表结构
+**重要：数据库表结构必须在后端服务启动前初始化！**
 
-或者使用 Railway 的 MySQL 终端：
+> 📖 **详细指南**: 请查看 [`database/railway-init.md`](./database/railway-init.md) 获取完整的初始化方法
+
+#### 方式一：使用 Railway MySQL Terminal（最简单，推荐）
+
+1. 在 Railway 项目中，点击 MySQL 服务
+2. 进入 "Data" 标签页
+3. 点击 "Connect" → 选择 "MySQL Terminal"
+4. 在终端中执行以下命令：
+
+```sql
+-- 如果项目已连接到 Git，可以直接执行：
+SOURCE database/init-mysql.sql;
+
+-- 或者直接复制 database/init-mysql.sql 的全部内容，粘贴到终端并执行
+```
+
+**提示**：如果 `SOURCE` 命令找不到文件，可以：
+- 查看当前目录：`pwd`
+- 列出文件：`ls -la`
+- 使用完整路径：`SOURCE /完整路径/init-mysql.sql;`
+- 或者直接复制 `database/init-mysql.sql` 的全部内容粘贴到终端
+
+#### 方式二：使用本地 MySQL 客户端
+
+1. 在 MySQL 服务的 "Variables" 标签页，获取连接信息：
+   - `MYSQLHOST` 或 `MYSQL_HOST` - 主机地址
+   - `MYSQLPORT` 或 `MYSQL_PORT` - 端口（通常是 3306）
+   - `MYSQLDATABASE` 或 `MYSQL_DATABASE` - 数据库名
+   - `MYSQLUSER` 或 `MYSQL_USER` - 用户名
+   - `MYSQLPASSWORD` 或 `MYSQL_PASSWORD` - 密码
+
+2. 使用 MySQL 客户端连接到数据库并执行脚本：
+
 ```bash
-# 在 Railway 数据库服务的 "Data" 标签页，点击 "Connect" → "MySQL Terminal"
-# 然后执行 SQL 脚本
+# 命令行方式
+mysql -h MYSQLHOST -P MYSQLPORT -u MYSQLUSER -pMYSQLPASSWORD MYSQLDATABASE < database/init-mysql.sql
+
+# 或使用 MySQL Workbench、DBeaver 等 GUI 工具
+# 1. 创建新连接，填入上述信息
+# 2. 打开 database/init-mysql.sql 文件
+# 3. 执行整个脚本
+```
+
+#### 验证初始化
+
+执行完成后，在 Railway MySQL Terminal 中验证：
+
+```sql
+-- 查看所有表
+SHOW TABLES;
+
+-- 应该看到以下表（包括 aml_alerts 和 risk_assessments）
+SHOW TABLES LIKE 'aml_%';
+SHOW TABLES LIKE 'risk_%';
 ```
 
 ## 二、后端部署（Railway）
