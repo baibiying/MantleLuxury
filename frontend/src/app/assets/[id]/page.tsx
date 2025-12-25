@@ -189,7 +189,6 @@ export default function AssetDetailPage() {
           address: asset.tokenAddress as `0x${string}`,
           abi: luxuryTokenAbi,
           functionName: "getAvailableTokens",
-          chainId: mantleSepoliaTestnet.id,
         });
         setOnchainAvailable(available?.toString() ?? null);
       } catch (e) {
@@ -488,7 +487,7 @@ export default function AssetDetailPage() {
 
   return (
     <PageContainer
-      title={asset.name || "资产详情"}
+      title={`${asset.brand} ${asset.model}` || "资产详情"}
       subtitle={asset.description || ""}
       maxWidth="7xl"
     >
@@ -936,7 +935,7 @@ export default function AssetDetailPage() {
                   请切换到 Mantle Sepolia 测试网
                 </p>
                 <button
-                  onClick={() => switchChain({ chainId: mantleSepoliaTestnet.id })}
+                  onClick={() => switchChainAsync({ chainId: mantleSepoliaTestnet.id })}
                   className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-white text-sm"
                 >
                   切换网络

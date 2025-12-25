@@ -14,7 +14,7 @@ export default function MouseTrail() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [trail, setTrail] = useState<TrailPoint[]>([]);
   const [isVisible, setIsVisible] = useState(false);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | undefined>(undefined);
   const lastPositionRef = useRef({ x: 0, y: 0 });
   const trailRef = useRef<TrailPoint[]>([]);
 

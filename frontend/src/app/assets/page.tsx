@@ -91,7 +91,6 @@ export default function AssetsPage() {
               address: asset.tokenAddress as `0x${string}`,
               abi: luxuryTokenAbi,
               functionName: "getAvailableTokens",
-              chainId: mantleSepoliaTestnet.id,
             })) as bigint;
             const formatted = formatEther(raw);
             return [asset.tokenAddress as string, formatted] as const;

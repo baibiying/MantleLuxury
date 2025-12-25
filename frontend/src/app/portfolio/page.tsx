@@ -292,7 +292,7 @@ export default function PortfolioPage() {
                           borderRadius: '8px',
                           color: '#e2e8f0'
                         }}
-                        formatter={(value: number) => [`${value.toFixed(4)} MNT`, '累计收益']}
+                        formatter={(value: number | undefined) => [`${value?.toFixed(4) ?? '0'} MNT`, '累计收益']}
                       />
                       <Line 
                         type="monotone" 
@@ -327,23 +327,22 @@ export default function PortfolioPage() {
                               data={distribution.byType}
                               cx="50%"
                               cy="50%"
-                              labelLine={true}
                               label={({ name, percent }) => {
                                 // 只显示百分比，完整名称在图例中显示
-                                return `${(percent * 100).toFixed(0)}%`;
+                                return `${((percent ?? 0) * 100).toFixed(0)}%`;
                               }}
+                              labelLine={{ strokeWidth: 2 }}
                               outerRadius={85}
                               innerRadius={30}
                               fill="#8884d8"
                               dataKey="value"
-                              labelLine={{ strokeWidth: 2 }}
                             >
                               {distribution.byType.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                               ))}
                             </Pie>
                             <Tooltip 
-                              formatter={(value: number, name: string) => [`${value.toFixed(2)} MNT`, name]}
+                              formatter={(value: number | undefined, name: string | undefined) => [`${(value ?? 0).toFixed(2)} MNT`, name ?? '']}
                             />
                             <Legend 
                               wrapperStyle={{ paddingTop: '15px', fontSize: '12px' }}
@@ -368,23 +367,22 @@ export default function PortfolioPage() {
                               data={distribution.byBrand}
                               cx="50%"
                               cy="50%"
-                              labelLine={true}
                               label={({ name, percent }) => {
                                 // 只显示百分比，完整名称在图例中显示
-                                return `${(percent * 100).toFixed(0)}%`;
+                                return `${((percent ?? 0) * 100).toFixed(0)}%`;
                               }}
+                              labelLine={{ strokeWidth: 2 }}
                               outerRadius={85}
                               innerRadius={30}
                               fill="#8884d8"
                               dataKey="value"
-                              labelLine={{ strokeWidth: 2 }}
                             >
                               {distribution.byBrand.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                               ))}
                             </Pie>
                             <Tooltip 
-                              formatter={(value: number, name: string) => [`${value.toFixed(2)} MNT`, name]}
+                              formatter={(value: number | undefined, name: string | undefined) => [`${(value ?? 0).toFixed(2)} MNT`, name ?? '']}
                             />
                             <Legend 
                               wrapperStyle={{ paddingTop: '15px', fontSize: '12px' }}
