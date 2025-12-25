@@ -10,28 +10,25 @@
 -- - Railway MySQL Terminal: SOURCE database/init-mysql.sql;
 -- - 本地 MySQL: mysql -u root -p < database/init-mysql.sql
 
--- 创建数据库（如果不存在）
--- 注意：Railway MySQL 通常已经创建了数据库，此步骤可能不需要
-CREATE DATABASE IF NOT EXISTS mantle_luxury CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- ============================================
+-- 数据库选择和诊断
+-- ============================================
+-- Railway MySQL 通常已经创建了数据库，使用当前数据库
+-- 如果需要创建新数据库，取消下面的注释：
+-- CREATE DATABASE IF NOT EXISTS mantle_luxury CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE mantle_luxury;
 
--- 使用数据库
--- 注意：如果 Railway MySQL 使用不同的数据库名，请修改此处
-USE mantle_luxury;
+-- 显示当前使用的数据库（用于诊断）
+SELECT DATABASE() AS current_database;
 
 -- ============================================
 -- 清理可能存在的错误大小写的表名
 -- ============================================
--- 如果之前创建的表名大小写不对，先删除它们
--- 注意：这会删除表中的所有数据！仅在首次初始化或确定要重新创建时使用
--- 
--- 如果需要保留数据，请先备份，然后手动执行：
---   RENAME TABLE AML_ALERTS TO aml_alerts;
---   或使用其他方式迁移数据
-
--- 删除可能存在的错误大小写的 aml_alerts 表（可选，谨慎使用）
--- DROP TABLE IF EXISTS AML_ALERTS;
--- DROP TABLE IF EXISTS Aml_Alerts;
--- DROP TABLE IF EXISTS aml_Alerts;
+-- 删除可能存在的错误大小写的 aml_alerts 表
+-- 注意：这会删除表中的所有数据！仅在确定要重新创建时使用
+DROP TABLE IF EXISTS AML_ALERTS;
+DROP TABLE IF EXISTS Aml_Alerts;
+DROP TABLE IF EXISTS aml_Alerts;
 
 -- users 表
 CREATE TABLE IF NOT EXISTS users (
@@ -167,10 +164,9 @@ CREATE TABLE IF NOT EXISTS aml_blacklist (
 
 -- aml_alerts 表（AML 告警记录）
 -- 重要：表名必须是小写 aml_alerts，与实体类 @Table(name = "aml_alerts") 一致
--- 如果表已存在但名称大小写不对，请先执行：
---   DROP TABLE IF EXISTS AML_ALERTS;
---   DROP TABLE IF EXISTS Aml_Alerts;
-CREATE TABLE IF NOT EXISTS aml_alerts (
+-- 如果表已存在，先删除再创建（确保表名和结构正确）
+DROP TABLE IF EXISTS aml_alerts;
+CREATE TABLE aml_alerts (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     wallet_address VARCHAR(42) NOT NULL COMMENT '触发告警的钱包地址',
     alert_type VARCHAR(50) NOT NULL COMMENT '告警类型：blacklist_hit, single_tx_limit, total_limit, external_risk, manual',
@@ -190,7 +186,9 @@ CREATE TABLE IF NOT EXISTS aml_alerts (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- risk_assessments 表（风险评估记录）
-CREATE TABLE IF NOT EXISTS risk_assessments (
+-- 重要：表名必须是小写 risk_assessments
+DROP TABLE IF EXISTS risk_assessments;
+CREATE TABLE risk_assessments (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     wallet_address VARCHAR(42) NOT NULL COMMENT '用户钱包地址',
     investment_experience_score INT COMMENT '投资经验评分 (1-5)',
@@ -327,19 +325,61 @@ CREATE TABLE IF NOT EXISTS blockchain_events (
     INDEX idx_transaction_hash (transaction_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 显示创建的表
+-- ============================================
+-- 验证表创建结果
+-- ============================================
+
+-- 显示所有创建的表
 SHOW TABLES;
 
 -- 验证关键表是否存在（特别是 aml_alerts 和 risk_assessments）
 SELECT 
     TABLE_NAME,
     TABLE_ROWS,
-    CREATE_TIME
+    CREATE_TIME,
+    CASE 
+        WHEN TABLE_NAME = 'aml_alerts' THEN '✓ 必需表'
+        WHEN TABLE_NAME = 'risk_assessments' THEN '✓ 必需表'
+        WHEN TABLE_NAME IN ('users', 'assets') THEN '✓ 核心表'
+        ELSE '其他表'
+    END AS status
 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = DATABASE()
-  AND TABLE_NAME IN ('aml_alerts', 'risk_assessments', 'users', 'assets')
+  AND TABLE_NAME IN ('aml_alerts', 'risk_assessments', 'users', 'assets', 
+                     'valuations', 'yield_distributions', 'user_holdings', 
+                     'user_investments', 'aml_blacklist', 'asset_authentications',
+                     'custodies', 'insurances', 'asset_reviews', 
+                     'event_indexer_state', 'blockchain_events')
 ORDER BY TABLE_NAME;
 
--- 如果看到以上查询结果，说明表创建成功
--- 如果 aml_alerts 表不存在，请检查表名大小写是否正确
+-- 重点验证 aml_alerts 表
+SELECT 
+    'aml_alerts 表验证' AS check_type,
+    CASE 
+        WHEN COUNT(*) > 0 THEN '✓ 表存在'
+        ELSE '✗ 表不存在 - 请检查上面的错误信息'
+    END AS result,
+    COUNT(*) AS table_count
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = 'aml_alerts';
+
+-- 如果 aml_alerts 表存在，显示表结构
+SELECT 
+    'aml_alerts 表结构' AS info,
+    COLUMN_NAME,
+    DATA_TYPE,
+    IS_NULLABLE,
+    COLUMN_DEFAULT
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = 'aml_alerts'
+ORDER BY ORDINAL_POSITION;
+
+-- 显示当前数据库信息（用于诊断连接问题）
+SELECT 
+    '数据库信息' AS info,
+    DATABASE() AS database_name,
+    USER() AS current_user,
+    VERSION() AS mysql_version;
 
