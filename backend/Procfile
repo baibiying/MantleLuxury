@@ -1,0 +1,2 @@
+web: java -jar build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar
+

@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["jdk17", "gradle"]
+
+[phases.install]
+cmds = ["./gradlew build -x test --no-daemon"]
+
+[phases.build]
+cmds = ["./gradlew bootJar --no-daemon"]
+
+[start]
+cmd = "java -jar build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar"
+
