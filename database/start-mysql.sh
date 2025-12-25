@@ -132,17 +132,21 @@ wait_for_mysql() {
 execute_init_sql() {
     print_info "执行数据库初始化脚本..."
     
-    # 将 SQL 文件复制到容器中并执行
-    docker cp "$INIT_SQL_FILE" "$CONTAINER_NAME:/tmp/init.sql" > /dev/null
+    # 将 SQL 文件复制到容器中
+    docker cp "$INIT_SQL_FILE" "$CONTAINER_NAME:/tmp/init.sql" > /dev/null 2>&1
     
-    if docker exec -i "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" < "$INIT_SQL_FILE" 2>/dev/null; then
+    # 方法一：使用 docker exec 在容器内执行
+    if docker exec "$CONTAINER_NAME" bash -c "mysql -uroot -p'$MYSQL_ROOT_PASSWORD' $MYSQL_DATABASE < /tmp/init.sql" > /dev/null 2>&1; then
         print_info "数据库表创建成功"
     else
+        # 方法二：使用标准输入重定向
         print_warn "尝试使用另一种方式执行 SQL..."
-        # 备用方法：直接在容器内执行
-        docker exec "$CONTAINER_NAME" bash -c "mysql -uroot -p$MYSQL_ROOT_PASSWORD < /tmp/init.sql" 2>/dev/null && \
-            print_info "数据库表创建成功" || \
-            print_error "数据库表创建失败，请检查 SQL 脚本"
+        if docker exec -i "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$INIT_SQL_FILE" > /dev/null 2>&1; then
+            print_info "数据库表创建成功"
+        else
+            print_warn "SQL 脚本执行可能失败，但将继续检查表结构..."
+            # 不退出，继续执行 ensure_schema 来补齐缺失的表
+        fi
     fi
 }
 
@@ -551,20 +555,21 @@ ensure_schema() {
     local create_aml_alerts_table_sql="
         CREATE TABLE IF NOT EXISTS aml_alerts (
             id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-            wallet_address VARCHAR(42) NOT NULL,
+            wallet_address VARCHAR(42) NOT NULL COMMENT '触发告警的钱包地址',
             alert_type VARCHAR(50) NOT NULL COMMENT '告警类型：blacklist_hit, single_tx_limit, total_limit, external_risk, manual',
-            risk_level VARCHAR(20) NOT NULL COMMENT '风险等级：low, medium, high, critical',
-            source VARCHAR(100) COMMENT '告警来源：internal_rule, chainalysis 等',
+            risk_level VARCHAR(20) NOT NULL DEFAULT 'medium' COMMENT '风险等级：low, medium, high, critical',
+            source VARCHAR(100) COMMENT '告警来源：internal_rule, chainalysis, elliptic, manual',
             message TEXT COMMENT '详细告警信息',
             status VARCHAR(20) NOT NULL DEFAULT 'open' COMMENT 'open, in_review, resolved, ignored',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             handled_by VARCHAR(42) COMMENT '处理人钱包地址',
             handled_at TIMESTAMP NULL COMMENT '处理时间',
             handle_notes TEXT COMMENT '处理备注',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_wallet_address (wallet_address),
             INDEX idx_status (status),
-            INDEX idx_risk_level (risk_level)
+            INDEX idx_risk_level (risk_level),
+            INDEX idx_alert_type (alert_type)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     "
     if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$create_aml_alerts_table_sql" > /dev/null 2>&1; then
@@ -578,7 +583,7 @@ ensure_schema() {
     local create_risk_assessments_table_sql="
         CREATE TABLE IF NOT EXISTS risk_assessments (
             id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-            wallet_address VARCHAR(42) NOT NULL,
+            wallet_address VARCHAR(42) NOT NULL COMMENT '用户钱包地址',
             investment_experience_score INT COMMENT '投资经验评分 (1-5)',
             risk_tolerance_score INT COMMENT '风险承受能力评分 (1-5)',
             investment_goal_score INT COMMENT '投资目标评分 (1-5)',

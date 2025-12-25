@@ -138,6 +138,44 @@ CREATE TABLE IF NOT EXISTS aml_blacklist (
     INDEX idx_wallet_address (wallet_address)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- aml_alerts 表（AML 告警记录）
+CREATE TABLE IF NOT EXISTS aml_alerts (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    wallet_address VARCHAR(42) NOT NULL COMMENT '触发告警的钱包地址',
+    alert_type VARCHAR(50) NOT NULL COMMENT '告警类型：blacklist_hit, single_tx_limit, total_limit, external_risk, manual',
+    risk_level VARCHAR(20) NOT NULL DEFAULT 'medium' COMMENT '风险等级：low, medium, high, critical',
+    source VARCHAR(100) COMMENT '告警来源：internal_rule, chainalysis, elliptic, manual',
+    message TEXT COMMENT '详细告警信息',
+    status VARCHAR(20) NOT NULL DEFAULT 'open' COMMENT 'open, in_review, resolved, ignored',
+    handled_by VARCHAR(42) COMMENT '处理人钱包地址',
+    handled_at TIMESTAMP NULL COMMENT '处理时间',
+    handle_notes TEXT COMMENT '处理备注',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_wallet_address (wallet_address),
+    INDEX idx_status (status),
+    INDEX idx_risk_level (risk_level),
+    INDEX idx_alert_type (alert_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- risk_assessments 表（风险评估记录）
+CREATE TABLE IF NOT EXISTS risk_assessments (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    wallet_address VARCHAR(42) NOT NULL COMMENT '用户钱包地址',
+    investment_experience_score INT COMMENT '投资经验评分 (1-5)',
+    risk_tolerance_score INT COMMENT '风险承受能力评分 (1-5)',
+    investment_goal_score INT COMMENT '投资目标评分 (1-5)',
+    investment_horizon_score INT COMMENT '投资期限偏好评分 (1-5)',
+    total_score INT COMMENT '总分数 (4-20)',
+    risk_level VARCHAR(20) COMMENT '风险等级：conservative, moderate, aggressive',
+    assessment_result TEXT COMMENT '测评结果描述',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_wallet_address (wallet_address),
+    INDEX idx_risk_level (risk_level),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- asset_authentications 表（资产真伪认证）
 CREATE TABLE IF NOT EXISTS asset_authentications (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
