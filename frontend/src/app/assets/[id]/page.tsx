@@ -110,6 +110,7 @@ export default function AssetDetailPage() {
   const [kycStatus, setKycStatus] = useState<"none" | "pending" | "approved" | "rejected">("none");
   const [kycLoading, setKycLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"image" | "3d">("image"); // 图片或3D模型查看模式
+  const [retryCount, setRetryCount] = useState(0); // 重试计数
 
   useEffect(() => {
     async function fetchAsset() {
