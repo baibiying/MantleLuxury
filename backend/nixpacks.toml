@@ -2,7 +2,10 @@
 nixPkgs = ["jdk17", "gradle"]
 
 [phases.install]
-cmds = ["./gradlew build -x test --no-daemon"]
+cmds = [
+  "chmod +x ./gradlew",
+  "./gradlew build -x test --no-daemon"
+]
 
 [phases.build]
 cmds = ["./gradlew bootJar --no-daemon"]

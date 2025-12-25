@@ -56,10 +56,31 @@
 
 ### 2.3 配置环境变量
 
-在后端服务的 "Variables" 标签页，添加以下环境变量：
+**重要：这些环境变量需要在 Railway 平台的 Web UI 中配置，不是在代码文件中！**
+
+操作步骤：
+1. 在 Railway 项目中，点击后端服务
+2. 点击 "Variables" 标签页
+3. 点击 "New Variable" 添加每个环境变量
+4. 或者点击 "Raw Editor" 批量添加
+
+**方式一：使用 Railway 变量引用（推荐）**
+
+在 Railway 后端服务的 "Variables" 标签页，添加以下环境变量。Railway 支持引用其他服务的变量，使用 `${{ServiceName.VARIABLE_NAME}}` 语法：
 
 ```bash
-# 数据库配置（从 MySQL 服务获取）
+# 数据库配置（使用 Railway 变量引用，自动从 MySQL 服务获取）
+DATABASE_URL=jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}?useSSL=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+DATABASE_USERNAME=${{MySQL.MYSQLUSER}}
+DATABASE_PASSWORD=${{MySQL.MYSQLPASSWORD}}
+```
+
+**方式二：手动填写（如果变量引用不工作）**
+
+如果 Railway 变量引用不工作，可以手动填写。首先在 MySQL 服务的 "Variables" 标签页查看实际值，然后填写：
+
+```bash
+# 数据库配置（手动填写，替换为实际值）
 DATABASE_URL=jdbc:mysql://MYSQLHOST:MYSQLPORT/MYSQLDATABASE?useSSL=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
 DATABASE_USERNAME=MYSQLUSER
 DATABASE_PASSWORD=MYSQLPASSWORD
@@ -89,12 +110,28 @@ ADMIN_WALLET_ADDRESSES=0x70a0af9d47a0f6314c4eef2a68666b096701ebdf
 
 ### 2.4 配置构建和启动
 
-Railway 会自动使用 `nixpacks.toml` 或 `railway.json` 配置进行构建。
+**重要：确保 Railway 正确识别构建方式**
 
-如果自动检测失败，可以手动设置：
-- **Root Directory**: `backend`
-- **Build Command**: `./gradlew bootJar`
-- **Start Command**: `java -jar build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar`
+Railway 会按以下优先级检测构建配置：
+1. `railway.toml`（推荐）
+2. `nixpacks.toml`
+3. `railway.json`
+4. `Dockerfile`（如果存在）
+
+**在 Railway 服务设置中配置：**
+
+1. 进入后端服务的 "Settings" 标签页
+2. 设置 **Root Directory**: `backend`
+3. 如果自动检测失败，手动设置：
+   - **Build Command**: `./gradlew bootJar --no-daemon`
+   - **Start Command**: `java -jar build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar`
+
+**如果遇到 "Script start.sh not found" 错误：**
+
+1. 确认 Root Directory 设置为 `backend`
+2. 确认 `nixpacks.toml` 或 `railway.toml` 文件存在于 `backend` 目录
+3. 在服务设置中，选择 **Builder**: `NIXPACKS`（不要选择 Docker）
+4. 如果仍然失败，可以尝试使用 Dockerfile（项目已包含）
 
 ### 2.5 获取后端 URL
 
@@ -228,11 +265,76 @@ fetch('https://your-backend.railway.app/api/assets')
 **后端构建失败：**
 - 检查 Java 版本（需要 Java 17）
 - 查看 Railway 构建日志
+- 检查 `build.gradle` 配置是否正确
+- 确认 `nixpacks.toml` 或 `railway.json` 配置正确
 
 **前端构建失败：**
 - 检查 Node.js 版本
 - 查看 Vercel 构建日志
 - 确认所有依赖都已安装
+
+### 问题 5：部署失败后如何重新部署
+
+**Railway 重新部署方法：**
+
+1. **方法一：手动触发重新部署（推荐）**
+   - 进入 Railway 项目页面
+   - 点击后端服务
+   - 在服务页面右上角，点击 "Deploy" 下拉菜单
+   - 选择 "Redeploy" 或 "Deploy Latest Commit"
+   - Railway 会重新构建并部署最新代码
+
+2. **方法二：通过代码推送触发**
+   - 修复问题后，提交代码到 GitHub
+   - 推送到主分支（或配置的分支）
+   - Railway 会自动检测并触发新的部署
+
+3. **方法三：重启服务**
+   - 如果只是运行时错误（不是构建错误）
+   - 在服务页面点击 "Restart" 按钮
+   - 这会重启服务但不会重新构建
+
+4. **方法四：清除构建缓存后重新部署**
+   - 如果构建缓存有问题
+   - 在服务设置中找到 "Clear Build Cache" 选项
+   - 清除缓存后重新部署
+
+**查看部署日志：**
+- 在服务页面点击 "Deployments" 标签页
+- 查看历史部署记录
+- 点击失败的部署，查看详细日志
+- 日志会显示构建错误的具体信息
+
+**常见部署失败原因：**
+
+1. **"Script start.sh not found" 或 "Railpack could not determine how to build"**
+   - **原因**：Railway 无法自动检测构建方式
+   - **解决方案**：
+     - 确认 Root Directory 设置为 `backend`
+     - 确认 `nixpacks.toml` 或 `railway.toml` 文件存在于 `backend` 目录
+     - 在服务设置中选择 Builder 为 `NIXPACKS`
+     - 如果使用 Dockerfile，选择 Builder 为 `DOCKERFILE`
+     - 手动设置 Build Command 和 Start Command
+
+2. **环境变量配置错误**
+   - 检查 Variables 标签页
+   - 确认所有必需的环境变量都已设置
+
+3. **数据库连接失败**
+   - 检查 `DATABASE_URL` 是否正确
+   - 确认数据库服务正在运行
+
+4. **构建命令错误**
+   - 检查 `nixpacks.toml` 或 `railway.json` 配置
+   - 确认 Gradle 命令正确
+
+5. **内存不足**
+   - Railway 免费计划有内存限制
+   - 考虑升级计划或优化构建过程
+
+6. **端口配置错误**
+   - Railway 会自动设置 `PORT`，不要硬编码
+   - 使用 `${PORT:8080}` 从环境变量读取
 
 ## 九、持续部署
 
