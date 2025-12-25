@@ -19,6 +19,9 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+        # 处理 MySQL 表名大小写问题（Linux 系统上 MySQL 区分大小写）
+        # 使用标准命名策略，不转换表名和列名
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 
   servlet:
     multipart:

@@ -1,10 +1,37 @@
 -- MantleLuxury 数据库初始化脚本
 -- 创建数据库和表结构
+-- 
+-- 重要提示：
+-- 1. 所有表名使用小写，与 Hibernate 实体类中的 @Table 注解一致
+-- 2. 在 Linux 系统（如 Railway）上，MySQL 默认区分大小写
+-- 3. 如果表已存在但名称大小写不对，请先删除旧表再执行此脚本
+-- 
+-- 使用方法：
+-- - Railway MySQL Terminal: SOURCE database/init-mysql.sql;
+-- - 本地 MySQL: mysql -u root -p < database/init-mysql.sql
 
 -- 创建数据库（如果不存在）
+-- 注意：Railway MySQL 通常已经创建了数据库，此步骤可能不需要
 CREATE DATABASE IF NOT EXISTS mantle_luxury CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- 使用数据库
+-- 注意：如果 Railway MySQL 使用不同的数据库名，请修改此处
 USE mantle_luxury;
+
+-- ============================================
+-- 清理可能存在的错误大小写的表名
+-- ============================================
+-- 如果之前创建的表名大小写不对，先删除它们
+-- 注意：这会删除表中的所有数据！仅在首次初始化或确定要重新创建时使用
+-- 
+-- 如果需要保留数据，请先备份，然后手动执行：
+--   RENAME TABLE AML_ALERTS TO aml_alerts;
+--   或使用其他方式迁移数据
+
+-- 删除可能存在的错误大小写的 aml_alerts 表（可选，谨慎使用）
+-- DROP TABLE IF EXISTS AML_ALERTS;
+-- DROP TABLE IF EXISTS Aml_Alerts;
+-- DROP TABLE IF EXISTS aml_Alerts;
 
 -- users 表
 CREATE TABLE IF NOT EXISTS users (
@@ -139,6 +166,10 @@ CREATE TABLE IF NOT EXISTS aml_blacklist (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- aml_alerts 表（AML 告警记录）
+-- 重要：表名必须是小写 aml_alerts，与实体类 @Table(name = "aml_alerts") 一致
+-- 如果表已存在但名称大小写不对，请先执行：
+--   DROP TABLE IF EXISTS AML_ALERTS;
+--   DROP TABLE IF EXISTS Aml_Alerts;
 CREATE TABLE IF NOT EXISTS aml_alerts (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     wallet_address VARCHAR(42) NOT NULL COMMENT '触发告警的钱包地址',
@@ -298,4 +329,17 @@ CREATE TABLE IF NOT EXISTS blockchain_events (
 
 -- 显示创建的表
 SHOW TABLES;
+
+-- 验证关键表是否存在（特别是 aml_alerts 和 risk_assessments）
+SELECT 
+    TABLE_NAME,
+    TABLE_ROWS,
+    CREATE_TIME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME IN ('aml_alerts', 'risk_assessments', 'users', 'assets')
+ORDER BY TABLE_NAME;
+
+-- 如果看到以上查询结果，说明表创建成功
+-- 如果 aml_alerts 表不存在，请检查表名大小写是否正确
 
