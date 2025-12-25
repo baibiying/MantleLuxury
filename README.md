@@ -4,6 +4,14 @@
 
 ---
 
+## 🌐 在线访问
+
+- **前端应用**: [https://ml-snowy-five.vercel.app/](https://ml-snowy-five.vercel.app/)
+- **后端 API**: [https://mantleluxury-production.up.railway.app](https://mantleluxury-production.up.railway.app)
+  - 健康检查: [https://mantleluxury-production.up.railway.app/api/health](https://mantleluxury-production.up.railway.app/api/health)
+
+---
+
 > 快速了解：请查看一页纸白皮书 `ONE_PAGER.md`（Problem / Solution / Business Model / Roadmap）。
 
 ## 本地运行说明
@@ -658,6 +666,33 @@ echo "✅ 资产 $ASSET_ID 的托管和保险记录已创建完成。"
 
 ## 部署说明
 
+> 📖 **详细部署指南**: 请查看 [`DEPLOYMENT.md`](./DEPLOYMENT.md) 获取完整的部署说明  
+> ⚡ **快速部署**: 请查看 [`QUICK_DEPLOY.md`](./QUICK_DEPLOY.md) 获取快速部署检查清单
+
+### 部署架构
+
+本项目使用以下平台进行部署：
+- **前端**: [Vercel](https://vercel.com) - 配置文件: [`frontend/vercel.json`](./frontend/vercel.json)
+- **后端**: [Railway](https://railway.app) - 配置文件: [`backend/Dockerfile`](./backend/Dockerfile), [`backend/railway.json`](./backend/railway.json), [`backend/railway.toml`](./backend/railway.toml), [`backend/nixpacks.toml`](./backend/nixpacks.toml), [`backend/Procfile`](./backend/Procfile)
+- **数据库**: [Railway MySQL](https://railway.app) - 初始化脚本: [`database/init-mysql.sql`](./database/init-mysql.sql)
+
+### 配置文件说明
+
+#### 前端部署配置
+- **Vercel 配置**: [`frontend/vercel.json`](./frontend/vercel.json)
+- **环境变量说明**: [`frontend/ENV_VARIABLES.md`](./frontend/ENV_VARIABLES.md)
+
+#### 后端部署配置
+- **Docker 配置**: [`backend/Dockerfile`](./backend/Dockerfile) - 用于 Railway Docker 部署
+- **Railway JSON 配置**: [`backend/railway.json`](./backend/railway.json)
+- **Railway TOML 配置**: [`backend/railway.toml`](./backend/railway.toml)
+- **Nixpacks 配置**: [`backend/nixpacks.toml`](./backend/nixpacks.toml) - 用于 Railway Nixpacks 构建
+- **Procfile**: [`backend/Procfile`](./backend/Procfile) - Railway 启动命令
+- **环境变量说明**: [`backend/ENV_VARIABLES.md`](./backend/ENV_VARIABLES.md)
+
+#### 数据库配置
+- **初始化脚本**: [`database/init-mysql.sql`](./database/init-mysql.sql)
+
 ### 前置要求
 
 #### 服务器环境
@@ -680,6 +715,8 @@ echo "✅ 资产 $ASSET_ID 的托管和保险记录已创建完成。"
 - **测试币/主网币**: 确保账户有足够的 MNT 用于交易
 
 ### 1. 数据库部署
+
+> 📝 **数据库初始化**: 使用 [`database/init-mysql.sql`](./database/init-mysql.sql) 初始化数据库表结构
 
 #### 方式一：使用 Docker（推荐）
 
@@ -708,6 +745,16 @@ FLUSH PRIVILEGES;
 ```
 
 ### 2. 后端部署
+
+> 📝 **Railway 部署**: 本项目使用 Railway 部署后端，配置文件包括：
+> - [`backend/Dockerfile`](./backend/Dockerfile) - Docker 构建配置（推荐使用）
+> - [`backend/railway.json`](./backend/railway.json) - Railway JSON 配置
+> - [`backend/railway.toml`](./backend/railway.toml) - Railway TOML 配置
+> - [`backend/nixpacks.toml`](./backend/nixpacks.toml) - Nixpacks 构建配置
+> - [`backend/Procfile`](./backend/Procfile) - 启动命令配置
+> - [`backend/ENV_VARIABLES.md`](./backend/ENV_VARIABLES.md) - 环境变量说明
+
+详细部署步骤请参考 [`DEPLOYMENT.md`](./DEPLOYMENT.md#二后端部署railway)。
 
 #### 2.1 构建后端应用
 
@@ -781,6 +828,12 @@ sudo systemctl status mantle-luxury-backend
 ```
 
 ### 3. 前端部署
+
+> 📝 **Vercel 部署**: 本项目使用 Vercel 部署前端，配置文件包括：
+> - [`frontend/vercel.json`](./frontend/vercel.json) - Vercel 部署配置
+> - [`frontend/ENV_VARIABLES.md`](./frontend/ENV_VARIABLES.md) - 环境变量说明
+
+详细部署步骤请参考 [`DEPLOYMENT.md`](./DEPLOYMENT.md#三前端部署vercel)。
 
 #### 3.1 构建前端应用
 
