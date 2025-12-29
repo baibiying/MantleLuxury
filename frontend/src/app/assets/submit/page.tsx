@@ -204,6 +204,22 @@ export default function AssetSubmitPage() {
           </div>
         )}
 
+        {/* KYC / AML 合规提示 - 放在页面最上方 */}
+        {isConnected && (
+          <div className="mb-6 bg-amber-950/40 border border-amber-500/40 rounded-xl px-6 py-4">
+            <p className="text-sm text-amber-200">
+              为符合合规要求，提交资产前需要完成{" "}
+              <a
+                href="/kyc"
+                className="underline decoration-amber-300 hover:text-amber-100 font-medium"
+              >
+                KYC / AML 审核
+              </a>
+              ，通过后才能提交。
+            </p>
+          </div>
+        )}
+
         {!isConnected ? (
           <TechCard className="px-6 py-8 text-center">
             <p className="text-sm text-slate-300">
@@ -627,16 +643,6 @@ export default function AssetSubmitPage() {
                 : "提交资产"}
             </button>
           </div>
-          <p className="mt-2 text-xs text-amber-300 text-right">
-            为符合合规要求，提交资产前需要完成{" "}
-            <a
-              href="/kyc"
-              className="underline decoration-amber-300 hover:text-amber-100"
-            >
-              KYC / AML 审核
-            </a>
-            ，通过后才能提交。
-          </p>
         </form>
         )}
     </PageContainer>
