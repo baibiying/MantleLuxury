@@ -281,42 +281,65 @@ public class MantleTokenDeploymentService {
     /**
      * 查找 contracts 目录
      * 支持多种路径：当前目录、上级目录、项目根目录
+     * 在生产环境中，contracts 目录应该与 backend 目录同级（项目根目录）
      */
     private java.io.File findContractsDirectory() {
         // 获取当前工作目录
         String currentDir = System.getProperty("user.dir");
-        logger.debug("Current working directory: {}", currentDir);
+        logger.info("Current working directory: {}", currentDir);
         
-        // 尝试多个可能的路径
-        String[] possiblePaths = {
-            "contracts",                                    // 当前目录下的 contracts
-            "../contracts",                                 // 上级目录下的 contracts
-            "../../contracts",                              // 上两级目录下的 contracts
-            currentDir + "/contracts",                      // 绝对路径：当前目录/contracts
-            currentDir + "/../contracts",                   // 绝对路径：上级目录/contracts
-        };
+        // 尝试多个可能的路径（按优先级排序）
+        String[] possiblePaths;
         
-        // 如果当前目录是 backend，尝试从项目根目录查找
-        if (currentDir.endsWith("backend")) {
+        // 如果当前目录是 /app（Railway/Vercel 生产环境）
+        if (currentDir.equals("/app")) {
             possiblePaths = new String[]{
-                "../contracts",                             // backend/../contracts
-                currentDir + "/../contracts",               // 绝对路径
-                "contracts",                                // 当前目录
+                "../contracts",                            // /app/../contracts (项目根目录)
+                "../../contracts",                          // 上两级
+                "contracts",                               // 当前目录
+                currentDir + "/../contracts",              // 绝对路径
+            };
+        }
+        // 如果当前目录是 backend
+        else if (currentDir.endsWith("backend") || currentDir.endsWith("/backend")) {
+            possiblePaths = new String[]{
+                "../contracts",                            // backend/../contracts
+                currentDir + "/../contracts",              // 绝对路径
+                "contracts",                               // 当前目录
+                "../../contracts",                          // 上两级
+            };
+        }
+        // 其他情况（可能是项目根目录）
+        else {
+            possiblePaths = new String[]{
+                "contracts",                               // 当前目录下的 contracts
+                "../contracts",                            // 上级目录
+                currentDir + "/contracts",                  // 绝对路径：当前目录/contracts
+                currentDir + "/../contracts",               // 绝对路径：上级目录/contracts
                 "../../contracts",                          // 上两级
             };
         }
         
         for (String path : possiblePaths) {
             java.io.File contractsDir = new java.io.File(path);
+            logger.debug("Checking contracts directory: {} (exists: {})", contractsDir.getAbsolutePath(), contractsDir.exists());
             if (contractsDir.exists() && contractsDir.isDirectory()) {
-                logger.info("Found contracts directory at: {}", contractsDir.getAbsolutePath());
-                return contractsDir;
+                // 验证 contracts 目录中是否有必要的文件
+                java.io.File deployScript = new java.io.File(contractsDir, "scripts/deployLuxuryToken.ts");
+                java.io.File hardhatConfig = new java.io.File(contractsDir, "hardhat.config.ts");
+                if (deployScript.exists() || hardhatConfig.exists()) {
+                    logger.info("✅ Found contracts directory at: {}", contractsDir.getAbsolutePath());
+                    return contractsDir;
+                } else {
+                    logger.warn("Contracts directory found but missing required files: {}", contractsDir.getAbsolutePath());
+                }
             }
         }
         
         // 如果都找不到，抛出异常
         throw new RuntimeException(
-            String.format("Contracts directory not found. Searched in: %s. Current working directory: %s", 
+            String.format("Contracts directory not found. Searched in: %s. Current working directory: %s. " +
+                "Please ensure the contracts directory is available in the deployment environment.", 
                 String.join(", ", possiblePaths), currentDir)
         );
     }

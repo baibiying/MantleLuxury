@@ -169,10 +169,15 @@ Railway 会按以下优先级检测构建配置：
 **在 Railway 服务设置中配置：**
 
 1. 进入后端服务的 "Settings" 标签页
-2. 设置 **Root Directory**: `backend`
+2. **重要：设置 Root Directory 为项目根目录（留空或设置为 `/`），而不是 `backend`**
+   - 这样 contracts 目录才能被访问（位于 `../contracts` 或 `./contracts`）
+   - 如果设置为 `backend`，contracts 目录将无法访问
 3. 如果自动检测失败，手动设置：
-   - **Build Command**: `./gradlew bootJar --no-daemon`
-   - **Start Command**: `java -jar build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar`
+   - **Build Command**: `cd backend && ./gradlew bootJar --no-daemon`
+   - **Start Command**: `cd backend && java -jar build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar`
+4. **确保 contracts 目录被包含在部署中**：
+   - 检查 `.railwayignore` 文件，确保 `contracts/` 没有被忽略
+   - Railway 会自动安装 contracts 目录中的 Node.js 依赖（通过 nixpacks.toml 配置）
 
 **如果遇到 "Script start.sh not found" 错误：**
 

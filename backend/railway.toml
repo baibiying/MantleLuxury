@@ -1,9 +1,11 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "./gradlew bootJar --no-daemon"
+# 注意：Railway 的 Root Directory 应该设置为项目根目录，而不是 backend
+# 这样 contracts 目录才能被访问
+buildCommand = "cd backend && ./gradlew bootJar --no-daemon"
 
 [deploy]
-startCommand = "java -jar build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar"
+startCommand = "cd backend && java -jar build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 

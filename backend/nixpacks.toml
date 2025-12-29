@@ -1,14 +1,24 @@
 [phases.setup]
-nixPkgs = ["jdk17", "gradle"]
+nixPkgs = ["jdk17", "gradle", "nodejs-18_x", "npm"]
 
 [phases.install]
 cmds = [
   "chmod +x ./gradlew",
-  "./gradlew build -x test --no-daemon"
+  "./gradlew build -x test --no-daemon",
+  # 安装 Hardhat 和合约依赖（contracts 目录应该在项目根目录，与 backend 同级）
+  "echo 'Current directory:' && pwd && ls -la",
+  "echo 'Checking for contracts directory:' && ls -la .. || echo 'Parent directory not accessible'",
+  "if [ -d ../contracts ]; then echo 'Found contracts directory, installing dependencies...' && cd ../contracts && npm install --production=false && cd ../backend; else echo 'Warning: contracts directory not found at ../contracts'; fi"
 ]
 
 [phases.build]
-cmds = ["./gradlew bootJar --no-daemon"]
+cmds = [
+  "./gradlew bootJar --no-daemon",
+  # 验证 contracts 目录在运行时可访问
+  "echo 'Build phase - checking contracts directory:'",
+  "if [ -d ../contracts ]; then echo '✅ Contracts directory found at:' && ls -la ../contracts | head -20; else echo '❌ Contracts directory not found'; fi",
+  "if [ -f ../contracts/scripts/deployLuxuryToken.ts ]; then echo '✅ Deployment script found'; else echo '❌ Deployment script not found'; fi"
+]
 
 [start]
 cmd = "java -jar build/libs/mantle-luxury-backend-0.0.1-SNAPSHOT.jar"
