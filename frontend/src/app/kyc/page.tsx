@@ -253,7 +253,7 @@ export default function KycPage() {
         ) : (
           <TechCard className="px-6 py-6 space-y-4">
             {/* 状态显示 */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-4">
               <div className="text-sm">
                 <span className="text-slate-400 mr-2">当前状态：</span>
                 <span
@@ -306,7 +306,7 @@ export default function KycPage() {
 
             {/* 审核中提示 */}
             {status === "pending" && (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg mt-4">
                 <p className="text-sm text-amber-300">
                   ⏳ 你的 KYC 申请正在审核中，请耐心等待。
                 </p>

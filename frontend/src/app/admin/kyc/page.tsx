@@ -255,7 +255,7 @@ export default function AdminKycPage() {
     };
     return (
       <span
-        className={`px-2 py-1 rounded text-xs font-medium ${styles[status as keyof typeof styles] || styles.none}`}
+        className={`px-2 py-1 rounded text-sm font-medium ${styles[status as keyof typeof styles] || styles.none}`}
       >
         {labels[status as keyof typeof labels] || status}
       </span>
@@ -275,23 +275,23 @@ export default function AdminKycPage() {
         <TechCard className="px-6 py-8 text-center">
           {!isConnected ? (
             <>
-              <p className="text-lg font-semibold text-red-200 mb-2">
+              <p className="text-xl font-semibold text-red-200 mb-2">
                 请先连接钱包
               </p>
-              <p className="text-sm text-slate-300">
+              <p className="text-base text-slate-300">
                 请在页面右上角连接钱包。管理后台仅限管理员访问
               </p>
             </>
           ) : (
             <>
-              <p className="text-lg font-semibold text-red-200 mb-2">
+              <p className="text-xl font-semibold text-red-200 mb-2">
                 无权限访问
               </p>
-              <p className="text-sm text-slate-300">
+              <p className="text-base text-slate-300">
                 当前钱包地址不是管理员，无法访问管理后台
               </p>
               {error && (
-                <p className="text-sm text-red-300 mt-2">{error}</p>
+                <p className="text-base text-red-300 mt-2">{error}</p>
               )}
             </>
           )}
@@ -309,15 +309,15 @@ export default function AdminKycPage() {
       {/* 错误和成功提示 */}
       {error && (
         <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">
-          <p className="text-sm font-semibold text-red-200 mb-1">
+          <p className="text-base font-semibold text-red-200 mb-1">
             错误
           </p>
-          <p className="text-xs text-red-300 break-all">{error}</p>
+          <p className="text-sm text-red-300 break-all">{error}</p>
         </div>
       )}
       {success && (
         <div className="mb-6 bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-6 py-4">
-          <p className="text-sm font-semibold text-emerald-200">
+          <p className="text-base font-semibold text-emerald-200">
             {success}
           </p>
         </div>
@@ -325,7 +325,7 @@ export default function AdminKycPage() {
 
       {loading ? (
         <TechCard className="px-6 py-8 text-center">
-          <p className="text-sm text-slate-300">正在加载数据...</p>
+          <p className="text-base text-slate-300">正在加载数据...</p>
         </TechCard>
       ) : (
         <div className="space-y-6">
@@ -333,28 +333,28 @@ export default function AdminKycPage() {
           {stats && (
             <div className="grid gap-4 md:grid-cols-6">
               <TechCard className="px-4 py-4">
-                <div className="text-xs text-slate-400 mb-1">总用户数</div>
-                <div className="text-2xl font-bold">{stats.total}</div>
+                <div className="text-sm text-slate-400 mb-1">总用户数</div>
+                <div className="text-3xl font-bold">{stats.total}</div>
               </TechCard>
               <TechCard className="px-4 py-4">
-                <div className="text-xs text-slate-400 mb-1">未提交</div>
-                <div className="text-2xl font-bold text-slate-400">{stats.none}</div>
+                <div className="text-sm text-slate-400 mb-1">未提交</div>
+                <div className="text-3xl font-bold text-slate-400">{stats.none}</div>
               </TechCard>
               <TechCard className="px-4 py-4">
-                <div className="text-xs text-slate-400 mb-1">审核中</div>
-                <div className="text-2xl font-bold text-amber-400">{stats.pending}</div>
+                <div className="text-sm text-slate-400 mb-1">审核中</div>
+                <div className="text-3xl font-bold text-amber-400">{stats.pending}</div>
               </TechCard>
               <TechCard className="px-4 py-4">
-                <div className="text-xs text-slate-400 mb-1">已通过</div>
-                <div className="text-2xl font-bold text-emerald-400">{stats.approved}</div>
+                <div className="text-sm text-slate-400 mb-1">已通过</div>
+                <div className="text-3xl font-bold text-emerald-400">{stats.approved}</div>
               </TechCard>
               <TechCard className="px-4 py-4">
-                <div className="text-xs text-slate-400 mb-1">已拒绝</div>
-                <div className="text-2xl font-bold text-red-400">{stats.rejected}</div>
+                <div className="text-sm text-slate-400 mb-1">已拒绝</div>
+                <div className="text-3xl font-bold text-red-400">{stats.rejected}</div>
               </TechCard>
               <TechCard className="px-4 py-4">
-                <div className="text-xs text-slate-400 mb-1">黑名单</div>
-                <div className="text-2xl font-bold text-red-500">{stats.blacklisted}</div>
+                <div className="text-sm text-slate-400 mb-1">黑名单</div>
+                <div className="text-3xl font-bold text-red-500">{stats.blacklisted}</div>
               </TechCard>
             </div>
           )}
@@ -362,12 +362,12 @@ export default function AdminKycPage() {
           {/* 用户列表 */}
           <TechCard className="px-6 py-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">用户列表</h2>
+                <h2 className="text-xl font-semibold">用户列表</h2>
                 <div className="flex items-center gap-3">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 text-base focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
                     <option value="all">全部状态</option>
                     <option value="none">未提交</option>
@@ -379,15 +379,15 @@ export default function AdminKycPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-base">
                   <thead>
                     <tr className="text-slate-400 border-b border-slate-700/60">
-                      <th className="py-3 text-left font-normal">钱包地址</th>
-                      <th className="py-3 text-left font-normal">邮箱</th>
-                      <th className="py-3 text-left font-normal">KYC 状态</th>
-                      <th className="py-3 text-left font-normal">提交时间</th>
-                      <th className="py-3 text-left font-normal">黑名单</th>
-                      <th className="py-3 text-right font-normal">操作</th>
+                      <th className="py-3 text-left font-medium">钱包地址</th>
+                      <th className="py-3 text-left font-medium">邮箱</th>
+                      <th className="py-3 text-left font-medium">KYC 状态</th>
+                      <th className="py-3 text-left font-medium">提交时间</th>
+                      <th className="py-3 text-left font-medium">黑名单</th>
+                      <th className="py-3 text-right font-medium">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -403,19 +403,19 @@ export default function AdminKycPage() {
                           key={user.id}
                           className="border-b border-slate-800/40 last:border-0"
                         >
-                          <td className="py-3 font-mono text-xs">
+                          <td className="py-3 font-mono text-sm">
                             {user.walletAddress}
                           </td>
                           <td className="py-3">{user.email || "-"}</td>
                           <td className="py-3">{getStatusBadge(user.kycStatus)}</td>
-                          <td className="py-3 text-slate-400 text-xs">
+                          <td className="py-3 text-slate-400 text-sm">
                             {user.kycSubmittedAt
                               ? new Date(user.kycSubmittedAt).toLocaleString("zh-CN")
                               : "-"}
                           </td>
                           <td className="py-3">
                             {user.isBlacklisted ? (
-                              <span className="px-2 py-1 rounded text-xs font-medium bg-red-600 text-red-100">
+                              <span className="px-2 py-1 rounded text-sm font-medium bg-red-600 text-red-100">
                                 是
                               </span>
                             ) : (
@@ -430,7 +430,7 @@ export default function AdminKycPage() {
                                     onClick={() =>
                                       handleReviewKyc(user.walletAddress, "approved")
                                     }
-                                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium"
+                                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium"
                                   >
                                     通过
                                   </TechButton>
@@ -438,7 +438,7 @@ export default function AdminKycPage() {
                                     onClick={() =>
                                       handleReviewKyc(user.walletAddress, "rejected")
                                     }
-                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium"
+                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium"
                                   >
                                     拒绝
                                   </TechButton>
@@ -457,10 +457,10 @@ export default function AdminKycPage() {
           {/* 黑名单管理 */}
           <TechCard className="px-6 py-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">黑名单管理</h2>
+                <h2 className="text-xl font-semibold">黑名单管理</h2>
                 <TechButton
                   onClick={() => setShowAddBlacklist(!showAddBlacklist)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-base font-medium"
                 >
                   {showAddBlacklist ? "取消" : "+ 添加黑名单"}
                 </TechButton>
@@ -470,7 +470,7 @@ export default function AdminKycPage() {
                 <div className="mb-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-base font-medium mb-2">
                         钱包地址
                       </label>
                       <input
@@ -478,11 +478,11 @@ export default function AdminKycPage() {
                         value={newBlacklistAddress}
                         onChange={(e) => setNewBlacklistAddress(e.target.value)}
                         placeholder="0x..."
-                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-base text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-base font-medium mb-2">
                         原因（可选）
                       </label>
                       <input
@@ -490,12 +490,12 @@ export default function AdminKycPage() {
                         value={newBlacklistReason}
                         onChange={(e) => setNewBlacklistReason(e.target.value)}
                         placeholder="请输入加入黑名单的原因"
-                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-base text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500"
                       />
                     </div>
                     <TechButton
                       onClick={handleAddToBlacklist}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium"
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-base font-medium"
                     >
                       确认添加
                     </TechButton>
@@ -504,13 +504,13 @@ export default function AdminKycPage() {
               )}
 
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-base">
                   <thead>
                     <tr className="text-slate-400 border-b border-slate-700/60">
-                      <th className="py-3 text-left font-normal">钱包地址</th>
-                      <th className="py-3 text-left font-normal">原因</th>
-                      <th className="py-3 text-left font-normal">添加时间</th>
-                      <th className="py-3 text-right font-normal">操作</th>
+                      <th className="py-3 text-left font-medium">钱包地址</th>
+                      <th className="py-3 text-left font-medium">原因</th>
+                      <th className="py-3 text-left font-medium">添加时间</th>
+                      <th className="py-3 text-right font-medium">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -526,13 +526,13 @@ export default function AdminKycPage() {
                           key={entry.id}
                           className="border-b border-slate-800/40 last:border-0"
                         >
-                          <td className="py-3 font-mono text-xs">
+                          <td className="py-3 font-mono text-sm">
                             {entry.walletAddress}
                           </td>
                           <td className="py-3 text-slate-400">
                             {entry.reason || "-"}
                           </td>
-                          <td className="py-3 text-slate-400 text-xs">
+                          <td className="py-3 text-slate-400 text-sm">
                             {new Date(entry.createdAt).toLocaleString("zh-CN")}
                           </td>
                           <td className="py-3 text-right">
@@ -540,7 +540,7 @@ export default function AdminKycPage() {
                               onClick={() =>
                                 handleRemoveFromBlacklist(entry.walletAddress)
                               }
-                              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium"
+                              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium"
                             >
                               移除
                             </TechButton>

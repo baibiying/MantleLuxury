@@ -1,14 +1,14 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
   application:
     name: mantle-luxury-backend
 
   datasource:
-    url: jdbc:mysql://localhost:3306/mantle_luxury?useSSL=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-    username: root
-    password: root123456
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/mantle_luxury?useSSL=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${DATABASE_USERNAME:root}
+    password: ${DATABASE_PASSWORD:root123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -19,6 +19,9 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+        # 处理 MySQL 表名大小写问题（Linux 系统上 MySQL 区分大小写）
+        # 使用标准命名策略，不转换表名和列名
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 
   servlet:
     multipart:
@@ -30,27 +33,49 @@ spring:
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false
 
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    from: ${MAIL_FROM:noreply@mantleluxury.com}
+    default-encoding: UTF-8
+
 management:
   endpoints:
     web:
       exposure:
         include: health,info
 
+# CORS 配置
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
 # 区块链配置
 blockchain:
-  enabled: true  # 设置为 true 启用真实的区块链部署到 Mantle 测试网
+  enabled: ${BLOCKCHAIN_ENABLED:true}  # 设置为 true 启用真实的区块链部署到 Mantle 测试网
   # Mantle Sepolia 测试网 RPC URL（已验证可用）
-  rpc-url: https://rpc.sepolia.mantle.xyz
-  private-key: 773d526fabccd1b26abef51ed7bdcda523409069ecfecd4269cb757c282a599e # 从环境变量读取私钥，或直接配置（不要提交到 Git）
-  yield-distribution-contract: "0x988304593FC2e89e56FFAD9393Af0B97c37d9E5D"  # YieldDistribution 合约地址
-  kyc-registry-contract: "0x519AD3F043581620e67567c896508b8Da33fF91D"  # KYCRegistry 合约地址（最新部署）
-  custody-manager-contract: "0xF1c527a19b65E3e9Ab9AD7499cc8167C63c3ca87"  # CustodyManager 合约地址
+  rpc-url: ${BLOCKCHAIN_RPC_URL:https://rpc.sepolia.mantle.xyz}
+  private-key: ${BLOCKCHAIN_PRIVATE_KEY:773d526fabccd1b26abef51ed7bdcda523409069ecfecd4269cb757c282a599e} # 从环境变量读取私钥，或直接配置（不要提交到 Git）
+  yield-distribution-contract: ${YIELD_DISTRIBUTION_CONTRACT:0x988304593FC2e89e56FFAD9393Af0B97c37d9E5D}  # YieldDistribution 合约地址
+  kyc-registry-contract: ${KYC_REGISTRY_CONTRACT:0x519AD3F043581620e67567c896508b8Da33fF91D}  # KYCRegistry 合约地址（最新部署）
+  custody-manager-contract: ${CUSTODY_MANAGER_CONTRACT:0xF1c527a19b65E3e9Ab9AD7499cc8167C63c3ca87}  # CustodyManager 合约地址
 
 # 管理员配置
 admin:
   # 管理员钱包地址列表（小写，用逗号分隔）
   # 这些地址可以访问管理后台功能
-  wallet-addresses: "0x70a0af9d47a0f6314c4eef2a68666b096701ebdf"
+  wallet-addresses: ${ADMIN_WALLET_ADDRESSES:0x70a0af9d47a0f6314c4eef2a68666b096701ebdf}
 
 # The Graph 配置（已弃用 - Hosted Service 已关闭，Studio 不支持 Mantle）
 # 现在使用后端自建的事件索引器（EventIndexerService）

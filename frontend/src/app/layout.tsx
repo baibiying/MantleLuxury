@@ -8,6 +8,7 @@ import ParticleEffect from "@/components/ParticleEffect";
 import DataStream from "@/components/DataStream";
 import MouseTrail from "@/components/MouseTrail";
 import WalletConnect from "@/components/WalletConnect";
+import AdminNavigation from "@/components/AdminNavigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -70,11 +71,6 @@ export default function RootLayout({
                     { href: "/portfolio", label: "我的持仓" },
                     { href: "/yields", label: "收益记录" },
                     { href: "/settings", label: "账户设置" },
-                    { href: "/admin/kyc", label: "KYC管理" },
-                    { href: "/admin/aml", label: "AML告警" },
-                    { href: "/admin/assets", label: "资产审核" },
-                    { href: "/admin/yields", label: "收益分配控制台" },
-                    { href: "/admin/reports", label: "报表导出" },
                   ].map((item) => (
                     <Link
                       key={item.href}
@@ -85,6 +81,8 @@ export default function RootLayout({
                       <span className="relative z-10">{item.label}</span>
                     </Link>
                   ))}
+                  {/* 管理员专用导航（仅对管理员可见） */}
+                  <AdminNavigation />
                 </nav>
               </div>
             </header>
