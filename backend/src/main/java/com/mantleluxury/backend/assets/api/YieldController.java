@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/yields")
-@CrossOrigin(origins = "http://localhost:3000")
 public class YieldController {
 
     private static final Logger logger = LoggerFactory.getLogger(YieldController.class);

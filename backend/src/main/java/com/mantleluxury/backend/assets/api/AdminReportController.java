@@ -30,7 +30,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/admin/reports")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AdminReportController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminReportController.class);

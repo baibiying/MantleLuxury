@@ -19,7 +19,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/admin/valuations")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AdminValuationController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminValuationController.class);

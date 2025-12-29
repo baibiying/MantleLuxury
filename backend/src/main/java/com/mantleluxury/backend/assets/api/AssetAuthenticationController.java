@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/asset-authentications")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AssetAuthenticationController {
 
     private static final Logger logger = LoggerFactory.getLogger(AssetAuthenticationController.class);

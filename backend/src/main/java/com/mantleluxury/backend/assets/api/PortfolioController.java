@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/portfolio")
-@CrossOrigin(origins = "http://localhost:3000")
 public class PortfolioController {
 
     private final UserHoldingRepository holdingRepository;

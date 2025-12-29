@@ -14,7 +14,6 @@ import com.mantleluxury.backend.blockchain.repository.BlockchainEventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,7 +30,6 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/stats")
-@CrossOrigin(origins = "http://localhost:3000")
 public class StatsController {
 
     private static final Logger logger = LoggerFactory.getLogger(StatsController.class);

@@ -13,7 +13,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/kyc")
-@CrossOrigin(origins = "http://localhost:3000")
 public class KycController {
 
     private final UserRepository userRepository;

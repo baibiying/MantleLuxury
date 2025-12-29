@@ -11,7 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/risk-assessment")
-@CrossOrigin(origins = "http://localhost:3000")
 public class RiskAssessmentController {
 
     private final RiskAssessmentService riskAssessmentService;

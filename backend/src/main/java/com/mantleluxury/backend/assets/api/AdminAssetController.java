@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/admin/assets")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AdminAssetController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminAssetController.class);

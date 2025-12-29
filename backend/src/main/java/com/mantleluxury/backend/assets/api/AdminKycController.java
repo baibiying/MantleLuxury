@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/admin/kyc")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AdminKycController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminKycController.class);

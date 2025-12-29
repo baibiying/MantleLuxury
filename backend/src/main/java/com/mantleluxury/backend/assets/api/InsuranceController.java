@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/insurances")
-@CrossOrigin(origins = "http://localhost:3000")
 public class InsuranceController {
 
     private static final Logger logger = LoggerFactory.getLogger(InsuranceController.class);

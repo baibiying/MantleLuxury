@@ -12,7 +12,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/assets")
-@CrossOrigin(origins = "http://localhost:3000")
 public class ValuationController {
 
     private final ValuationService valuationService;

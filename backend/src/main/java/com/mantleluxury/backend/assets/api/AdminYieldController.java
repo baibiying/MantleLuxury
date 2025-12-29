@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/admin/yields")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AdminYieldController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminYieldController.class);

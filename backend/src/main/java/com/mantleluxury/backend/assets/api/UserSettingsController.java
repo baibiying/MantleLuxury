@@ -14,7 +14,6 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/user-settings")
-@CrossOrigin(origins = "http://localhost:3000")
 public class UserSettingsController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserSettingsController.class);

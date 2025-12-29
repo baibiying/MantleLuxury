@@ -17,7 +17,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/assets")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AssetController {
 
     private static final Logger logger = LoggerFactory.getLogger(AssetController.class);

@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/admin/aml-alerts")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AdminAmlAlertController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminAmlAlertController.class);

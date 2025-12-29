@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/custodies")
-@CrossOrigin(origins = "http://localhost:3000")
 public class CustodyController {
 
     private static final Logger logger = LoggerFactory.getLogger(CustodyController.class);

@@ -19,7 +19,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/legal-documents")
-@CrossOrigin(origins = "http://localhost:3000")
 public class LegalDocumentController {
 
     /**
