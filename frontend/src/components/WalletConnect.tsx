@@ -17,18 +17,6 @@ export default function WalletConnect() {
     setMounted(true);
   }, []);
 
-  // 切换账户：断开后重新连接，MetaMask 会显示账户选择界面
-  const handleSwitchAccount = async () => {
-    await disconnect();
-    // 等待断开完成后再连接
-    setTimeout(() => {
-      const metaMaskConnector = connectors.find(c => c.id === 'metaMask');
-      if (metaMaskConnector) {
-        connect({ connector: metaMaskConnector });
-      }
-    }, 100);
-  };
-
   // 连接后自动尝试切到 Mantle Sepolia
   useEffect(() => {
     const ensureMantle = async () => {
@@ -87,13 +75,6 @@ export default function WalletConnect() {
             {switchingNetwork ? '切换中...' : '切换到 Mantle Sepolia'}
           </button>
         )}
-        <button
-          onClick={handleSwitchAccount}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm transition"
-          title="切换账户"
-        >
-          切换账户
-        </button>
         <button
           onClick={() => disconnect()}
           className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm transition"

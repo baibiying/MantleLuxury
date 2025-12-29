@@ -10,7 +10,7 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
 type KycStatus = "none" | "pending" | "approved" | "rejected";
-type Step = "risk-assessment" | "basic-info" | "documents" | "review";
+type Step = "risk-assessment" | "risk-result" | "basic-info" | "documents" | "review";
 
 type RiskAssessmentAnswers = {
   investmentExperience: number;
@@ -104,9 +104,9 @@ export default function KycPage() {
           const riskData = await riskRes.json();
           setRiskAssessmentSubmitted(true);
           setRiskAssessmentResult(riskData);
-          // 如果KYC状态是none或rejected，进入基本信息步骤
+          // 如果KYC状态是none或rejected，进入风险测评结果步骤
           if (data.status === "none" || data.status === "rejected") {
-            setCurrentStep("basic-info");
+            setCurrentStep("risk-result");
           }
         }
       } catch {
@@ -142,7 +142,7 @@ export default function KycPage() {
       const data = await res.json();
       setRiskAssessmentSubmitted(true);
       setRiskAssessmentResult(data);
-      setCurrentStep("basic-info");
+      setCurrentStep("risk-result");
     } catch (e: any) {
       setError(e.message ?? "提交失败");
     } finally {
@@ -316,14 +316,14 @@ export default function KycPage() {
               <form onSubmit={handleRiskAssessmentSubmit} className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold mb-2">步骤 1: 风险测评问卷</h3>
-                  <p className="text-xs text-slate-400 mb-4">
+                  <p className="text-base text-slate-400 mb-4">
                     请如实回答以下问题，帮助我们了解您的投资偏好和风险承受能力。
                   </p>
                 </div>
 
                 {/* 投资经验 */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-base font-medium text-slate-300 mb-2">
                     1. 您的投资经验如何？
                   </label>
                   <div className="space-y-2">
@@ -346,9 +346,9 @@ export default function KycPage() {
                               investmentExperience: parseInt(e.target.value),
                             })
                           }
-                          className="mr-2"
+                          className="mr-3 w-4 h-4"
                         />
-                        <span className="text-sm text-slate-300">{option.label}</span>
+                        <span className="text-lg text-slate-300">{option.label}</span>
                       </label>
                     ))}
                   </div>
@@ -356,7 +356,7 @@ export default function KycPage() {
 
                 {/* 风险承受能力 */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-base font-medium text-slate-300 mb-2">
                     2. 您的风险承受能力如何？
                   </label>
                   <div className="space-y-2">
@@ -379,9 +379,9 @@ export default function KycPage() {
                               riskTolerance: parseInt(e.target.value),
                             })
                           }
-                          className="mr-2"
+                          className="mr-3 w-4 h-4"
                         />
-                        <span className="text-sm text-slate-300">{option.label}</span>
+                        <span className="text-lg text-slate-300">{option.label}</span>
                       </label>
                     ))}
                   </div>
@@ -389,7 +389,7 @@ export default function KycPage() {
 
                 {/* 投资目标 */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-base font-medium text-slate-300 mb-2">
                     3. 您的主要投资目标是？
                   </label>
                   <div className="space-y-2">
@@ -412,9 +412,9 @@ export default function KycPage() {
                               investmentGoal: parseInt(e.target.value),
                             })
                           }
-                          className="mr-2"
+                          className="mr-3 w-4 h-4"
                         />
-                        <span className="text-sm text-slate-300">{option.label}</span>
+                        <span className="text-lg text-slate-300">{option.label}</span>
                       </label>
                     ))}
                   </div>
@@ -422,7 +422,7 @@ export default function KycPage() {
 
                 {/* 投资期限 */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-base font-medium text-slate-300 mb-2">
                     4. 您的投资期限偏好是？
                   </label>
                   <div className="space-y-2">
@@ -445,41 +445,67 @@ export default function KycPage() {
                               investmentHorizon: parseInt(e.target.value),
                             })
                           }
-                          className="mr-2"
+                          className="mr-3 w-4 h-4"
                         />
-                        <span className="text-sm text-slate-300">{option.label}</span>
+                        <span className="text-lg text-slate-300">{option.label}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
                 {error && (
-                  <div className="text-xs text-red-300">{error}</div>
+                  <div className="text-base text-red-300">{error}</div>
                 )}
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-sm font-semibold"
+                  className="w-full px-4 py-3 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-base font-semibold"
                 >
                   {loading ? "提交中..." : "提交风险测评"}
                 </button>
               </form>
             )}
 
-            {/* 风险测评结果 */}
-            {riskAssessmentResult && (
-              <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
-                <h4 className="text-sm font-semibold mb-2">风险测评结果</h4>
-                <p className="text-xs text-slate-300 mb-2">
-                  风险等级：<span className="font-semibold text-sky-400">
-                    {riskAssessmentResult.riskLevel === "conservative" ? "保守型" :
-                     riskAssessmentResult.riskLevel === "moderate" ? "稳健型" : "积极型"}
-                  </span>
-                </p>
-                <p className="text-xs text-slate-400">
-                  {riskAssessmentResult.assessmentResult}
-                </p>
+            {/* 风险测评结果步骤 */}
+            {currentStep === "risk-result" && riskAssessmentResult && status !== "approved" && status !== "pending" && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">步骤 1: 风险测评结果</h3>
+                  <p className="text-base text-slate-400 mb-4">
+                    您的风险测评已完成，请查看结果后继续下一步。
+                  </p>
+                </div>
+                <div className="p-5 bg-slate-800/50 border border-slate-700 rounded-lg">
+                  <h4 className="text-base font-semibold mb-3">风险测评结果</h4>
+                  <p className="text-lg text-slate-300 mb-3">
+                    风险等级：<span className="font-semibold text-sky-400">
+                      {riskAssessmentResult.riskLevel === "conservative" ? "保守型" :
+                       riskAssessmentResult.riskLevel === "moderate" ? "稳健型" : "积极型"}
+                    </span>
+                  </p>
+                  <p className="text-lg text-slate-400">
+                    {riskAssessmentResult.assessmentResult}
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setCurrentStep("risk-assessment");
+                      setRiskAssessmentSubmitted(false);
+                      setRiskAssessmentResult(null);
+                    }}
+                    className="flex-1 px-4 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-base font-semibold"
+                  >
+                    重新填写
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep("basic-info")}
+                    className="flex-1 px-4 py-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-base font-semibold"
+                  >
+                    下一步：填写基本信息
+                  </button>
+                </div>
               </div>
             )}
 
@@ -494,7 +520,7 @@ export default function KycPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-base font-medium text-slate-300 mb-2">
                     邮箱地址 <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -502,13 +528,13 @@ export default function KycPage() {
                     value={kycData.email}
                     onChange={(e) => setKycData(prev => ({ ...prev, email: e.target.value }))}
                     required
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
                     placeholder="you@example.com"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-base font-medium text-slate-300 mb-2">
                     姓名 <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -516,21 +542,21 @@ export default function KycPage() {
                     value={kycData.fullName}
                     onChange={(e) => setKycData(prev => ({ ...prev, fullName: e.target.value }))}
                     required
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
                     placeholder="请输入真实姓名"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">
+                    <label className="block text-base font-medium text-slate-300 mb-2">
                       证件类型 <span className="text-red-400">*</span>
                     </label>
                     <select
                       value={kycData.idType}
                       onChange={(e) => setKycData(prev => ({ ...prev, idType: e.target.value }))}
                       required
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
                     >
                       <option value="id_card">身份证</option>
                       <option value="passport">护照</option>
@@ -538,7 +564,7 @@ export default function KycPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">
+                    <label className="block text-base font-medium text-slate-300 mb-2">
                       证件号 <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -546,44 +572,53 @@ export default function KycPage() {
                       value={kycData.idNumber}
                       onChange={(e) => setKycData(prev => ({ ...prev, idNumber: e.target.value }))}
                       required
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
                       placeholder="请输入证件号"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-base font-medium text-slate-300 mb-2">
                     地址
                   </label>
                   <textarea
                     value={kycData.address}
                     onChange={(e) => setKycData(prev => ({ ...prev, address: e.target.value }))}
                     rows={3}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
                     placeholder="请输入详细地址"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-base font-medium text-slate-300 mb-2">
                     联系电话
                   </label>
                   <input
                     type="tel"
                     value={kycData.phone}
                     onChange={(e) => setKycData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-lg text-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
                     placeholder="请输入联系电话"
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-sm font-semibold"
-                >
-                  下一步：上传证件
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep("risk-result")}
+                    className="flex-1 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
+                  >
+                    上一步
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-sm font-semibold"
+                  >
+                    下一步：上传证件
+                  </button>
+                </div>
               </form>
             )}
 
@@ -600,7 +635,7 @@ export default function KycPage() {
                 <div className="space-y-4">
                   {/* 证件正面 */}
                   <div>
-                    <label className="block text-xs text-slate-400 mb-2">
+                    <label className="block text-base font-medium text-slate-300 mb-2">
                       证件正面照片
                     </label>
                     <div className="flex items-center gap-4">
@@ -612,20 +647,20 @@ export default function KycPage() {
                           if (file) handleFileUpload(file, "front");
                         }}
                         disabled={uploading.front}
-                        className="text-sm text-slate-300"
+                        className="text-lg text-slate-300"
                       />
                       {uploading.front && (
-                        <span className="text-xs text-slate-400">上传中...</span>
+                        <span className="text-base text-slate-400">上传中...</span>
                       )}
                       {kycData.idDocumentFrontUrl && (
-                        <span className="text-xs text-emerald-400">✓ 已上传</span>
+                        <span className="text-base text-emerald-400">✓ 已上传</span>
                       )}
                     </div>
                   </div>
 
                   {/* 证件背面 */}
                   <div>
-                    <label className="block text-xs text-slate-400 mb-2">
+                    <label className="block text-base font-medium text-slate-300 mb-2">
                       证件背面照片
                     </label>
                     <div className="flex items-center gap-4">
@@ -637,20 +672,20 @@ export default function KycPage() {
                           if (file) handleFileUpload(file, "back");
                         }}
                         disabled={uploading.back}
-                        className="text-sm text-slate-300"
+                        className="text-lg text-slate-300"
                       />
                       {uploading.back && (
-                        <span className="text-xs text-slate-400">上传中...</span>
+                        <span className="text-base text-slate-400">上传中...</span>
                       )}
                       {kycData.idDocumentBackUrl && (
-                        <span className="text-xs text-emerald-400">✓ 已上传</span>
+                        <span className="text-base text-emerald-400">✓ 已上传</span>
                       )}
                     </div>
                   </div>
 
                   {/* 自拍照片 */}
                   <div>
-                    <label className="block text-xs text-slate-400 mb-2">
+                    <label className="block text-base font-medium text-slate-300 mb-2">
                       自拍照片（人脸识别）
                     </label>
                     <div className="flex items-center gap-4">
@@ -662,16 +697,16 @@ export default function KycPage() {
                           if (file) handleFileUpload(file, "selfie");
                         }}
                         disabled={uploading.selfie}
-                        className="text-sm text-slate-300"
+                        className="text-lg text-slate-300"
                       />
                       {uploading.selfie && (
-                        <span className="text-xs text-slate-400">上传中...</span>
+                        <span className="text-base text-slate-400">上传中...</span>
                       )}
                       {kycData.selfieUrl && (
-                        <span className="text-xs text-emerald-400">✓ 已上传</span>
+                        <span className="text-base text-emerald-400">✓ 已上传</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-base text-slate-500 mt-1">
                       * 请手持证件进行自拍，确保面部和证件清晰可见
                     </p>
                   </div>
@@ -708,18 +743,18 @@ export default function KycPage() {
                   </p>
                 </div>
 
-                <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-lg space-y-2 text-sm">
-                  <div><span className="text-slate-400">姓名：</span>{kycData.fullName}</div>
-                  <div><span className="text-slate-400">证件类型：</span>
+                <div className="p-5 bg-slate-800/50 border border-slate-700 rounded-lg space-y-3 text-lg">
+                  <div><span className="text-slate-400">姓名：</span><span className="text-slate-200 font-medium">{kycData.fullName}</span></div>
+                  <div><span className="text-slate-400">证件类型：</span><span className="text-slate-200 font-medium">
                     {kycData.idType === "id_card" ? "身份证" :
                      kycData.idType === "passport" ? "护照" : "驾驶证"}
-                  </div>
-                  <div><span className="text-slate-400">证件号：</span>
+                  </span></div>
+                  <div><span className="text-slate-400">证件号：</span><span className="text-slate-200 font-medium">
                     {kycData.idNumber.slice(0, 4)}****{kycData.idNumber.slice(-4)}
-                  </div>
-                  <div><span className="text-slate-400">邮箱：</span>{kycData.email}</div>
-                  {kycData.phone && <div><span className="text-slate-400">电话：</span>{kycData.phone}</div>}
-                  {kycData.address && <div><span className="text-slate-400">地址：</span>{kycData.address}</div>}
+                  </span></div>
+                  <div><span className="text-slate-400">邮箱：</span><span className="text-slate-200 font-medium">{kycData.email}</span></div>
+                  {kycData.phone && <div><span className="text-slate-400">电话：</span><span className="text-slate-200 font-medium">{kycData.phone}</span></div>}
+                  {kycData.address && <div><span className="text-slate-400">地址：</span><span className="text-slate-200 font-medium">{kycData.address}</span></div>}
                 </div>
 
                 {error && (
