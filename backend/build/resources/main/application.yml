@@ -37,7 +37,7 @@ spring:
     host: ${MAIL_HOST:smtp.mail.me.com}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:baibiying@icloud.com}  # SMTP 认证账户（实际发送账户）
-    password: ${MAIL_PASSWORD:SxHy2130}  # iCloud 应用专用密码
+    password: ${MAIL_PASSWORD:crqq-nqbc-iuev-asgh}  # iCloud 应用专用密码
     properties:
       mail:
         smtp:
@@ -67,6 +67,8 @@ blockchain:
   # Mantle Sepolia 测试网 RPC URL（已验证可用）
   rpc-url: ${BLOCKCHAIN_RPC_URL:https://rpc.sepolia.mantle.xyz}
   private-key: ${BLOCKCHAIN_PRIVATE_KEY:773d526fabccd1b26abef51ed7bdcda523409069ecfecd4269cb757c282a599e} # 从环境变量读取私钥，或直接配置（不要提交到 Git）
+  chain-id: ${BLOCKCHAIN_CHAIN_ID:5003}  # Mantle Sepolia Chain ID
+  gas-limit: ${BLOCKCHAIN_GAS_LIMIT:80000000}  # Gas 限制（默认 80000000，足够大部分操作）
   yield-distribution-contract: ${YIELD_DISTRIBUTION_CONTRACT:0x988304593FC2e89e56FFAD9393Af0B97c37d9E5D}  # YieldDistribution 合约地址
   kyc-registry-contract: ${KYC_REGISTRY_CONTRACT:0x519AD3F043581620e67567c896508b8Da33fF91D}  # KYCRegistry 合约地址（最新部署）
   custody-manager-contract: ${CUSTODY_MANAGER_CONTRACT:0xF1c527a19b65E3e9Ab9AD7499cc8167C63c3ca87}  # CustodyManager 合约地址

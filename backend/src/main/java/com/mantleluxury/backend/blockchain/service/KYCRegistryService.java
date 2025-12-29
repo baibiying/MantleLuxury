@@ -85,22 +85,35 @@ public class KYCRegistryService {
     private final boolean enabled;
     private final TransactionManager transactionManager;
 
+    /**
+     * 区块链 chainId，用于构造 EIP-155 保护的交易（Mantle Sepolia 默认 5003）
+     */
+    private final long chainId;
+
+    /**
+     * Gas 限制
+     */
+    @Value("${blockchain.gas-limit:80000000}")
+    private BigInteger gasLimit;
+
     public KYCRegistryService(
             Web3j web3j,
             Credentials credentials,
             @Value("${blockchain.enabled:false}") boolean enabled,
-            @Value("${blockchain.kyc-registry-contract:}") String contractAddress
+            @Value("${blockchain.kyc-registry-contract:}") String contractAddress,
+            @Value("${blockchain.chain-id:5003}") long chainId
     ) {
         this.web3j = web3j;
         this.credentials = credentials;
         this.enabled = enabled;
         this.contractAddress = contractAddress;
-        this.transactionManager = new RawTransactionManager(web3j, credentials, 5003L); // Mantle Sepolia Chain ID
+        this.chainId = chainId;
+        this.transactionManager = new RawTransactionManager(web3j, credentials, chainId);
 
         if (enabled && (contractAddress == null || contractAddress.isEmpty())) {
             logger.warn("KYCRegistry contract address is not configured. KYC status will not be synced to blockchain.");
         } else if (enabled) {
-            logger.info("KYCRegistryService initialized with contract address: {}", contractAddress);
+            logger.info("KYCRegistryService initialized with contract address: {}, chainId: {}", contractAddress, chainId);
         }
     }
 
@@ -132,38 +145,82 @@ public class KYCRegistryService {
 
             String encodedFunction = FunctionEncoder.encode(function);
 
-            // 获取 nonce
-            EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(
-                    credentials.getAddress(), DefaultBlockParameterName.LATEST).send();
-            BigInteger nonce = ethGetTransactionCount.getTransactionCount();
-
-            // 构建交易
+            // 构建交易参数
             org.web3j.tx.gas.ContractGasProvider gasProvider = new DefaultGasProvider();
             BigInteger gasPrice = gasProvider.getGasPrice();
-            BigInteger gasLimit = gasProvider.getGasLimit();
+            // 使用配置的 gasLimit，如果未配置则使用默认值
+            BigInteger txGasLimit = this.gasLimit != null ? this.gasLimit : gasProvider.getGasLimit();
 
-            org.web3j.crypto.RawTransaction rawTransaction = org.web3j.crypto.RawTransaction.createTransaction(
-                    nonce,
-                    gasPrice,
-                    gasLimit,
-                    contractAddress,
-                    encodedFunction
-            );
+            // 重试机制：如果 nonce 错误，重新获取 nonce 并重试（最多重试 3 次）
+            int maxRetries = 3;
+            Exception lastException = null;
+            
+            for (int attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    // 每次重试都重新获取最新的 nonce
+                    EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(
+                            credentials.getAddress(), DefaultBlockParameterName.LATEST).send();
+                    BigInteger nonce = ethGetTransactionCount.getTransactionCount();
+                    
+                    if (attempt > 0) {
+                        logger.info("Retry attempt {}: using nonce {}", attempt + 1, nonce);
+                        // 重试时稍微等待一下，避免立即重试
+                        Thread.sleep(500 * attempt); // 递增等待时间：0ms, 500ms, 1000ms
+                    }
 
-            // 签名并发送交易
-            byte[] signedMessage = org.web3j.crypto.TransactionEncoder.signMessage(rawTransaction, credentials);
-            String hexValue = Numeric.toHexString(signedMessage);
+                    org.web3j.crypto.RawTransaction rawTransaction = org.web3j.crypto.RawTransaction.createTransaction(
+                            nonce,
+                            gasPrice,
+                            txGasLimit,
+                            contractAddress,
+                            encodedFunction
+                    );
 
-            EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(hexValue).send();
-            if (ethSendTransaction.hasError()) {
-                String errorMessage = ethSendTransaction.getError().getMessage();
-                logger.error("Failed to send transaction: {}", errorMessage);
-                throw new RuntimeException("Failed to set KYC status on-chain: " + errorMessage);
+                    // 签名并发送交易（包含链 ID 以支持 EIP-155）
+                    byte[] signedMessage = org.web3j.crypto.TransactionEncoder.signMessage(rawTransaction, chainId, credentials);
+                    String hexValue = Numeric.toHexString(signedMessage);
+
+                    EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(hexValue).send();
+                    if (ethSendTransaction.hasError()) {
+                        String errorMessage = ethSendTransaction.getError().getMessage();
+                        
+                        // 如果是 nonce 错误且还有重试机会，则重试
+                        if (errorMessage != null && errorMessage.contains("nonce") && attempt < maxRetries - 1) {
+                            logger.warn("Nonce error on attempt {}: {}. Will retry...", attempt + 1, errorMessage);
+                            lastException = new RuntimeException("Nonce error: " + errorMessage);
+                            continue; // 继续重试
+                        }
+                        
+                        // 其他错误或已达到最大重试次数，抛出异常
+                        logger.error("Failed to send transaction: {}", errorMessage);
+                        throw new RuntimeException("Failed to set KYC status on-chain: " + errorMessage);
+                    }
+
+                    String transactionHash = ethSendTransaction.getTransactionHash();
+                    logger.info("✅ KYC status updated on-chain. Transaction hash: {} (attempt {})", transactionHash, attempt + 1);
+                    return transactionHash;
+                    
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Transaction interrupted", e);
+                } catch (Exception e) {
+                    String errorMessage = e.getMessage();
+                    // 如果是 nonce 错误且还有重试机会，则重试
+                    if (errorMessage != null && errorMessage.contains("nonce") && attempt < maxRetries - 1) {
+                        logger.warn("Nonce error on attempt {}: {}. Will retry...", attempt + 1, errorMessage);
+                        lastException = e;
+                        continue; // 继续重试
+                    }
+                    // 其他错误，抛出异常
+                    throw e;
+                }
             }
-
-            String transactionHash = ethSendTransaction.getTransactionHash();
-            logger.info("✅ KYC status updated on-chain. Transaction hash: {}", transactionHash);
-            return transactionHash;
+            
+            // 所有重试都失败了
+            if (lastException != null) {
+                throw lastException;
+            }
+            throw new RuntimeException("Failed to send transaction after " + maxRetries + " attempts");
 
         } catch (Exception e) {
             logger.error("Failed to set KYC status on-chain for {}: {}", userAddress, e.getMessage(), e);

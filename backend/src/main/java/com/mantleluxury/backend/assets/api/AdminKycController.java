@@ -98,6 +98,8 @@ public class AdminKycController {
             map.put("kycStatus", user.getKycStatus());
             map.put("kycSubmittedAt", user.getKycSubmittedAt());
             map.put("kycApprovedAt", user.getKycApprovedAt());
+            map.put("kycRejectedAt", user.getKycRejectedAt());
+            map.put("kycRejectionReason", user.getKycRejectionReason());
             map.put("createdAt", user.getCreatedAt());
             // 检查是否在黑名单中
             boolean isBlacklisted = blacklistRepository.findByWalletAddress(user.getWalletAddress().toLowerCase()).isPresent();
@@ -200,9 +202,13 @@ public class AdminKycController {
             // 不抛出异常，允许链下状态更新成功，但记录错误
         }
 
-        // 发送邮件通知（如果用户启用了邮件通知）
-        String emailStatus = "not_sent";
-        String emailMessage = "";
+        // 发送邮件通知（已禁用）
+        String emailStatus = "disabled";
+        String emailMessage = "邮件发送功能已禁用";
+        logger.info("Email sending is disabled. Skipping email notification for user: {}", walletAddress);
+        
+        // 邮件发送功能已禁用，以下代码暂时不执行
+        /*
         if (user.getEmailNotifications() == null || user.getEmailNotifications()) {
             String userEmail = user.getEmail();
             String fullName = user.getFullName();
@@ -235,6 +241,7 @@ public class AdminKycController {
             emailMessage = "用户已禁用邮件通知";
             logger.info("Email notifications disabled for user: {}, skipping email", walletAddress);
         }
+        */
 
         logger.info("KYC reviewed for {}: {} (email: {})", walletAddress, status, emailStatus);
         Map<String, Object> response = new HashMap<>();

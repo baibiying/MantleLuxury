@@ -17,6 +17,8 @@ type User = {
   kycStatus: "none" | "pending" | "approved" | "rejected";
   kycSubmittedAt: string | null;
   kycApprovedAt: string | null;
+  kycRejectedAt: string | null;
+  kycRejectionReason: string | null;
   createdAt: string;
   isBlacklisted: boolean;
 };
@@ -463,6 +465,7 @@ export default function AdminKycPage() {
                       <th className="py-3 text-left font-medium">邮箱</th>
                       <th className="py-3 text-left font-medium">KYC 状态</th>
                       <th className="py-3 text-left font-medium">提交时间</th>
+                      <th className="py-3 text-left font-medium">拒绝原因</th>
                       <th className="py-3 text-left font-medium">黑名单</th>
                       <th className="py-3 text-right font-medium">操作</th>
                     </tr>
@@ -470,7 +473,7 @@ export default function AdminKycPage() {
                   <tbody>
                     {users.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-slate-400">
+                        <td colSpan={7} className="py-8 text-center text-slate-400">
                           暂无用户数据
                         </td>
                       </tr>
@@ -489,6 +492,21 @@ export default function AdminKycPage() {
                             {user.kycSubmittedAt
                               ? new Date(user.kycSubmittedAt).toLocaleString("zh-CN")
                               : "-"}
+                          </td>
+                          <td className="py-3 text-slate-300 text-sm max-w-xs">
+                            {user.kycStatus === "rejected" ? (
+                              user.kycRejectionReason ? (
+                                <span className="text-red-300" title={user.kycRejectionReason}>
+                                  {user.kycRejectionReason.length > 50
+                                    ? user.kycRejectionReason.substring(0, 50) + "..."
+                                    : user.kycRejectionReason}
+                                </span>
+                              ) : (
+                                <span className="text-slate-500 italic">未提供原因</span>
+                              )
+                            ) : (
+                              <span className="text-slate-500">-</span>
+                            )}
                           </td>
                           <td className="py-3">
                             {user.isBlacklisted ? (
