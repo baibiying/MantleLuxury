@@ -71,6 +71,8 @@ export default function KycPage() {
     selfie: false,
   });
 
+  const [amlConfirmed, setAmlConfirmed] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -608,13 +610,13 @@ export default function KycPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep("risk-result")}
-                    className="flex-1 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
+                    className="flex-1 px-4 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-base font-semibold"
                   >
                     上一步
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-sm font-semibold"
+                    className="flex-1 px-4 py-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-base font-semibold"
                   >
                     下一步：上传证件
                   </button>
@@ -719,13 +721,13 @@ export default function KycPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setCurrentStep("basic-info")}
-                    className="flex-1 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
+                    className="flex-1 px-4 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-base font-semibold"
                   >
                     上一步
                   </button>
                   <button
                     onClick={() => setCurrentStep("review")}
-                    className="flex-1 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-sm font-semibold"
+                    className="flex-1 px-4 py-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-base font-semibold"
                   >
                     下一步：确认提交
                   </button>
@@ -757,22 +759,50 @@ export default function KycPage() {
                   {kycData.address && <div><span className="text-slate-400">地址：</span><span className="text-slate-200 font-medium">{kycData.address}</span></div>}
                 </div>
 
+                {/* AML 反洗钱声明 */}
+                <div className="p-5 bg-blue-950/30 border border-blue-500/30 rounded-lg">
+                  <h4 className="text-base font-semibold text-blue-300 mb-3">AML 反洗钱检查机制说明</h4>
+                  <div className="space-y-2 text-base text-slate-300 mb-4">
+                    <p>为符合反洗钱（AML）合规要求，平台将自动对您的账户进行以下检查：</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>黑名单检查：系统会自动检查您的钱包地址是否在 AML 黑名单中</li>
+                      <li>投资限额监控：单笔投资限额为 10,000 MNT，累计投资限额为 50,000 MNT</li>
+                      <li>异常交易检测：系统会监控异常交易模式并生成风控告警</li>
+                      <li>持续监控：在您使用平台期间，系统将持续进行 AML 合规检查</li>
+                    </ul>
+                    <p className="mt-3 text-slate-400 text-sm">
+                      如触发 AML 告警，您的交易可能会被暂停，需要人工审核。我们承诺保护您的隐私，所有 AML 检查均符合相关法律法规要求。
+                    </p>
+                  </div>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={amlConfirmed}
+                      onChange={(e) => setAmlConfirmed(e.target.checked)}
+                      className="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-sky-600 focus:ring-sky-500"
+                    />
+                    <span className="text-base text-slate-300">
+                      我已了解并同意平台的 AML 反洗钱检查机制，确认提交的信息真实有效。
+                    </span>
+                  </label>
+                </div>
+
                 {error && (
-                  <div className="text-xs text-red-300">{error}</div>
+                  <div className="text-base text-red-300">{error}</div>
                 )}
 
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => setCurrentStep("documents")}
-                    className="flex-1 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
+                    className="flex-1 px-4 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-base font-semibold"
                   >
                     上一步
                   </button>
                   <button
                     type="submit"
-                    disabled={loading || !kycData.email || !kycData.fullName || !kycData.idNumber}
-                    className="flex-1 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-sm font-semibold"
+                    disabled={loading || !kycData.email || !kycData.fullName || !kycData.idNumber || !amlConfirmed}
+                    className="flex-1 px-4 py-3 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-base font-semibold"
                   >
                     {loading ? "提交中..." : "提交 KYC 申请"}
                   </button>
