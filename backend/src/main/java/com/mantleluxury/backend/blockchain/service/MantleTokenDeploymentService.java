@@ -33,6 +33,8 @@ public class MantleTokenDeploymentService {
     private final Credentials credentials;
     private final boolean enabled;
     private final String kycRegistryAddress;
+    private final String privateKey;
+    private final String rpcUrl;
 
     // LuxuryToken 合约的字节码（需要从编译后的合约获取）
     // 这里使用简化的方式，实际应该从编译后的 artifacts 读取
@@ -42,12 +44,16 @@ public class MantleTokenDeploymentService {
             Web3j web3j,
             Credentials credentials,
             @Value("${blockchain.enabled:false}") boolean enabled,
-            @Value("${blockchain.kyc-registry-contract:}") String kycRegistryAddress
+            @Value("${blockchain.kyc-registry-contract:}") String kycRegistryAddress,
+            @Value("${blockchain.private-key:}") String privateKey,
+            @Value("${blockchain.rpc-url:}") String rpcUrl
     ) {
         this.web3j = web3j;
         this.credentials = credentials;
         this.enabled = enabled;
         this.kycRegistryAddress = kycRegistryAddress;
+        this.privateKey = privateKey;
+        this.rpcUrl = rpcUrl;
     }
     
     /**
@@ -200,6 +206,26 @@ public class MantleTokenDeploymentService {
         processBuilder.environment().put("INITIAL_SUPPLY", totalSupply.toString());
         processBuilder.environment().put("PRICE_PER_TOKEN", pricePerTokenWei.toString());
         processBuilder.environment().put("OWNER_ADDRESS", credentials.getAddress());
+        
+        // 设置私钥（Hardhat 需要这个来创建 signer）
+        if (privateKey != null && !privateKey.isEmpty()) {
+            // 确保私钥不包含 0x 前缀（Hardhat 配置期望的格式）
+            String cleanPrivateKey = privateKey.startsWith("0x") ? privateKey.substring(2) : privateKey;
+            processBuilder.environment().put("PRIVATE_KEY", cleanPrivateKey);
+            logger.info("PRIVATE_KEY environment variable set for Hardhat");
+        } else {
+            logger.error("PRIVATE_KEY is not configured! Hardhat deployment will fail.");
+            throw new RuntimeException("PRIVATE_KEY is required for token deployment. Please configure blockchain.private-key in application.yml or environment variables.");
+        }
+        
+        // 设置 RPC URL（Hardhat 需要这个来连接网络）
+        if (rpcUrl != null && !rpcUrl.isEmpty()) {
+            processBuilder.environment().put("MANTLE_TESTNET_RPC_URL", rpcUrl);
+            logger.info("MANTLE_TESTNET_RPC_URL environment variable set: {}", rpcUrl);
+        } else {
+            logger.warn("RPC URL not configured, Hardhat will use default RPC URL");
+        }
+        
         if (kycRegistryAddress != null && !kycRegistryAddress.isEmpty()) {
             processBuilder.environment().put("KYC_REGISTRY_ADDRESS", kycRegistryAddress);
             logger.info("Using KYCRegistry address: {}", kycRegistryAddress);

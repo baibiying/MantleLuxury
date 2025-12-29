@@ -13,7 +13,23 @@ import { ethers } from "hardhat";
  * - owner: 所有者地址
  */
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  
+  // 检查是否有可用的 signer
+  if (signers.length === 0) {
+    throw new Error(
+      "No signers available. Please ensure PRIVATE_KEY is set in the environment variables. " +
+      "The Hardhat network configuration requires a private key to create a signer."
+    );
+  }
+  
+  const deployer = signers[0];
+  
+  if (!deployer || !deployer.address) {
+    throw new Error(
+      "Deployer signer is invalid. Please check your Hardhat network configuration and PRIVATE_KEY environment variable."
+    );
+  }
   
   console.log("Deploying LuxuryToken with the account:", deployer.address);
   console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
