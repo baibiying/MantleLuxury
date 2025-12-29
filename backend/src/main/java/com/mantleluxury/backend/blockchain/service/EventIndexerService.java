@@ -217,10 +217,25 @@ public class EventIndexerService {
             ).addSingleTopic(eventSignature);
 
             EthLog ethLog = web3j.ethGetLogs(filter).send();
+            if (ethLog == null) {
+                logger.warn("ethGetLogs returned null for KYC events");
+                return;
+            }
+            
             List<EthLog.LogResult> logs = ethLog.getLogs();
+            if (logs == null) {
+                logger.debug("No logs found for KYC events in block range {}-{}", fromBlock, toBlock);
+                return;
+            }
 
             for (EthLog.LogResult logResult : logs) {
+                if (logResult == null) {
+                    continue;
+                }
                 Log log = (Log) logResult.get();
+                if (log == null) {
+                    continue;
+                }
                 saveEvent("KYCStatusUpdated", kycRegistryAddress, log);
             }
 
@@ -258,10 +273,25 @@ public class EventIndexerService {
                 ).addSingleTopic(eventSignature);
 
                 EthLog ethLog = web3j.ethGetLogs(filter).send();
+                if (ethLog == null) {
+                    logger.warn("ethGetLogs returned null for Custody events");
+                    continue;
+                }
+                
                 List<EthLog.LogResult> logs = ethLog.getLogs();
+                if (logs == null) {
+                    logger.debug("No logs found for Custody events in block range {}-{}", fromBlock, toBlock);
+                    continue;
+                }
 
                 for (EthLog.LogResult logResult : logs) {
+                    if (logResult == null) {
+                        continue;
+                    }
                     Log log = (Log) logResult.get();
+                    if (log == null) {
+                        continue;
+                    }
                     String eventType = eventSignature.contains("AssetRegistered") ? "AssetRegistered" :
                                      eventSignature.contains("StatusUpdated") ? "StatusUpdated" :
                                      eventSignature.contains("CustodyInfoUpdated") ? "CustodyInfoUpdated" :
@@ -303,10 +333,25 @@ public class EventIndexerService {
                 ).addSingleTopic(eventSignature);
 
                 EthLog ethLog = web3j.ethGetLogs(filter).send();
+                if (ethLog == null) {
+                    logger.warn("ethGetLogs returned null for Yield events");
+                    continue;
+                }
+                
                 List<EthLog.LogResult> logs = ethLog.getLogs();
+                if (logs == null) {
+                    logger.debug("No logs found for Yield events in block range {}-{}", fromBlock, toBlock);
+                    continue;
+                }
 
                 for (EthLog.LogResult logResult : logs) {
+                    if (logResult == null) {
+                        continue;
+                    }
                     Log log = (Log) logResult.get();
+                    if (log == null) {
+                        continue;
+                    }
                     String eventType = eventSignature.contains("DistributionCreated") ? "DistributionCreated" :
                                      eventSignature.contains("DistributionCompleted") ? "DistributionCompleted" :
                                      "Claimed";

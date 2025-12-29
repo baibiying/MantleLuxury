@@ -51,6 +51,9 @@ export default function AdminKycPage() {
   const [newBlacklistAddress, setNewBlacklistAddress] = useState("");
   const [newBlacklistReason, setNewBlacklistReason] = useState("");
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectingWalletAddress, setRejectingWalletAddress] = useState<string>("");
+  const [rejectionReason, setRejectionReason] = useState<string>("");
 
   useEffect(() => {
     setMounted(true);
@@ -146,9 +149,14 @@ export default function AdminKycPage() {
     }
   };
 
-  const handleReviewKyc = async (walletAddress: string, status: "approved" | "rejected") => {
+  const handleReviewKyc = async (walletAddress: string, status: "approved" | "rejected", rejectionReason?: string) => {
     if (!address) return;
     try {
+      const requestBody: any = { status };
+      if (status === "rejected" && rejectionReason) {
+        requestBody.rejectionReason = rejectionReason;
+      }
+
       const res = await fetch(
         `${API_BASE}/api/admin/kyc/users/${walletAddress}/review`,
         {
@@ -157,7 +165,7 @@ export default function AdminKycPage() {
             "Content-Type": "application/json",
             "X-Wallet-Address": address,
           },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify(requestBody),
         }
       );
 
@@ -166,11 +174,41 @@ export default function AdminKycPage() {
         throw new Error(text || "审核失败");
       }
 
-      setSuccess(`✅ KYC ${status === "approved" ? "已通过" : "已拒绝"}`);
-      setTimeout(() => setSuccess(null), 3000);
+      const data = await res.json();
+      const emailStatus = data.emailStatus;
+      const emailMessage = data.emailMessage || "";
+      
+      let successMessage = `✅ KYC ${status === "approved" ? "已通过" : "已拒绝"}`;
+      if (emailStatus === "sent") {
+        successMessage += "，邮件已发送";
+      } else if (emailStatus === "no_email") {
+        successMessage += "，但用户未设置邮箱地址，无法发送邮件";
+      } else if (emailStatus === "failed") {
+        successMessage += `，但邮件发送失败：${emailMessage}`;
+      } else if (emailStatus === "disabled") {
+        successMessage += "，用户已禁用邮件通知";
+      }
+
+      setSuccess(successMessage);
+      setTimeout(() => setSuccess(null), 5000);
+      setShowRejectDialog(false);
+      setRejectionReason("");
+      setRejectingWalletAddress("");
       loadData();
     } catch (e: any) {
       setError(e.message ?? "审核失败");
+    }
+  };
+
+  const handleRejectClick = (walletAddress: string) => {
+    setRejectingWalletAddress(walletAddress);
+    setRejectionReason("");
+    setShowRejectDialog(true);
+  };
+
+  const handleConfirmReject = () => {
+    if (rejectingWalletAddress) {
+      handleReviewKyc(rejectingWalletAddress, "rejected", rejectionReason || undefined);
     }
   };
 
@@ -323,6 +361,45 @@ export default function AdminKycPage() {
         </div>
       )}
 
+      {/* 拒绝原因对话框 */}
+      {showRejectDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold text-slate-200 mb-4">拒绝 KYC 申请</h3>
+            <div className="mb-4">
+              <label className="block text-base font-medium text-slate-300 mb-2">
+                拒绝原因（可选）
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="请输入拒绝原因，此原因将发送给用户..."
+                rows={4}
+                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg text-base text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRejectDialog(false);
+                  setRejectionReason("");
+                  setRejectingWalletAddress("");
+                }}
+                className="flex-1 px-4 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-base font-semibold"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmReject}
+                className="flex-1 px-4 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-base font-semibold"
+              >
+                确认拒绝
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <TechCard className="px-6 py-8 text-center">
           <p className="text-base text-slate-300">正在加载数据...</p>
@@ -435,9 +512,7 @@ export default function AdminKycPage() {
                                     通过
                                   </TechButton>
                                   <TechButton
-                                    onClick={() =>
-                                      handleReviewKyc(user.walletAddress, "rejected")
-                                    }
+                                    onClick={() => handleRejectClick(user.walletAddress)}
                                     className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium"
                                   >
                                     拒绝

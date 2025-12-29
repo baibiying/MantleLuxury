@@ -201,23 +201,48 @@ public class AdminKycController {
         }
 
         // 发送邮件通知（如果用户启用了邮件通知）
+        String emailStatus = "not_sent";
+        String emailMessage = "";
         if (user.getEmailNotifications() == null || user.getEmailNotifications()) {
             String userEmail = user.getEmail();
             String fullName = user.getFullName();
-            if (status.equals("approved")) {
-                emailService.sendKycApprovedEmail(userEmail, fullName);
-            } else if (status.equals("rejected")) {
-                emailService.sendKycRejectedEmail(userEmail, fullName, user.getKycRejectionReason());
+            
+            if (userEmail == null || userEmail.trim().isEmpty()) {
+                emailStatus = "no_email";
+                emailMessage = "用户未设置邮箱地址";
+                logger.warn("Cannot send email to user {}: email address is not set", walletAddress);
+            } else {
+                try {
+                    if (status.equals("approved")) {
+                        emailService.sendKycApprovedEmail(userEmail, fullName);
+                        emailStatus = "sent";
+                        emailMessage = "邮件已发送";
+                        logger.info("KYC approved email sent to: {} ({})", userEmail, walletAddress);
+                    } else if (status.equals("rejected")) {
+                        emailService.sendKycRejectedEmail(userEmail, fullName, user.getKycRejectionReason());
+                        emailStatus = "sent";
+                        emailMessage = "邮件已发送";
+                        logger.info("KYC rejected email sent to: {} ({})", userEmail, walletAddress);
+                    }
+                } catch (Exception e) {
+                    emailStatus = "failed";
+                    emailMessage = "邮件发送失败: " + e.getMessage();
+                    logger.error("Failed to send email to user {} ({}): {}", walletAddress, userEmail, e.getMessage(), e);
+                }
             }
         } else {
+            emailStatus = "disabled";
+            emailMessage = "用户已禁用邮件通知";
             logger.info("Email notifications disabled for user: {}, skipping email", walletAddress);
         }
 
-        logger.info("KYC reviewed for {}: {}", walletAddress, status);
+        logger.info("KYC reviewed for {}: {} (email: {})", walletAddress, status, emailStatus);
         Map<String, Object> response = new HashMap<>();
         response.put("walletAddress", walletAddress);
         response.put("status", status);
         response.put("message", "KYC status updated successfully");
+        response.put("emailStatus", emailStatus);
+        response.put("emailMessage", emailMessage);
         return ResponseEntity.ok(response);
     }
 

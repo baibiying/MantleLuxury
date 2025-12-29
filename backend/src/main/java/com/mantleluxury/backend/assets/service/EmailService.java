@@ -27,11 +27,12 @@ public class EmailService {
 
     /**
      * 发送 KYC 审核通过通知
+     * @throws RuntimeException 如果邮件发送失败
      */
     public void sendKycApprovedEmail(String toEmail, String fullName) {
         if (toEmail == null || toEmail.trim().isEmpty()) {
             logger.warn("Cannot send KYC approved email: email address is empty");
-            return;
+            throw new IllegalArgumentException("Email address is empty");
         }
 
         try {
@@ -44,16 +45,18 @@ public class EmailService {
             logger.info("KYC approved email sent successfully to: {}", toEmail);
         } catch (Exception e) {
             logger.error("Failed to send KYC approved email to {}: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         }
     }
 
     /**
      * 发送 KYC 审核拒绝通知
+     * @throws RuntimeException 如果邮件发送失败
      */
     public void sendKycRejectedEmail(String toEmail, String fullName, String rejectionReason) {
         if (toEmail == null || toEmail.trim().isEmpty()) {
             logger.warn("Cannot send KYC rejected email: email address is empty");
-            return;
+            throw new IllegalArgumentException("Email address is empty");
         }
 
         try {
@@ -66,6 +69,7 @@ public class EmailService {
             logger.info("KYC rejected email sent successfully to: {}", toEmail);
         } catch (Exception e) {
             logger.error("Failed to send KYC rejected email to {}: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         }
     }
 

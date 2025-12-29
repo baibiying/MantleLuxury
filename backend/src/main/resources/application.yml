@@ -34,10 +34,10 @@ spring:
       WRITE_DATES_AS_TIMESTAMPS: false
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
+    host: ${MAIL_HOST:smtp.mail.me.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
+    username: ${MAIL_USERNAME:baibiying@icloud.com}  # SMTP 认证账户（实际发送账户）
+    password: ${MAIL_PASSWORD:SxHy2130}  # iCloud 应用专用密码
     properties:
       mail:
         smtp:
@@ -48,7 +48,7 @@ spring:
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
-    from: ${MAIL_FROM:noreply@mantleluxury.com}
+    from: ${MAIL_FROM:noreply@mantleluxury.com}  # 显示的发件人地址
     default-encoding: UTF-8
 
 management:
