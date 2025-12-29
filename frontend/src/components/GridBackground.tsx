@@ -2,7 +2,20 @@
 
 export default function GridBackground() {
   return (
-    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+    <div 
+      className="fixed z-0 pointer-events-none"
+      style={{
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#020617', // 使用明确的颜色值，确保与 slate-950 一致
+        margin: 0,
+        padding: 0,
+      }}
+    >
       {/* 网格背景 */}
       <div 
         className="absolute inset-0 opacity-30"

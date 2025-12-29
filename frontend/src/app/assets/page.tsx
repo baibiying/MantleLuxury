@@ -59,14 +59,40 @@ export default function AssetsPage() {
   useEffect(() => {
     async function fetchAssets() {
       try {
-        const res = await fetch(`${API_BASE}/api/assets`);
+        const apiUrl = `${API_BASE}/api/assets`;
+        console.log("Fetching assets from:", apiUrl);
+        
+        const res = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // 添加 mode 和 credentials 以处理 CORS
+          mode: 'cors',
+          credentials: 'omit',
+        });
+        
+        console.log("Response status:", res.status, res.statusText);
+        
         if (!res.ok) {
-          throw new Error(`Request failed with status ${res.status}`);
+          const errorText = await res.text().catch(() => res.statusText);
+          throw new Error(`请求失败 (${res.status}): ${errorText || res.statusText}`);
         }
         const data: Asset[] = await res.json();
-        setAssets(data);
+        console.log("Fetched assets:", data.length, "items");
+        setAssets(data || []); // 确保始终是数组
+        setError(null); // 清除之前的错误
       } catch (e: any) {
-        setError(e.message ?? "Failed to load assets");
+        console.error("Failed to fetch assets:", e);
+        console.error("Error details:", {
+          message: e.message,
+          stack: e.stack,
+          name: e.name,
+          apiBase: API_BASE,
+        });
+        const errorMessage = e.message ?? "加载资产列表失败";
+        setError(`${errorMessage}。请检查后端服务是否正常运行 (${API_BASE})`);
+        setAssets([]); // 发生错误时设置为空数组，而不是显示错误页面
       } finally {
         setLoading(false);
       }
@@ -127,22 +153,8 @@ export default function AssetsPage() {
     );
   }
 
-  if (error) {
-    return (
-      <PageContainer
-        title="可投资资产"
-        subtitle="来自 MantleLuxury 的奢侈品 RWA 资产列表"
-        maxWidth="5xl"
-      >
-        <div className="bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4 max-w-md mx-auto">
-          <p className="text-sm font-semibold text-red-200 mb-1">
-            加载失败
-          </p>
-          <p className="text-xs text-red-300 break-all">{error}</p>
-        </div>
-      </PageContainer>
-    );
-  }
+  // 如果有错误，显示警告但不阻止页面渲染
+  // 这样即使 API 失败，用户也能看到筛选器等 UI
 
   // 提取所有品牌（用于筛选下拉框）
   const allBrands = Array.from(new Set(assets.map(a => a.brand).filter(Boolean))).sort();
@@ -224,22 +236,24 @@ export default function AssetsPage() {
       subtitle="来自 MantleLuxury 的奢侈品 RWA 资产列表"
       maxWidth="5xl"
     >
-      <div className="mb-6 flex items-center justify-between">
-        <div></div>
-        <Link
-          href="/assets/submit"
-          className="tech-button group relative px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl text-white text-sm font-semibold hover:from-sky-400 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/50 neon-border"
-        >
-          <span className="relative z-10 flex items-center gap-2">
-            <span className="text-lg">+</span> 提交资产
-          </span>
-        </Link>
-      </div>
-
+      {error && (
+        <div className="mb-4 bg-yellow-950/40 border border-yellow-500/40 rounded-xl px-6 py-4">
+          <p className="text-sm font-semibold text-yellow-200 mb-1">
+            ⚠️ 加载警告
+          </p>
+          <p className="text-xs text-yellow-300 break-all">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 text-xs text-yellow-400 hover:text-yellow-300 underline"
+          >
+            点击重试
+          </button>
+        </div>
+      )}
         {/* 筛选与排序 */}
-        <section className="mb-4 space-y-3">
-          {/* 第一行：资产类型、品牌、状态、排序 */}
-          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+        <section className="mb-4">
+          {/* 所有筛选器在同一行 */}
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             <div className="flex flex-col gap-1">
               <label className="text-xs text-slate-400">资产类型</label>
               <select
@@ -292,31 +306,46 @@ export default function AssetsPage() {
                 <option value="yield">预期收益率（从高到低）</option>
               </select>
             </div>
-          </div>
-          {/* 第二行：价格区间 */}
-          <div className="flex flex-col gap-1 max-w-md">
-            <label className="text-xs text-slate-400">价格区间 (MNT)</label>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={priceMin}
-                onChange={(e) => setPriceMin(e.target.value)}
-                placeholder="最低"
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
-              />
-              <input
-                type="number"
-                value={priceMax}
-                onChange={(e) => setPriceMax(e.target.value)}
-                placeholder="最高"
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
-              />
+            {/* 价格区间占据 2 列 */}
+            <div className="flex flex-col gap-1 col-span-2">
+              <label className="text-xs text-slate-400">价格区间 (MNT)</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={priceMin}
+                  onChange={(e) => setPriceMin(e.target.value)}
+                  placeholder="最低"
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+                />
+                <input
+                  type="number"
+                  value={priceMax}
+                  onChange={(e) => setPriceMax(e.target.value)}
+                  placeholder="最高"
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+                />
+              </div>
             </div>
           </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((asset, index) => (
+          {filtered.length === 0 ? (
+            <div className="col-span-full text-center py-20">
+              <div className="text-6xl mb-4">📦</div>
+              <h3 className="text-xl font-semibold text-slate-200 mb-2">
+                {assets.length === 0
+                  ? "暂无资产"
+                  : "没有匹配的资产"}
+              </h3>
+              <p className="text-sm text-slate-400 mb-4">
+                {assets.length === 0
+                  ? "当前还没有可投资的资产，请稍后再来查看"
+                  : "请尝试调整筛选条件"}
+              </p>
+            </div>
+          ) : (
+            filtered.map((asset, index) => (
             <Link
               key={asset.id}
               href={`/assets/${asset.id}`}
@@ -436,7 +465,8 @@ export default function AssetsPage() {
                 </dl>
               </div>
             </Link>
-          ))}
+            ))
+          )}
         </section>
     </PageContainer>
   );

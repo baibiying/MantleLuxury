@@ -29,7 +29,13 @@ export default function PageContainer({
   }[maxWidth];
 
   return (
-    <main className="min-h-screen gradient-bg text-slate-50 relative overflow-hidden">
+    <main 
+      className="min-h-screen text-slate-50 relative"
+      style={{
+        backgroundColor: '#020617', // 使用明确的颜色值，确保与整体背景一致
+        minHeight: '100vh',
+      }}
+    >
       {/* 背景装饰 - 区块链风格光效 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-20 left-10 w-72 h-72 bg-cyan-500/15 rounded-full blur-3xl float-animation pulse-light" style={{ boxShadow: '0 0 100px rgba(0, 255, 255, 0.3)' }}></div>

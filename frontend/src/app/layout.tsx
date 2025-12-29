@@ -31,12 +31,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" className="bg-slate-950">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950`}
       >
         <Web3Provider>
-          <div className="min-h-screen flex flex-col bg-slate-950 relative">
+          <div 
+            className="min-h-screen flex flex-col relative"
+            style={{
+              backgroundColor: '#020617', // 使用明确的颜色值
+              minHeight: '100vh',
+            }}
+          >
             {/* 科技感背景效果 */}
             <GridBackground />
             <ParticleEffect />

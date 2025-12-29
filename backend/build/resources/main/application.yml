@@ -6,10 +6,19 @@ spring:
     name: mantle-luxury-backend
 
   datasource:
-    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/mantle_luxury?useSSL=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/mantle_luxury?useSSL=false&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true&autoReconnect=true&tcpKeepAlive=true&tcpNoDelay=true&useServerPrepStmts=true&cachePrepStmts=true&prepStmtCacheSize=250&prepStmtCacheSqlLimit=2048}
     username: ${DATABASE_USERNAME:root}
     password: ${DATABASE_PASSWORD:root123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      connection-test-query: SELECT 1
+      keepalive-time: 30000
 
   jpa:
     hibernate:
