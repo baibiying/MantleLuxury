@@ -365,7 +365,8 @@ public class AssetService {
                 totalYield,                // 累计收益
                 authentications,           // 认证信息
                 custody,                   // 托管信息
-                insurance                  // 保险信息
+                insurance,                 // 保险信息
+                asset.getSubmittedBy()     // 提交者钱包地址
         );
     }
     

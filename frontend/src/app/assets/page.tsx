@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useChainId, usePublicClient } from "wagmi";
+import { useAccount, useChainId, usePublicClient } from "wagmi";
 import { formatEther } from "viem";
 import { mantleSepoliaTestnet } from "@/lib/web3/config";
 import { luxuryTokenAbi } from "@/lib/web3/contracts";
@@ -36,6 +36,7 @@ type Asset = {
     id: string;
     authenticationStatus: string;
   }>;
+  submittedBy?: string | null; // 提交者钱包地址
 };
 
 const API_BASE =
@@ -52,7 +53,9 @@ export default function AssetsPage() {
   const [sortKey, setSortKey] = useState<"price" | "recent" | "yield">("recent");
   const [priceMin, setPriceMin] = useState<string>("");
   const [priceMax, setPriceMax] = useState<string>("");
+  const [myAssetsOnly, setMyAssetsOnly] = useState<boolean>(false);
 
+  const { address } = useAccount();
   const chainId = useChainId();
   const publicClient = usePublicClient();
 
@@ -183,6 +186,15 @@ export default function AssetsPage() {
     .filter((a) => (typeFilter === "all" ? true : a.assetType === typeFilter))
     .filter((a) => (statusFilter === "all" ? true : a.status === statusFilter))
     .filter((a) => (brandFilter === "all" ? true : a.brand === brandFilter))
+    .filter((a) => {
+      // 如果启用了"我提交的资产"过滤器，只显示当前用户提交的资产
+      if (myAssetsOnly && address) {
+        if (!a.submittedBy || a.submittedBy.toLowerCase() !== address.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
+    })
     .filter((a) => {
       if (priceMin) {
         const pmin = parseFloat(priceMin);
@@ -328,6 +340,24 @@ export default function AssetsPage() {
               </div>
             </div>
           </div>
+          {/* 我提交的资产过滤器 */}
+          {address && (
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="myAssetsOnly"
+                checked={myAssetsOnly}
+                onChange={(e) => setMyAssetsOnly(e.target.checked)}
+                className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-2 focus:ring-sky-500 focus:ring-offset-0 focus:ring-offset-slate-900 cursor-pointer"
+              />
+              <label
+                htmlFor="myAssetsOnly"
+                className="text-sm text-slate-300 cursor-pointer select-none"
+              >
+                只显示我提交的资产
+              </label>
+            </div>
+          )}
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
