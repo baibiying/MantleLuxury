@@ -37,7 +37,8 @@ export default function AssetSubmitPage() {
   const [success, setSuccess] = useState(false);
   const [kycStatus, setKycStatus] = useState<"none" | "pending" | "approved" | "rejected">("none");
   const [kycLoading, setKycLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploading3dModel, setUploading3dModel] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     assetType: "watch",
@@ -349,7 +350,7 @@ export default function AssetSubmitPage() {
                     onChange={async (e) => {
                       if (!e.target.files || e.target.files.length === 0) return;
                       const files = Array.from(e.target.files);
-                      setUploading(true);
+                      setUploadingImages(true);
                       setError(null);
                       try {
                         const uploaded: string[] = [];
@@ -361,27 +362,41 @@ export default function AssetSubmitPage() {
                             body: form,
                           });
                           if (!res.ok) {
-                            const t = await res.text();
-                            throw new Error(t || "上传失败");
+                            let errorMsg = "上传失败";
+                            try {
+                              const errorData = await res.json();
+                              errorMsg = errorData.error || errorMsg;
+                            } catch {
+                              const text = await res.text();
+                              errorMsg = text || errorMsg;
+                            }
+                            throw new Error(errorMsg);
                           }
                           const data = await res.json();
-                          if (data.url) uploaded.push(data.url);
+                          if (data.url) {
+                            // 确保URL格式正确
+                            const url = data.url.startsWith('/') ? `${API_BASE}${data.url}` : data.url;
+                            uploaded.push(url);
+                          }
                         }
-                        setFormData((prev) => ({
-                          ...prev,
-                          imageUrls: [...(prev.imageUrls ?? []), ...uploaded].slice(0, 3),
-                        }));
+                        if (uploaded.length > 0) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            imageUrls: [...(prev.imageUrls ?? []), ...uploaded].slice(0, 3),
+                          }));
+                        }
                       } catch (err: any) {
-                        setError(err.message || "上传失败，请重试");
+                        setError(err.message || "图片上传失败，请重试");
+                        console.error("Image upload error:", err);
                       } finally {
-                        setUploading(false);
+                        setUploadingImages(false);
                         // 清空文件选择
                         e.target.value = "";
                       }
                     }}
                     className="text-sm text-slate-200"
                   />
-                  {uploading && (
+                  {uploadingImages && (
                     <span className="text-xs text-slate-300">上传中...</span>
                   )}
                 </div>
@@ -440,7 +455,7 @@ export default function AssetSubmitPage() {
                     onChange={async (e) => {
                       if (!e.target.files || e.target.files.length === 0) return;
                       const file = e.target.files[0];
-                      setUploading(true);
+                      setUploading3dModel(true);
                       setError(null);
                       try {
                         const form = new FormData();
@@ -450,28 +465,38 @@ export default function AssetSubmitPage() {
                           body: form,
                         });
                         if (!res.ok) {
-                          const t = await res.text();
-                          throw new Error(t || "上传失败");
+                          let errorMsg = "上传失败";
+                          try {
+                            const errorData = await res.json();
+                            errorMsg = errorData.error || errorMsg;
+                          } catch {
+                            const text = await res.text();
+                            errorMsg = text || errorMsg;
+                          }
+                          throw new Error(errorMsg);
                         }
                         const data = await res.json();
                         if (data.url) {
+                          // 确保URL格式正确
+                          const url = data.url.startsWith('/') ? `${API_BASE}${data.url}` : data.url;
                           setFormData((prev) => ({
                             ...prev,
-                            model3dUrl: data.url,
+                            model3dUrl: url,
                           }));
                         }
                       } catch (err: any) {
-                        setError(err.message || "上传失败，请重试");
+                        setError(err.message || "3D模型上传失败，请重试");
+                        console.error("3D model upload error:", err);
                       } finally {
-                        setUploading(false);
+                        setUploading3dModel(false);
                         // 清空文件选择
                         e.target.value = "";
                       }
                     }}
                     className="text-sm text-slate-200"
-                    disabled={uploading}
+                    disabled={uploading3dModel}
                   />
-                  {uploading && (
+                  {uploading3dModel && (
                     <span className="text-xs text-slate-300">上传中...</span>
                   )}
                 </div>
