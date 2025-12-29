@@ -141,14 +141,37 @@ public class MantleTokenDeploymentService {
         }
         logger.info("Using deployment script: {}", deployScript.getAbsolutePath());
 
+        // 检查并确保 Hardhat 已安装
+        ensureHardhatInstalled(contractsDir);
+
         // 先编译合约（Hardhat 会自动编译，但显式编译更可靠）
         compileContracts();
 
         // 构建部署命令
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "npx", "hardhat", "run", "scripts/deployLuxuryToken.ts",
-                "--network", "mantleTestnet"
-        );
+        // 优先使用本地安装的 Hardhat（./node_modules/.bin/hardhat）
+        // 如果不存在，回退到 npx hardhat
+        String hardhatCommand;
+        java.io.File localHardhat = new java.io.File(contractsDir, "node_modules/.bin/hardhat");
+        if (localHardhat.exists() && localHardhat.canExecute()) {
+            hardhatCommand = localHardhat.getAbsolutePath();
+            logger.info("Using local Hardhat installation: {}", hardhatCommand);
+        } else {
+            hardhatCommand = "npx";
+            logger.warn("Local Hardhat not found, using npx. Expected at: {}", localHardhat.getAbsolutePath());
+        }
+        
+        ProcessBuilder processBuilder;
+        if (hardhatCommand.equals("npx")) {
+            processBuilder = new ProcessBuilder(
+                    "npx", "hardhat", "run", "scripts/deployLuxuryToken.ts",
+                    "--network", "mantleTestnet"
+            );
+        } else {
+            processBuilder = new ProcessBuilder(
+                    hardhatCommand, "run", "scripts/deployLuxuryToken.ts",
+                    "--network", "mantleTestnet"
+            );
+        }
 
         // 计算每份代币的价格（wei 单位）
         // 假设 1 USD = 1 MNT（实际应该使用价格预言机）
@@ -240,6 +263,58 @@ public class MantleTokenDeploymentService {
     }
 
     /**
+     * 确保 Hardhat 已安装
+     * 如果 node_modules 不存在或 Hardhat 不可用，尝试安装依赖
+     */
+    private void ensureHardhatInstalled(java.io.File contractsDir) throws Exception {
+        java.io.File nodeModules = new java.io.File(contractsDir, "node_modules");
+        java.io.File hardhatBin = new java.io.File(contractsDir, "node_modules/.bin/hardhat");
+        java.io.File packageJson = new java.io.File(contractsDir, "package.json");
+        
+        // 如果 Hardhat 已存在，直接返回
+        if (hardhatBin.exists() && hardhatBin.canExecute()) {
+            logger.info("Hardhat is already installed at: {}", hardhatBin.getAbsolutePath());
+            return;
+        }
+        
+        // 如果 package.json 存在但 node_modules 不存在，需要安装
+        if (packageJson.exists() && (!nodeModules.exists() || !hardhatBin.exists())) {
+            logger.warn("Hardhat not found. Installing dependencies in contracts directory...");
+            logger.info("Contracts directory: {}", contractsDir.getAbsolutePath());
+            
+            ProcessBuilder installProcess = new ProcessBuilder("npm", "install");
+            installProcess.directory(contractsDir);
+            installProcess.redirectErrorStream(true);
+            
+            Process installProc = installProcess.start();
+            StringBuilder installOutput = new StringBuilder();
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(installProc.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    installOutput.append(line).append("\n");
+                    logger.info("npm install: {}", line);
+                }
+            }
+            
+            int installExitCode = installProc.waitFor();
+            if (installExitCode != 0) {
+                logger.error("npm install failed. Output: {}", installOutput.toString());
+                throw new RuntimeException("Failed to install Hardhat dependencies. Exit code: " + installExitCode);
+            }
+            
+            // 再次检查 Hardhat 是否安装成功
+            if (!hardhatBin.exists()) {
+                throw new RuntimeException("Hardhat installation completed but binary not found at: " + hardhatBin.getAbsolutePath());
+            }
+            
+            logger.info("✅ Hardhat installed successfully");
+        } else if (!packageJson.exists()) {
+            throw new RuntimeException("package.json not found in contracts directory: " + contractsDir.getAbsolutePath());
+        }
+    }
+
+    /**
      * 编译合约
      */
     private void compileContracts() throws Exception {
@@ -247,9 +322,23 @@ public class MantleTokenDeploymentService {
         
         java.io.File contractsDir = findContractsDirectory();
         
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "npx", "hardhat", "compile"
-        );
+        // 优先使用本地安装的 Hardhat
+        String hardhatCommand;
+        java.io.File localHardhat = new java.io.File(contractsDir, "node_modules/.bin/hardhat");
+        if (localHardhat.exists() && localHardhat.canExecute()) {
+            hardhatCommand = localHardhat.getAbsolutePath();
+            logger.info("Using local Hardhat for compilation: {}", hardhatCommand);
+        } else {
+            hardhatCommand = "npx";
+            logger.warn("Local Hardhat not found for compilation, using npx");
+        }
+        
+        ProcessBuilder processBuilder;
+        if (hardhatCommand.equals("npx")) {
+            processBuilder = new ProcessBuilder("npx", "hardhat", "compile");
+        } else {
+            processBuilder = new ProcessBuilder(hardhatCommand, "compile");
+        }
         
         processBuilder.directory(contractsDir);
         processBuilder.redirectErrorStream(true);

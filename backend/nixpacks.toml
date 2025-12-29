@@ -6,18 +6,52 @@ cmds = [
   "chmod +x ./gradlew",
   "./gradlew build -x test --no-daemon",
   # 安装 Hardhat 和合约依赖（contracts 目录应该在项目根目录，与 backend 同级）
-  "echo 'Current directory:' && pwd && ls -la",
-  "echo 'Checking for contracts directory:' && ls -la .. || echo 'Parent directory not accessible'",
-  "if [ -d ../contracts ]; then echo 'Found contracts directory, installing dependencies...' && cd ../contracts && npm install --production=false && cd ../backend; else echo 'Warning: contracts directory not found at ../contracts'; fi"
+  "echo '=== Current directory:' && pwd && ls -la",
+  "echo '=== Checking for contracts directory:' && ls -la .. || echo 'Parent directory not accessible'",
+  "if [ -d ../contracts ]; then \
+    echo '✅ Found contracts directory at ../contracts'; \
+    cd ../contracts && \
+    echo 'Installing npm dependencies (including Hardhat)...' && \
+    npm install && \
+    echo 'Verifying Hardhat installation...' && \
+    if [ -f node_modules/.bin/hardhat ]; then \
+      echo '✅ Hardhat installed successfully at node_modules/.bin/hardhat'; \
+      ls -la node_modules/.bin/hardhat; \
+      ./node_modules/.bin/hardhat --version || echo 'Hardhat version check failed'; \
+    else \
+      echo '❌ Hardhat not found in node_modules/.bin/hardhat'; \
+      echo 'node_modules/.bin contents:'; \
+      ls -la node_modules/.bin/ 2>/dev/null || echo 'node_modules/.bin does not exist'; \
+    fi && \
+    cd ../backend; \
+  else \
+    echo '❌ Warning: contracts directory not found at ../contracts'; \
+  fi"
 ]
 
 [phases.build]
 cmds = [
   "./gradlew bootJar --no-daemon",
-  # 验证 contracts 目录在运行时可访问
-  "echo 'Build phase - checking contracts directory:'",
-  "if [ -d ../contracts ]; then echo '✅ Contracts directory found at:' && ls -la ../contracts | head -20; else echo '❌ Contracts directory not found'; fi",
-  "if [ -f ../contracts/scripts/deployLuxuryToken.ts ]; then echo '✅ Deployment script found'; else echo '❌ Deployment script not found'; fi"
+  # 验证 contracts 目录和 Hardhat 安装
+  "echo '=== Build phase - verifying contracts directory and Hardhat:'",
+  "if [ -d ../contracts ]; then \
+    echo '✅ Contracts directory found at ../contracts'; \
+    echo 'Checking Hardhat installation...'; \
+    if [ -f ../contracts/node_modules/.bin/hardhat ]; then \
+      echo '✅ Hardhat found at ../contracts/node_modules/.bin/hardhat'; \
+      ../contracts/node_modules/.bin/hardhat --version || echo 'Hardhat version check failed'; \
+    else \
+      echo '❌ Hardhat not found. Reinstalling...'; \
+      cd ../contracts && npm install && cd ../backend; \
+    fi && \
+    if [ -f ../contracts/scripts/deployLuxuryToken.ts ]; then \
+      echo '✅ Deployment script found'; \
+    else \
+      echo '❌ Deployment script not found'; \
+    fi; \
+  else \
+    echo '❌ Contracts directory not found'; \
+  fi"
 ]
 
 [start]
