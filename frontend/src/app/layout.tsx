@@ -60,10 +60,10 @@ export default function RootLayout({
                 <nav className="flex items-center gap-3 text-sm justify-center overflow-x-auto">
                   {[
                     { href: "/assets", label: "资产列表" },
+                    { href: "/kyc", label: "KYC / AML" },
                     { href: "/assets/submit", label: "提交资产" },
                     { href: "/portfolio", label: "我的持仓" },
                     { href: "/yields", label: "收益记录" },
-                    { href: "/kyc", label: "KYC / AML" },
                     { href: "/settings", label: "账户设置" },
                     { href: "/admin/kyc", label: "KYC管理" },
                     { href: "/admin/aml", label: "AML告警" },
