@@ -289,6 +289,7 @@ export default function AssetsPage() {
                 className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
               >
                 <option value="all">全部</option>
+                <option value="registered">待认证</option>
                 <option value="fundraising">募集中</option>
                 <option value="funded">已满额</option>
                 <option value="sold">已结束</option>
