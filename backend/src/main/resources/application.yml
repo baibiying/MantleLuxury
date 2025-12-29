@@ -37,7 +37,7 @@ spring:
     host: ${MAIL_HOST:smtp.mail.me.com}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:baibiying@icloud.com}  # SMTP 认证账户（实际发送账户）
-    password: ${MAIL_PASSWORD:SxHy2130}  # iCloud 应用专用密码
+    password: ${MAIL_PASSWORD:crqq-nqbc-iuev-asgh}  # iCloud 应用专用密码
     properties:
       mail:
         smtp:
