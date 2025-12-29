@@ -280,16 +280,45 @@ public class MantleTokenDeploymentService {
 
     /**
      * 查找 contracts 目录
+     * 支持多种路径：当前目录、上级目录、项目根目录
      */
     private java.io.File findContractsDirectory() {
-        java.io.File contractsDir = new java.io.File("contracts");
-        if (!contractsDir.exists()) {
-            contractsDir = new java.io.File("../contracts");
+        // 获取当前工作目录
+        String currentDir = System.getProperty("user.dir");
+        logger.debug("Current working directory: {}", currentDir);
+        
+        // 尝试多个可能的路径
+        String[] possiblePaths = {
+            "contracts",                                    // 当前目录下的 contracts
+            "../contracts",                                 // 上级目录下的 contracts
+            "../../contracts",                              // 上两级目录下的 contracts
+            currentDir + "/contracts",                      // 绝对路径：当前目录/contracts
+            currentDir + "/../contracts",                   // 绝对路径：上级目录/contracts
+        };
+        
+        // 如果当前目录是 backend，尝试从项目根目录查找
+        if (currentDir.endsWith("backend")) {
+            possiblePaths = new String[]{
+                "../contracts",                             // backend/../contracts
+                currentDir + "/../contracts",               // 绝对路径
+                "contracts",                                // 当前目录
+                "../../contracts",                          // 上两级
+            };
         }
-        if (!contractsDir.exists()) {
-            throw new RuntimeException("Contracts directory not found. Expected: contracts/ or ../contracts/");
+        
+        for (String path : possiblePaths) {
+            java.io.File contractsDir = new java.io.File(path);
+            if (contractsDir.exists() && contractsDir.isDirectory()) {
+                logger.info("Found contracts directory at: {}", contractsDir.getAbsolutePath());
+                return contractsDir;
+            }
         }
-        return contractsDir;
+        
+        // 如果都找不到，抛出异常
+        throw new RuntimeException(
+            String.format("Contracts directory not found. Searched in: %s. Current working directory: %s", 
+                String.join(", ", possiblePaths), currentDir)
+        );
     }
 
     /**
