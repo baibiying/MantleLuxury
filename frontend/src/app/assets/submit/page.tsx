@@ -325,6 +325,184 @@ export default function AssetSubmitPage() {
                   className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none"
                 />
               </div>
+
+              {/* 资产图片 */}
+              <div className="pt-4 border-t border-slate-700/50">
+                <label className="block text-sm font-medium text-slate-300 mb-2 relative">
+                  <span className="relative inline-flex items-center gap-2">
+                    <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="bg-gradient-to-r from-sky-300 via-cyan-300 to-sky-300 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">
+                      资产图片
+                    </span>
+                  </span>
+                </label>
+                <p className="text-xs text-slate-400 mb-3">
+                  上传 1-3 张资产照片（JPG/PNG），优先展示第一张作为封面。
+                </p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={async (e) => {
+                      if (!e.target.files || e.target.files.length === 0) return;
+                      const files = Array.from(e.target.files);
+                      setUploading(true);
+                      setError(null);
+                      try {
+                        const uploaded: string[] = [];
+                        for (const f of files) {
+                          const form = new FormData();
+                          form.append("file", f);
+                          const res = await fetch(`${API_BASE}/api/assets/upload-image`, {
+                            method: "POST",
+                            body: form,
+                          });
+                          if (!res.ok) {
+                            const t = await res.text();
+                            throw new Error(t || "上传失败");
+                          }
+                          const data = await res.json();
+                          if (data.url) uploaded.push(data.url);
+                        }
+                        setFormData((prev) => ({
+                          ...prev,
+                          imageUrls: [...(prev.imageUrls ?? []), ...uploaded].slice(0, 3),
+                        }));
+                      } catch (err: any) {
+                        setError(err.message || "上传失败，请重试");
+                      } finally {
+                        setUploading(false);
+                        // 清空文件选择
+                        e.target.value = "";
+                      }
+                    }}
+                    className="text-sm text-slate-200"
+                  />
+                  {uploading && (
+                    <span className="text-xs text-slate-300">上传中...</span>
+                  )}
+                </div>
+                {formData.imageUrls && formData.imageUrls.length > 0 && (
+                  <div className="mt-4 grid grid-cols-3 gap-3">
+                    {formData.imageUrls.map((url, idx) => {
+                      // 如果是相对路径，拼接后端地址
+                      const imageUrl = url.startsWith('/uploads/') 
+                        ? `${API_BASE}${url}` 
+                        : url;
+                      return (
+                      <div key={idx} className="relative">
+                        <div
+                          className="h-24 w-full rounded-lg border border-slate-700 bg-cover bg-center"
+                          style={{ backgroundImage: `url(${imageUrl})` }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              imageUrls: prev.imageUrls.filter((_, i) => i !== idx),
+                            }))
+                          }
+                          className="absolute top-1 right-1 text-[10px] px-2 py-1 bg-slate-900/80 text-slate-200 rounded"
+                        >
+                          移除
+                        </button>
+                      </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 3D 模型 */}
+              <div className="pt-4 border-t border-slate-700/50">
+                <label className="block text-sm font-medium text-slate-300 mb-2 relative">
+                  <span className="relative inline-flex items-center gap-2">
+                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    <span className="bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]">
+                      3D 模型
+                    </span>
+                  </span>
+                </label>
+                <p className="text-xs text-slate-400 mb-3">
+                  上传资产的 3D 模型文件（.glb 或 .gltf 格式），让投资者可以360度查看资产。
+                  文件大小不超过 50MB。
+                </p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept=".glb,.gltf"
+                    onChange={async (e) => {
+                      if (!e.target.files || e.target.files.length === 0) return;
+                      const file = e.target.files[0];
+                      setUploading(true);
+                      setError(null);
+                      try {
+                        const form = new FormData();
+                        form.append("file", file);
+                        const res = await fetch(`${API_BASE}/api/upload/3d-model`, {
+                          method: "POST",
+                          body: form,
+                        });
+                        if (!res.ok) {
+                          const t = await res.text();
+                          throw new Error(t || "上传失败");
+                        }
+                        const data = await res.json();
+                        if (data.url) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            model3dUrl: data.url,
+                          }));
+                        }
+                      } catch (err: any) {
+                        setError(err.message || "上传失败，请重试");
+                      } finally {
+                        setUploading(false);
+                        // 清空文件选择
+                        e.target.value = "";
+                      }
+                    }}
+                    className="text-sm text-slate-200"
+                    disabled={uploading}
+                  />
+                  {uploading && (
+                    <span className="text-xs text-slate-300">上传中...</span>
+                  )}
+                </div>
+                {formData.model3dUrl && (
+                  <div className="mt-4 p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-sm text-slate-300">3D 模型已上传</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            model3dUrl: null,
+                          }))
+                        }
+                        className="text-xs px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded transition-colors"
+                      >
+                        移除
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
+                      {formData.model3dUrl}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
             </div>
           </TechCard>
@@ -454,170 +632,6 @@ export default function AssetSubmitPage() {
                 </p>
               </div>
             </div>
-            </div>
-          </TechCard>
-
-          <TechCard className="px-5 py-4">
-            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
-            <div className="relative z-10">
-              <h2 className="text-xl font-bold mb-4 gradient-text">资产图片</h2>
-              <p className="text-xs text-slate-400 mb-3">
-                上传 1-3 张资产照片（JPG/PNG），优先展示第一张作为封面。
-              </p>
-              <div className="flex items-center gap-3">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={async (e) => {
-                    if (!e.target.files || e.target.files.length === 0) return;
-                    const files = Array.from(e.target.files);
-                    setUploading(true);
-                    setError(null);
-                    try {
-                      const uploaded: string[] = [];
-                      for (const f of files) {
-                        const form = new FormData();
-                        form.append("file", f);
-                        const res = await fetch(`${API_BASE}/api/assets/upload-image`, {
-                          method: "POST",
-                          body: form,
-                        });
-                        if (!res.ok) {
-                          const t = await res.text();
-                          throw new Error(t || "上传失败");
-                        }
-                        const data = await res.json();
-                        if (data.url) uploaded.push(data.url);
-                      }
-                      setFormData((prev) => ({
-                        ...prev,
-                        imageUrls: [...(prev.imageUrls ?? []), ...uploaded].slice(0, 3),
-                      }));
-                    } catch (err: any) {
-                      setError(err.message || "上传失败，请重试");
-                    } finally {
-                      setUploading(false);
-                      // 清空文件选择
-                      e.target.value = "";
-                    }
-                  }}
-                  className="text-sm text-slate-200"
-                />
-                {uploading && (
-                  <span className="text-xs text-slate-300">上传中...</span>
-                )}
-              </div>
-              {formData.imageUrls && formData.imageUrls.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 gap-3">
-                  {formData.imageUrls.map((url, idx) => {
-                    // 如果是相对路径，拼接后端地址
-                    const imageUrl = url.startsWith('/uploads/') 
-                      ? `${API_BASE}${url}` 
-                      : url;
-                    return (
-                    <div key={idx} className="relative">
-                      <div
-                        className="h-24 w-full rounded-lg border border-slate-700 bg-cover bg-center"
-                        style={{ backgroundImage: `url(${imageUrl})` }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            imageUrls: prev.imageUrls.filter((_, i) => i !== idx),
-                          }))
-                        }
-                        className="absolute top-1 right-1 text-[10px] px-2 py-1 bg-slate-900/80 text-slate-200 rounded"
-                      >
-                        移除
-                      </button>
-                    </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </TechCard>
-
-          <TechCard className="px-5 py-4">
-            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
-            <div className="relative z-10">
-              <h2 className="text-xl font-bold mb-4 gradient-text">3D 模型（可选）</h2>
-              <p className="text-xs text-slate-400 mb-3">
-                上传资产的 3D 模型文件（.glb 或 .gltf 格式），让投资者可以360度查看资产。
-                文件大小不超过 50MB。
-              </p>
-              <div className="flex items-center gap-3">
-                <input
-                  type="file"
-                  accept=".glb,.gltf"
-                  onChange={async (e) => {
-                    if (!e.target.files || e.target.files.length === 0) return;
-                    const file = e.target.files[0];
-                    setUploading(true);
-                    setError(null);
-                    try {
-                      const form = new FormData();
-                      form.append("file", file);
-                      const res = await fetch(`${API_BASE}/api/upload/3d-model`, {
-                        method: "POST",
-                        body: form,
-                      });
-                      if (!res.ok) {
-                        const t = await res.text();
-                        throw new Error(t || "上传失败");
-                      }
-                      const data = await res.json();
-                      if (data.url) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          model3dUrl: data.url,
-                        }));
-                      }
-                    } catch (err: any) {
-                      setError(err.message || "上传失败，请重试");
-                    } finally {
-                      setUploading(false);
-                      // 清空文件选择
-                      e.target.value = "";
-                    }
-                  }}
-                  className="text-sm text-slate-200"
-                  disabled={uploading}
-                />
-                {uploading && (
-                  <span className="text-xs text-slate-300">上传中...</span>
-                )}
-              </div>
-              {formData.model3dUrl && (
-                <div className="mt-4 p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="text-sm text-slate-300">3D 模型已上传</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          model3dUrl: null,
-                        }))
-                      }
-                      className="text-xs px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded transition-colors"
-                    >
-                      移除
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2">
-                    {formData.model3dUrl}
-                  </p>
-                </div>
-              )}
             </div>
           </TechCard>
 

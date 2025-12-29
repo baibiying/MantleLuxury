@@ -7,7 +7,6 @@ import GridBackground from "@/components/GridBackground";
 import ParticleEffect from "@/components/ParticleEffect";
 import DataStream from "@/components/DataStream";
 import MouseTrail from "@/components/MouseTrail";
-import WalletConnect from "@/components/WalletConnect";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,8 +45,8 @@ export default function RootLayout({
             <header className="w-full border-b border-cyan-500/30 bg-gradient-to-r from-black via-slate-950 to-black backdrop-blur z-20 shadow-lg shadow-cyan-900/30 relative">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent"></div>
               <div className="relative z-10 max-w-7xl mx-auto px-6 py-4 flex flex-col gap-4">
-                {/* Logo 和钱包连接 */}
-                <div className="flex items-center justify-between">
+                {/* Logo */}
+                <div className="flex items-center justify-start">
                   <Link href="/" className="flex items-center gap-4 text-base font-semibold text-cyan-100 hover:text-cyan-50 transition-colors">
                     <span className="relative inline-flex h-16 w-16 items-center justify-center">
                       <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 blur-lg opacity-70 animate-pulse" />
@@ -55,10 +54,6 @@ export default function RootLayout({
                     </span>
                     <span className="tracking-wide text-3xl font-bold gradient-text">MantleLuxury</span>
                   </Link>
-                  {/* 右上角钱包连接 */}
-                  <div className="flex items-center">
-                    <WalletConnect />
-                  </div>
                 </div>
                 
                 {/* 导航栏 */}
