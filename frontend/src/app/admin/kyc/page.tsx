@@ -177,19 +177,8 @@ export default function AdminKycPage() {
       }
 
       const data = await res.json();
-      const emailStatus = data.emailStatus;
-      const emailMessage = data.emailMessage || "";
       
       let successMessage = `✅ KYC ${status === "approved" ? "已通过" : "已拒绝"}`;
-      if (emailStatus === "sent") {
-        successMessage += "，邮件已发送";
-      } else if (emailStatus === "no_email") {
-        successMessage += "，但用户未设置邮箱地址，无法发送邮件";
-      } else if (emailStatus === "failed") {
-        successMessage += `，但邮件发送失败：${emailMessage}`;
-      } else if (emailStatus === "disabled") {
-        successMessage += "，用户已禁用邮件通知";
-      }
 
       setSuccess(successMessage);
       setTimeout(() => setSuccess(null), 5000);
