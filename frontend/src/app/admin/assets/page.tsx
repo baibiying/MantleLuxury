@@ -452,7 +452,7 @@ export default function AdminAssetsPage() {
     };
     return (
       <span
-        className={`px-2 py-1 rounded text-xs font-medium ${styles[status as keyof typeof styles] || styles.registered}`}
+        className={`px-2 py-1 rounded text-sm font-medium ${styles[status as keyof typeof styles] || styles.registered}`}
       >
         {labels[status as keyof typeof labels] || status}
       </span>
@@ -474,7 +474,7 @@ export default function AdminAssetsPage() {
     };
     return (
       <span
-        className={`px-2 py-1 rounded text-xs font-medium ${styles[status as keyof typeof styles] || styles.pending}`}
+        className={`px-2 py-1 rounded text-sm font-medium ${styles[status as keyof typeof styles] || styles.pending}`}
       >
         {labels[status as keyof typeof labels] || status}
       </span>
@@ -497,7 +497,7 @@ export default function AdminAssetsPage() {
               <p className="text-lg font-semibold text-red-200 mb-2">
                 请先连接钱包
               </p>
-              <p className="text-sm text-slate-300">
+              <p className="text-base text-slate-300">
                 请在页面右上角连接钱包。管理后台仅限管理员访问
               </p>
             </>
@@ -506,11 +506,11 @@ export default function AdminAssetsPage() {
               <p className="text-lg font-semibold text-red-200 mb-2">
                 无权限访问
               </p>
-              <p className="text-sm text-slate-300">
+              <p className="text-base text-slate-300">
                 当前钱包地址不是管理员，无法访问管理后台
               </p>
               {error && (
-                <p className="text-sm text-red-300 mt-2">{error}</p>
+                <p className="text-base text-red-300 mt-2">{error}</p>
               )}
             </>
           )}
@@ -528,15 +528,15 @@ export default function AdminAssetsPage() {
       {/* 错误和成功提示 */}
       {error && (
         <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">
-          <p className="text-sm font-semibold text-red-200 mb-1">
+          <p className="text-base font-semibold text-red-200 mb-1">
             错误
           </p>
-          <p className="text-xs text-red-300 break-all">{error}</p>
+          <p className="text-sm text-red-300 break-all">{error}</p>
         </div>
       )}
       {success && (
         <div className="mb-6 bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-6 py-4">
-          <p className="text-sm font-semibold text-emerald-200">
+          <p className="text-base font-semibold text-emerald-200">
             {success}
           </p>
         </div>
@@ -544,7 +544,7 @@ export default function AdminAssetsPage() {
 
       {loading ? (
         <TechCard className="px-6 py-8 text-center">
-          <p className="text-sm text-slate-300">正在加载数据...</p>
+          <p className="text-base text-slate-300">正在加载数据...</p>
         </TechCard>
       ) : (
         <div className="space-y-6">
@@ -552,24 +552,24 @@ export default function AdminAssetsPage() {
             {stats && (
               <div className="grid gap-4 md:grid-cols-5">
                 <TechCard className="px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">总资产数</div>
-                  <div className="text-2xl font-bold">{stats.total}</div>
+                  <div className="text-sm text-slate-400 mb-1">总资产数</div>
+                  <div className="text-3xl font-bold">{stats.total}</div>
                 </TechCard>
                 <TechCard className="px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">待认证</div>
-                  <div className="text-2xl font-bold text-slate-400">{stats.registered}</div>
+                  <div className="text-sm text-slate-400 mb-1">待认证</div>
+                  <div className="text-3xl font-bold text-slate-400">{stats.registered}</div>
                 </TechCard>
                 <TechCard className="px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">募集中</div>
-                  <div className="text-2xl font-bold text-blue-400">{stats.fundraising}</div>
+                  <div className="text-sm text-slate-400 mb-1">募集中</div>
+                  <div className="text-3xl font-bold text-blue-400">{stats.fundraising}</div>
                 </TechCard>
                 <TechCard className="px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">已满额</div>
-                  <div className="text-2xl font-bold text-emerald-400">{stats.funded}</div>
+                  <div className="text-sm text-slate-400 mb-1">已满额</div>
+                  <div className="text-3xl font-bold text-emerald-400">{stats.funded}</div>
                 </TechCard>
                 <TechCard className="px-4 py-4">
-                  <div className="text-xs text-slate-400 mb-1">已售出</div>
-                  <div className="text-2xl font-bold text-purple-400">{stats.sold}</div>
+                  <div className="text-sm text-slate-400 mb-1">已售出</div>
+                  <div className="text-3xl font-bold text-purple-400">{stats.sold}</div>
                 </TechCard>
               </div>
             )}
@@ -577,12 +577,12 @@ export default function AdminAssetsPage() {
             {/* 资产列表 */}
             <TechCard className="px-6 py-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">资产列表</h2>
+                <h2 className="text-xl font-semibold">资产列表</h2>
                 <div className="flex items-center gap-3">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-50 text-base focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
                     <option value="all">全部状态</option>
                     <option value="registered">待认证</option>
@@ -594,15 +594,15 @@ export default function AdminAssetsPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="w-full text-lg">
                   <thead>
                     <tr className="text-slate-400 border-b border-slate-700/60">
-                      <th className="py-3 text-left font-normal">资产信息</th>
-                      <th className="py-3 text-left font-normal">状态</th>
-                      <th className="py-3 text-left font-normal">提交者</th>
-                      <th className="py-3 text-left font-normal">合约地址</th>
-                      <th className="py-3 text-left font-normal">提交时间</th>
-                      <th className="py-3 text-right font-normal">操作</th>
+                      <th className="py-3 text-left font-normal min-w-[280px]">资产信息</th>
+                      <th className="py-3 text-left font-normal min-w-[100px]">状态</th>
+                      <th className="py-3 text-left font-normal min-w-[200px]">提交者</th>
+                      <th className="py-3 text-left font-normal min-w-[200px]">合约地址</th>
+                      <th className="py-3 text-left font-normal min-w-[180px]">提交时间</th>
+                      <th className="py-3 text-right font-normal min-w-[120px]">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -618,46 +618,46 @@ export default function AdminAssetsPage() {
                           key={asset.id}
                           className="border-b border-slate-800/40 last:border-0 hover:bg-slate-800/20"
                         >
-                          <td className="py-3">
+                          <td className="py-3 min-w-[280px]">
                             <div className="flex flex-col">
-                              <span className="font-medium">
+                              <span className="font-medium break-words">
                                 {asset.brand} {asset.model}
                               </span>
-                              <span className="text-xs text-slate-500 mt-1">
+                              <span className="text-base text-slate-500 mt-1">
                                 {asset.assetType === "watch" ? "名表" : "珠宝"} ·{" "}
                                 {asset.year ?? "年份未知"}
                               </span>
                             </div>
                           </td>
-                          <td className="py-3">{getStatusBadge(asset.status)}</td>
-                          <td className="py-3 font-mono text-xs">
+                          <td className="py-3 min-w-[100px]">{getStatusBadge(asset.status)}</td>
+                          <td className="py-3 font-mono text-base min-w-[200px] break-all">
                             {asset.submittedBy || "-"}
                           </td>
-                          <td className="py-3 font-mono text-xs">
+                          <td className="py-3 font-mono text-base min-w-[200px] break-all">
                             {asset.tokenAddress ? (
                               <a
                                 href={`https://explorer.sepolia.mantle.xyz/address/${asset.tokenAddress}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sky-400 hover:text-sky-300"
+                                className="text-sky-400 hover:text-sky-300 break-all"
                               >
-                                {asset.tokenAddress.substring(0, 10)}...
+                                {asset.tokenAddress}
                               </a>
                             ) : (
                               "-"
                             )}
                           </td>
-                          <td className="py-3 text-slate-400 text-xs">
+                          <td className="py-3 text-slate-400 text-base min-w-[180px] whitespace-nowrap">
                             {new Date(asset.createdAt).toLocaleString("zh-CN")}
                           </td>
-                          <td className="py-3 text-right">
+                          <td className="py-3 text-right min-w-[120px]">
                             <button
                               onClick={async () => {
                                 await loadAssetDetail(asset.id);
                                 await loadAuthentications(asset.id);
                                 await loadValuations(asset.id);
                               }}
-                              className="px-3 py-1 bg-sky-600 hover:bg-sky-700 rounded text-white text-xs font-medium transition-colors"
+                              className="px-3 py-1 bg-sky-600 hover:bg-sky-700 rounded text-white text-base font-medium transition-colors whitespace-nowrap"
                             >
                               查看详情
                             </button>
@@ -676,7 +676,7 @@ export default function AdminAssetsPage() {
                 <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-xl font-semibold">资产详情</h2>
+                      <h2 className="text-2xl font-semibold">资产详情</h2>
                       <button
                         onClick={() => {
                           setSelectedAsset(null);
@@ -691,7 +691,7 @@ export default function AdminAssetsPage() {
                     {/* 资产基本信息 */}
                     <div className="mb-6 p-4 bg-slate-800/50 rounded-lg">
                       <h3 className="font-semibold mb-3">基本信息</h3>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-base">
                         <div>
                           <span className="text-slate-400">品牌：</span>
                           <span className="ml-2">{selectedAsset.asset.brand}</span>
@@ -716,7 +716,7 @@ export default function AdminAssetsPage() {
                         </div>
                         <div>
                           <span className="text-slate-400">合约地址：</span>
-                          <span className="ml-2 font-mono text-xs">
+                          <span className="ml-2 font-mono text-sm">
                             {selectedAsset.asset.tokenAddress || "-"}
                           </span>
                         </div>
@@ -735,13 +735,13 @@ export default function AdminAssetsPage() {
                         <h3 className="font-semibold">审核记录</h3>
                         <button
                           onClick={() => setShowReviewModal(true)}
-                          className="px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white text-sm font-medium transition-colors"
+                          className="px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white text-base font-medium transition-colors"
                         >
                           + 添加审核记录
                         </button>
                       </div>
                       {selectedAsset.reviews.length === 0 ? (
-                        <div className="text-center py-8 text-slate-400 text-sm">
+                        <div className="text-center py-8 text-slate-400 text-base">
                           暂无审核记录
                         </div>
                       ) : (
@@ -755,26 +755,26 @@ export default function AdminAssetsPage() {
                                 <div className="flex items-center gap-3">
                                   {getReviewStatusBadge(review.reviewStatus)}
                                   {review.actionType && (
-                                    <span className="text-xs text-slate-400">
+                                    <span className="text-sm text-slate-400">
                                       {review.actionType}
                                     </span>
                                   )}
                                 </div>
-                                <span className="text-xs text-slate-400">
+                                <span className="text-sm text-slate-400">
                                   {new Date(review.createdAt).toLocaleString("zh-CN")}
                                 </span>
                               </div>
                               {review.reviewNotes && (
-                                <p className="text-sm text-slate-300 mt-2">
+                                <p className="text-base text-slate-300 mt-2">
                                   {review.reviewNotes}
                                 </p>
                               )}
                               {review.nextStep && (
-                                <p className="text-xs text-slate-400 mt-2">
+                                <p className="text-sm text-slate-400 mt-2">
                                   下一步：{review.nextStep}
                                 </p>
                               )}
-                              <p className="text-xs text-slate-500 mt-2">
+                              <p className="text-sm text-slate-500 mt-2">
                                 审核人：{review.reviewerAddress}
                               </p>
                             </div>
@@ -791,14 +791,14 @@ export default function AdminAssetsPage() {
                           onClick={() => {
                             setShowAuthModal(true);
                           }}
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-sm font-medium transition-colors"
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors"
                         >
                           + 添加认证记录
                         </button>
                       </div>
                       {!selectedAsset.authentications ||
                       selectedAsset.authentications.length === 0 ? (
-                        <div className="text-center py-6 text-slate-400 text-sm">
+                        <div className="text-center py-6 text-slate-400 text-base">
                           暂无认证记录
                         </div>
                       ) : (
@@ -810,10 +810,10 @@ export default function AdminAssetsPage() {
                             >
                               <div className="flex items-start justify-between mb-2">
                                 <div>
-                                  <div className="text-sm font-medium text-slate-200">
+                                  <div className="text-base font-medium text-slate-200">
                                     {auth.authenticatorName}
                                   </div>
-                                  <div className="text-xs text-slate-400 mt-1">
+                                  <div className="text-sm text-slate-400 mt-1">
                                     {auth.authenticatorType === "official_brand"
                                       ? "官方品牌认证"
                                       : auth.authenticatorType === "third_party"
@@ -821,7 +821,7 @@ export default function AdminAssetsPage() {
                                       : "AI 系统认证"}
                                   </div>
                                   {auth.verificationDate && (
-                                    <div className="text-xs text-slate-500 mt-1">
+                                    <div className="text-sm text-slate-500 mt-1">
                                       鉴定日期：
                                       {new Date(
                                         auth.verificationDate
@@ -833,26 +833,26 @@ export default function AdminAssetsPage() {
                                       href={auth.reportUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-xs text-sky-400 hover:text-sky-300 mt-1 inline-block"
+                                      className="text-sm text-sky-400 hover:text-sky-300 mt-1 inline-block"
                                     >
                                       查看认证报告 →
                                     </a>
                                   )}
                                   {auth.reportHash && (
-                                    <div className="text-xs text-slate-500 mt-1 font-mono">
+                                    <div className="text-sm text-slate-500 mt-1 font-mono">
                                       报告哈希：
                                       {auth.reportHash.slice(0, 18)}...
                                     </div>
                                   )}
                                   {auth.notes && (
-                                    <div className="text-xs text-slate-400 mt-1 whitespace-pre-line">
+                                    <div className="text-sm text-slate-400 mt-1 whitespace-pre-line">
                                       备注：{auth.notes}
                                     </div>
                                   )}
                                 </div>
                                 <div className="text-right">
                                   <span
-                                    className={`inline-block mb-2 text-xs rounded-full px-2 py-1 border ${
+                                    className={`inline-block mb-2 text-sm rounded-full px-2 py-1 border ${
                                       auth.authenticationStatus === "verified"
                                         ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/10"
                                         : auth.authenticationStatus ===
@@ -879,7 +879,7 @@ export default function AdminAssetsPage() {
                                       disabled={
                                         auth.authenticationStatus === "verified"
                                       }
-                                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-400 rounded text-white text-xs font-medium transition-colors"
+                                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-400 rounded text-white text-sm font-medium transition-colors"
                                     >
                                       标记为通过
                                     </button>
@@ -893,7 +893,7 @@ export default function AdminAssetsPage() {
                                       disabled={
                                         auth.authenticationStatus === "rejected"
                                       }
-                                      className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-400 rounded text-white text-xs font-medium transition-colors"
+                                      className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-400 rounded text-white text-sm font-medium transition-colors"
                                     >
                                       标记为拒绝
                                     </button>
@@ -914,14 +914,14 @@ export default function AdminAssetsPage() {
                           onClick={() => {
                             setShowValuationModal(true);
                           }}
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-sm font-medium transition-colors"
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors"
                         >
                           + 添加估值报告
                         </button>
                       </div>
                       {!selectedAsset.valuations ||
                       selectedAsset.valuations.length === 0 ? (
-                        <div className="text-center py-6 text-slate-400 text-sm">
+                        <div className="text-center py-6 text-slate-400 text-base">
                           暂无估值报告
                         </div>
                       ) : (
@@ -933,11 +933,11 @@ export default function AdminAssetsPage() {
                             >
                               <div className="flex items-start justify-between mb-2">
                                 <div>
-                                  <div className="text-sm font-medium text-slate-200">
+                                  <div className="text-base font-medium text-slate-200">
                                     {valuation.valuationAgency || "估值机构"}
                                   </div>
                                   {valuation.valuationDate && (
-                                    <div className="text-xs text-slate-400 mt-1">
+                                    <div className="text-sm text-slate-400 mt-1">
                                       估值日期：
                                       {new Date(
                                         valuation.valuationDate
@@ -949,14 +949,14 @@ export default function AdminAssetsPage() {
                                       href={valuation.reportUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-xs text-sky-400 hover:text-sky-300 mt-1 inline-block"
+                                      className="text-sm text-sky-400 hover:text-sky-300 mt-1 inline-block"
                                     >
                                       查看估值报告 →
                                     </a>
                                   )}
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-lg font-semibold text-emerald-400 mb-2">
+                                  <div className="text-xl font-semibold text-emerald-400 mb-2">
                                     {parseFloat(valuation.valuationAmount).toLocaleString("zh-CN", {
                                       minimumFractionDigits: 2,
                                       maximumFractionDigits: 2,
@@ -967,7 +967,7 @@ export default function AdminAssetsPage() {
                                     onClick={() =>
                                       handleDeleteValuation(valuation.id)
                                     }
-                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-white text-xs font-medium transition-colors"
+                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-white text-sm font-medium transition-colors"
                                   >
                                     删除
                                   </button>
@@ -983,12 +983,12 @@ export default function AdminAssetsPage() {
                     <div className="flex gap-3">
                       <Link
                         href={`/assets/${selectedAsset.asset.id}`}
-                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm font-medium transition-colors"
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-base font-medium transition-colors"
                       >
                         查看前端页面
                       </Link>
                       {selectedAsset.asset.authentications && selectedAsset.asset.authentications.length > 0 && (
-                        <div className="px-4 py-2 bg-slate-700/50 rounded-lg text-sm text-slate-300">
+                        <div className="px-4 py-2 bg-slate-700/50 rounded-lg text-base text-slate-300">
                           认证记录：{selectedAsset.asset.authentications.length} 条
                         </div>
                       )}
@@ -1003,7 +1003,7 @@ export default function AdminAssetsPage() {
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">添加审核记录</h2>
+                    <h2 className="text-2xl font-semibold">添加审核记录</h2>
                     <button
                       onClick={() => setShowReviewModal(false)}
                       className="text-slate-400 hover:text-slate-200"
@@ -1014,7 +1014,7 @@ export default function AdminAssetsPage() {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-base font-medium mb-2">
                         审核状态 *
                       </label>
                       <select
@@ -1096,7 +1096,7 @@ export default function AdminAssetsPage() {
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">添加真伪认证记录</h2>
+                    <h2 className="text-2xl font-semibold">添加真伪认证记录</h2>
                     <button
                       onClick={() => setShowAuthModal(false)}
                       className="text-slate-400 hover:text-slate-200"
@@ -1210,7 +1210,7 @@ export default function AdminAssetsPage() {
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">添加估值报告</h2>
+                    <h2 className="text-2xl font-semibold">添加估值报告</h2>
                     <button
                       onClick={() => setShowValuationModal(false)}
                       className="text-slate-400 hover:text-slate-200"
