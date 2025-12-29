@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import WalletConnect from "@/components/WalletConnect";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
 import TechButton from "@/components/TechButton";
@@ -336,19 +335,15 @@ export default function AdminYieldsPage() {
         subtitle="仅管理员可以创建和管理收益分配"
         maxWidth="5xl"
       >
-        <div className="mb-6 flex items-center justify-end">
-          <WalletConnect />
-        </div>
         <TechCard className="px-6 py-8 text-center">
           {!isConnected ? (
             <>
               <p className="text-lg font-semibold text-red-200 mb-2">
                 请先连接钱包
               </p>
-              <p className="text-sm text-slate-300 mb-4">
-                收益分配控制台仅限管理员访问
+              <p className="text-sm text-slate-300">
+                请在页面右上角连接钱包。收益分配控制台仅限管理员访问
               </p>
-              <WalletConnect />
             </>
           ) : (
             <>
@@ -374,10 +369,6 @@ export default function AdminYieldsPage() {
       subtitle="为已代币化资产创建和管理收益分配（仅管理员）"
       maxWidth="5xl"
     >
-      <div className="mb-6 flex items-center justify-end">
-        <WalletConnect />
-      </div>
-
       {/* 全局提示 */}
       {error && (
         <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">

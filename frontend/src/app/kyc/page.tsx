@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import WalletConnect from "@/components/WalletConnect";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
 import TechButton from "@/components/TechButton";
@@ -243,16 +242,11 @@ export default function KycPage() {
       subtitle="完成身份认证以开始投资奢侈品 RWA 资产"
       maxWidth="5xl"
     >
-        <div className="mb-6 flex items-center justify-end">
-          <WalletConnect />
-        </div>
-
         {!isConnected || !address ? (
           <TechCard className="px-6 py-8 text-center">
-            <p className="text-sm text-slate-300 mb-3">
-              请先连接钱包，再进行 KYC。
+            <p className="text-sm text-slate-300">
+              请先在页面右上角连接钱包，再进行 KYC。
             </p>
-            <WalletConnect />
           </TechCard>
         ) : (
           <TechCard className="px-6 py-6 space-y-4">

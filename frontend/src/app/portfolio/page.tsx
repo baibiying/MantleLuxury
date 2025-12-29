@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import WalletConnect from "@/components/WalletConnect";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
@@ -208,16 +207,11 @@ export default function PortfolioPage() {
       subtitle="查看你在 MantleLuxury 平台上持有的资产份额"
       maxWidth="5xl"
     >
-      <div className="mb-6 flex items-center justify-end">
-        <WalletConnect />
-      </div>
-
         {!isConnected ? (
           <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
-            <p className="text-sm text-slate-300 mb-3">
-              请先连接钱包以查看你的持仓。
+            <p className="text-sm text-slate-300">
+              请先在页面右上角连接钱包以查看你的持仓。
             </p>
-            <WalletConnect />
           </div>
         ) : (
           <>

@@ -7,7 +7,6 @@ import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTra
 import { parseEther, formatEther } from "viem";
 import { mantleSepoliaTestnet, mantleSepoliaMetaMaskConfig } from "@/lib/web3/config";
 import { luxuryTokenAbi } from "@/lib/web3/contracts";
-import WalletConnect from "@/components/WalletConnect";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
 import TechButton from "@/components/TechButton";
@@ -492,14 +491,13 @@ export default function AssetDetailPage() {
       maxWidth="7xl"
     >
       {/* 头部导航 */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-start">
           <button
             onClick={() => router.back()}
             className="text-sm text-slate-400 hover:text-slate-200 transition"
           >
             ← 返回
           </button>
-          <WalletConnect />
         </div>
 
         {/* 资产详情 */}
@@ -922,10 +920,9 @@ export default function AssetDetailPage() {
 
             {!isConnected && (
               <div className="mb-4 p-4 bg-blue-950/40 border border-blue-500/40 rounded-lg">
-                <p className="text-sm text-blue-200 mb-3">
-                  请先连接钱包以进行投资
+                <p className="text-sm text-blue-200">
+                  请先在页面右上角连接钱包以进行投资
                 </p>
-                <WalletConnect />
               </div>
             )}
 

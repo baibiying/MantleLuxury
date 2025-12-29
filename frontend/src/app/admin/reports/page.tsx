@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import WalletConnect from "@/components/WalletConnect";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
 import TechButton from "@/components/TechButton";
@@ -94,19 +93,15 @@ export default function AdminReportsPage() {
         subtitle="仅管理员可访问的合规与运营报表导出"
         maxWidth="5xl"
       >
-        <div className="mb-6 flex items-center justify-end">
-          <WalletConnect />
-        </div>
         <TechCard className="px-6 py-8 text-center">
           {!isConnected ? (
             <>
               <p className="text-lg font-semibold text-red-200 mb-2">
                 请先连接钱包
               </p>
-              <p className="text-sm text-slate-300 mb-4">
-                报表后台仅限管理员访问
+              <p className="text-sm text-slate-300">
+                请在页面右上角连接钱包。报表后台仅限管理员访问
               </p>
-              <WalletConnect />
             </>
           ) : (
             <>
@@ -132,10 +127,6 @@ export default function AdminReportsPage() {
       subtitle="导出资产级与用户级 CSV 报表（仅管理员）"
       maxWidth="5xl"
     >
-      <div className="mb-6 flex items-center justify-end">
-        <WalletConnect />
-      </div>
-
       {error && (
         <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">
           <p className="text-sm font-semibold text-red-200 mb-1">

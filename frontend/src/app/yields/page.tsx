@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import WalletConnect from "@/components/WalletConnect";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
@@ -103,16 +102,11 @@ export default function YieldsPage() {
       subtitle="查看您的资产升值收益分配记录"
       maxWidth="5xl"
     >
-      <div className="mb-6 flex items-center justify-end">
-        <WalletConnect />
-      </div>
-
         {!isConnected || !address ? (
           <TechCard className="px-6 py-8 text-center">
-            <p className="text-sm text-slate-300 mb-3">
-              请先连接钱包，查看收益记录。
+            <p className="text-sm text-slate-300">
+              请先在页面右上角连接钱包，查看收益记录。
             </p>
-            <WalletConnect />
           </TechCard>
         ) : (
           <>

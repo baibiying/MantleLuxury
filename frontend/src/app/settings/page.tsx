@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import WalletConnect from "@/components/WalletConnect";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
@@ -145,15 +144,13 @@ export default function SettingsPage() {
               管理你的账户信息和通知偏好
             </p>
           </div>
-          <WalletConnect />
         </div>
 
         {!isConnected || !address ? (
           <TechCard className="px-6 py-8 text-center">
-            <p className="text-sm text-slate-300 mb-3">
-              请先连接钱包以查看和修改设置。
+            <p className="text-sm text-slate-300">
+              请先在页面右上角连接钱包以查看和修改设置。
             </p>
-            <WalletConnect />
           </TechCard>
         ) : (
           <div className="space-y-6">

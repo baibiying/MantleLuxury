@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
-import WalletConnect from "@/components/WalletConnect";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
 import TechButton from "@/components/TechButton";
@@ -185,10 +184,6 @@ export default function AssetSubmitPage() {
       subtitle="将您的奢侈品资产提交到 MantleLuxury 平台进行代币化"
       maxWidth="5xl"
     >
-      <div className="mb-6 flex items-center justify-end">
-        <WalletConnect />
-      </div>
-
       {success && (
           <div className="mb-6 bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-6 py-4">
             <p className="text-sm font-semibold text-emerald-200">
@@ -211,10 +206,9 @@ export default function AssetSubmitPage() {
 
         {!isConnected ? (
           <TechCard className="px-6 py-8 text-center">
-            <p className="text-sm text-slate-300 mb-3">
-              请先连接钱包，再提交资产。
+            <p className="text-sm text-slate-300">
+              请先在页面右上角连接钱包，再提交资产。
             </p>
-            <WalletConnect />
           </TechCard>
         ) : (
         <form onSubmit={handleSubmit} className="space-y-4">

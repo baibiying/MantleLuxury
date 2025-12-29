@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import WalletConnect from "@/components/WalletConnect";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
@@ -273,19 +272,15 @@ export default function AdminKycPage() {
         subtitle="管理用户 KYC 状态和 AML 黑名单"
         maxWidth="5xl"
       >
-        <div className="mb-6 flex items-center justify-end">
-          <WalletConnect />
-        </div>
         <TechCard className="px-6 py-8 text-center">
           {!isConnected ? (
             <>
               <p className="text-lg font-semibold text-red-200 mb-2">
                 请先连接钱包
               </p>
-              <p className="text-sm text-slate-300 mb-4">
-                管理后台仅限管理员访问
+              <p className="text-sm text-slate-300">
+                请在页面右上角连接钱包。管理后台仅限管理员访问
               </p>
-              <WalletConnect />
             </>
           ) : (
             <>
@@ -311,10 +306,6 @@ export default function AdminKycPage() {
       subtitle="管理用户 KYC 状态和 AML 黑名单（仅管理员）"
       maxWidth="5xl"
     >
-      <div className="mb-6 flex items-center justify-end">
-        <WalletConnect />
-      </div>
-
       {/* 错误和成功提示 */}
       {error && (
         <div className="mb-6 bg-red-950/40 border border-red-500/40 rounded-xl px-6 py-4">
