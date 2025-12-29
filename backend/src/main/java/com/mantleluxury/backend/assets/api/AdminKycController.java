@@ -32,17 +32,20 @@ public class AdminKycController {
     private final AmlBlacklistRepository blacklistRepository;
     private final AdminConfig adminConfig;
     private final com.mantleluxury.backend.blockchain.service.KYCRegistryService kycRegistryService;
+    private final com.mantleluxury.backend.assets.service.EmailService emailService;
 
     public AdminKycController(
             UserRepository userRepository,
             AmlBlacklistRepository blacklistRepository,
             AdminConfig adminConfig,
-            com.mantleluxury.backend.blockchain.service.KYCRegistryService kycRegistryService
+            com.mantleluxury.backend.blockchain.service.KYCRegistryService kycRegistryService,
+            com.mantleluxury.backend.assets.service.EmailService emailService
     ) {
         this.userRepository = userRepository;
         this.blacklistRepository = blacklistRepository;
         this.adminConfig = adminConfig;
         this.kycRegistryService = kycRegistryService;
+        this.emailService = emailService;
     }
 
     /**
@@ -195,6 +198,19 @@ public class AdminKycController {
         } catch (Exception e) {
             logger.error("Failed to sync KYC status to blockchain for {}: {}", walletAddress, e.getMessage(), e);
             // 不抛出异常，允许链下状态更新成功，但记录错误
+        }
+
+        // 发送邮件通知（如果用户启用了邮件通知）
+        if (user.getEmailNotifications() == null || user.getEmailNotifications()) {
+            String userEmail = user.getEmail();
+            String fullName = user.getFullName();
+            if (status.equals("approved")) {
+                emailService.sendKycApprovedEmail(userEmail, fullName);
+            } else if (status.equals("rejected")) {
+                emailService.sendKycRejectedEmail(userEmail, fullName, user.getKycRejectionReason());
+            }
+        } else {
+            logger.info("Email notifications disabled for user: {}, skipping email", walletAddress);
         }
 
         logger.info("KYC reviewed for {}: {}", walletAddress, status);
