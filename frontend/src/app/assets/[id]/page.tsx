@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
@@ -539,8 +539,18 @@ export default function AssetDetailPage() {
     return [];
   };
 
-  const imageList = getImageList();
-  const heroImage = imageList[activeImageIndex] ?? getDefaultImage();
+  // 使用 useMemo 稳定 imageList 的引用，避免 useEffect 无限循环
+  // 使用 JSON.stringify 来比较数组内容，而不是引用
+  const imageIndicesKey = useMemo(() => JSON.stringify(imageIndices), [imageIndices]);
+  const imageList = useMemo(() => {
+    if (!asset) return [];
+    return getImageList();
+  }, [asset?.id, asset?.imageUrls, imageIndicesKey]);
+  
+  // 使用 useMemo 稳定 heroImage
+  const heroImage = useMemo(() => {
+    return imageList[activeImageIndex] ?? getDefaultImage();
+  }, [imageList, activeImageIndex]);
 
   // 同步 ref 和 state
   useEffect(() => {
@@ -553,10 +563,11 @@ export default function AssetDetailPage() {
 
   // 预加载图片：当图片列表或当前索引变化时，预加载当前和相邻图片
   useEffect(() => {
-    if (imageList.length === 0) return;
+    if (!imageList || imageList.length === 0) return;
     
     // 预加载当前图片
-    if (imageList[activeImageIndex]) {
+    const currentImageUrl = imageList[activeImageIndex];
+    if (currentImageUrl) {
       const img = new Image();
       img.onload = () => {
         setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
@@ -571,19 +582,25 @@ export default function AssetDetailPage() {
       if (!currentLoading && !currentError) {
         setImageLoading(prev => ({ ...prev, [activeImageIndex]: true }));
       }
-      img.src = imageList[activeImageIndex];
+      img.src = currentImageUrl;
     }
     
     // 预加载下一张图片
-    if (activeImageIndex < imageList.length - 1 && imageList[activeImageIndex + 1]) {
-      const img = new Image();
-      img.src = imageList[activeImageIndex + 1];
+    if (activeImageIndex < imageList.length - 1) {
+      const nextImageUrl = imageList[activeImageIndex + 1];
+      if (nextImageUrl) {
+        const img = new Image();
+        img.src = nextImageUrl;
+      }
     }
     
     // 预加载上一张图片
-    if (activeImageIndex > 0 && imageList[activeImageIndex - 1]) {
-      const img = new Image();
-      img.src = imageList[activeImageIndex - 1];
+    if (activeImageIndex > 0) {
+      const prevImageUrl = imageList[activeImageIndex - 1];
+      if (prevImageUrl) {
+        const img = new Image();
+        img.src = prevImageUrl;
+      }
     }
   }, [activeImageIndex, imageList]);
 
