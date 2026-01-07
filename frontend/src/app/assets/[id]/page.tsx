@@ -110,6 +110,7 @@ export default function AssetDetailPage() {
   const [kycLoading, setKycLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"image" | "3d">("image"); // 图片或3D模型查看模式
   const [retryCount, setRetryCount] = useState(0); // 重试计数
+  const [activeImageIndex, setActiveImageIndex] = useState(0); // 当前展示的图片索引
 
   useEffect(() => {
     async function fetchAsset() {
@@ -457,22 +458,7 @@ export default function AssetDetailPage() {
   }
 
   // 计算 hero image URL
-  const getHeroImage = () => {
-    if (asset.imageUrls) {
-      try {
-        const arr = JSON.parse(asset.imageUrls);
-        if (Array.isArray(arr) && arr.length > 0) {
-          const url = arr[0];
-          // 如果是相对路径，拼接后端地址
-          if (url.startsWith('/uploads/')) {
-            return `${API_BASE}${url}`;
-          }
-          return url;
-        }
-      } catch {
-        // ignore
-      }
-    }
+  const getDefaultImage = () => {
     if (asset.assetType === "watch") {
       return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80";
     }
@@ -481,8 +467,26 @@ export default function AssetDetailPage() {
     }
     return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";
   };
-  
-  const heroImage = getHeroImage();
+
+  const getImageList = () => {
+    if (!asset.imageUrls) return [] as string[];
+    try {
+      const arr = JSON.parse(asset.imageUrls);
+      if (!Array.isArray(arr)) return [] as string[];
+      return arr
+        .map((url: string) => {
+          if (!url) return null;
+          // 如果是相对路径，拼接后端地址
+          return url.startsWith("/uploads/") ? `${API_BASE}${url}` : url;
+        })
+        .filter((u): u is string => !!u);
+    } catch {
+      return [] as string[];
+    }
+  };
+
+  const imageList = getImageList();
+  const heroImage = imageList[activeImageIndex] ?? getDefaultImage();
 
   return (
     <PageContainer
@@ -534,7 +538,7 @@ export default function AssetDetailPage() {
                 </div>
               )}
               
-              <div className="overflow-hidden rounded-xl mb-4 border border-slate-800/60 shadow-inner">
+              <div className="overflow-hidden rounded-xl mb-4 border border-slate-800/60 shadow-inner bg-slate-900">
                 {viewMode === "3d" && asset.model3dUrl ? (
                   <div className="h-96 w-full">
                     <Model3DViewer 
@@ -544,10 +548,32 @@ export default function AssetDetailPage() {
                     />
                   </div>
                 ) : (
-                  <div
-                    className="h-56 w-full bg-cover bg-center"
-                    style={{ backgroundImage: `url(${heroImage})` }}
-                  />
+                  <div className="flex flex-col">
+                    <div
+                      className="h-64 w-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${heroImage})` }}
+                    />
+                    {imageList.length > 1 && (
+                      <div className="flex items-center gap-2 px-3 py-3 border-t border-slate-800 overflow-x-auto bg-slate-900/80">
+                        {imageList.map((url, idx) => (
+                          <button
+                            key={`${url}-${idx}`}
+                            onClick={() => setActiveImageIndex(idx)}
+                            className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border transition-all ${
+                              idx === activeImageIndex
+                                ? "border-sky-400 ring-2 ring-sky-500/60"
+                                : "border-slate-700 hover:border-slate-500"
+                            }`}
+                          >
+                            <div
+                              className="w-full h-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${url})` }}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="mb-4">

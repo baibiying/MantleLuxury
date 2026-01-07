@@ -246,7 +246,7 @@ export default function AssetsPage() {
     <PageContainer
       title="可投资资产"
       subtitle="来自 MantleLuxury 的奢侈品 RWA 资产列表"
-      maxWidth="5xl"
+      maxWidth="7xl"
     >
       {error && (
         <div className="mb-4 bg-yellow-950/40 border border-yellow-500/40 rounded-xl px-6 py-4">
@@ -360,7 +360,7 @@ export default function AssetsPage() {
           )}
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
           {filtered.length === 0 ? (
             <div className="col-span-full text-center py-20">
               <div className="text-6xl mb-4">📦</div>
