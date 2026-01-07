@@ -603,6 +603,62 @@ ensure_schema() {
     else
         print_warn "risk_assessments 表创建失败，请手动检查数据库"
     fi
+    
+    # 检查并创建 asset_images 表（如果不存在），并确保 asset_id 允许为 null
+    print_info "检查 asset_images 表..."
+    local create_asset_images_table_sql="
+        CREATE TABLE IF NOT EXISTS asset_images (
+            id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+            asset_id CHAR(36) NULL COMMENT '关联的资产ID（允许为null，用于临时存储）',
+            image_index INT NOT NULL DEFAULT 0 COMMENT '图片索引（同一资产的多张图片）',
+            image_data LONGBLOB NOT NULL COMMENT '图片二进制数据',
+            content_type VARCHAR(100) NOT NULL DEFAULT 'image/jpeg' COMMENT '图片MIME类型（image/jpeg, image/png等）',
+            original_filename VARCHAR(255) COMMENT '原始文件名',
+            file_size BIGINT COMMENT '文件大小（字节）',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+            INDEX idx_asset_id (asset_id),
+            INDEX idx_asset_image_index (asset_id, image_index),
+            UNIQUE KEY uk_asset_image (asset_id, image_index)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    "
+    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$create_asset_images_table_sql" > /dev/null 2>&1; then
+        print_info "asset_images 表检查完成（如不存在已自动创建）"
+    else
+        print_warn "asset_images 表创建失败，请手动检查数据库"
+    fi
+    
+    # 如果 asset_images 表已存在，检查并修改 asset_id 列允许为 null
+    print_info "检查并修改 asset_images 表的 asset_id 列..."
+    local modify_asset_id_sql="
+        SET @dbname = DATABASE();
+        SET @tablename = 'asset_images';
+        SET @columnname = 'asset_id';
+        
+        -- 检查 asset_id 列是否允许 null
+        SET @is_nullable = (
+            SELECT IS_NULLABLE 
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = @dbname
+            AND TABLE_NAME = @tablename
+            AND COLUMN_NAME = @columnname
+        );
+        
+        -- 如果列存在且不允许 null，则修改为允许 null
+        SET @preparedStatement = (SELECT IF(
+            @is_nullable = 'NO',
+            CONCAT('ALTER TABLE ', @tablename, ' MODIFY COLUMN ', @columnname, ' CHAR(36) NULL COMMENT ''关联的资产ID（允许为null，用于临时存储）'''),
+            'SELECT 1'
+        ));
+        PREPARE alterIfNotNull FROM @preparedStatement;
+        EXECUTE alterIfNotNull;
+        DEALLOCATE PREPARE alterIfNotNull;
+    "
+    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$modify_asset_id_sql" > /dev/null 2>&1; then
+        print_info "asset_images 表的 asset_id 列检查完成（如不允许null已自动修改）"
+    else
+        print_warn "asset_images 表的 asset_id 列修改失败，请手动检查数据库"
+    fi
 }
 
 # 显示连接信息

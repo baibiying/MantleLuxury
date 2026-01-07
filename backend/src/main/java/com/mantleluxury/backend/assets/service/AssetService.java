@@ -150,6 +150,31 @@ public class AssetService {
         asset = assetRepository.save(asset);
         logger.info("Asset saved successfully with token address: {}. Status: registered (awaiting authentication)", tokenAddress);
         
+        // 如果 imageUrls 中包含临时图片（格式：image:{imageId}），将它们关联到新创建的资产
+        if (request.imageUrls() != null && !request.imageUrls().isEmpty()) {
+            try {
+                // 解析 imageUrls（可能是 JSON 数组字符串）
+                String imageUrlsStr = request.imageUrls();
+                if (imageUrlsStr.startsWith("[") && imageUrlsStr.endsWith("]")) {
+                    // 是 JSON 数组，解析它
+                    java.util.List<String> imageUrls = new java.util.ArrayList<>();
+                    try {
+                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        imageUrls = mapper.readValue(imageUrlsStr, java.util.List.class);
+                    } catch (Exception e) {
+                        logger.warn("Failed to parse imageUrls JSON: {}", imageUrlsStr, e);
+                    }
+                    // 关联临时图片到资产
+                    if (!imageUrls.isEmpty()) {
+                        associateImagesToAsset(imageUrls, asset.getId());
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Failed to associate images to asset {}: {}", asset.getId(), e.getMessage(), e);
+                // 不抛出异常，因为资产已经创建成功，图片关联失败不影响资产创建
+            }
+        }
+        
         return asset;
     }
     
@@ -245,6 +270,54 @@ public class AssetService {
     }
     
     /**
+     * 批量删除资产
+     * @param assetIds 资产ID列表
+     * @return 删除成功的数量和失败的ID列表
+     */
+    @Transactional
+    public Map<String, Object> deleteBatch(List<String> assetIds) {
+        int successCount = 0;
+        List<String> failedIds = new java.util.ArrayList<>();
+        
+        for (String id : assetIds) {
+            try {
+                assetRepository.findById(id)
+                        .ifPresentOrElse(
+                                asset -> {
+                                    assetRepository.deleteById(id);
+                                    logger.info("Deleted asset: {}", id);
+                                },
+                                () -> { throw new RuntimeException("Asset not found: " + id); }
+                        );
+                successCount++;
+            } catch (Exception e) {
+                logger.error("Failed to delete asset {}: {}", id, e.getMessage());
+                failedIds.add(id);
+            }
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("successCount", successCount);
+        result.put("failedIds", failedIds);
+        result.put("totalRequested", assetIds.size());
+        return result;
+    }
+    
+    /**
+     * 按状态批量删除资产
+     * @param status 资产状态（如 "registered", "fundraising" 等）
+     * @return 删除的数量
+     */
+    @Transactional
+    public int deleteByStatus(String status) {
+        List<Asset> assets = assetRepository.findByStatus(status);
+        int count = assets.size();
+        assetRepository.deleteAll(assets);
+        logger.info("Deleted {} assets with status: {}", count, status);
+        return count;
+    }
+    
+    /**
      * 根据 ID 获取资产
      */
     public AssetDto getAssetById(String id) {
@@ -276,11 +349,15 @@ public class AssetService {
         if (assetId != null && !assetId.isEmpty()) {
             long existingCount = assetImageRepository.countByAssetId(assetId);
             imageIndex = (int) existingCount;
+        } else {
+            // 如果 assetId 为 null（临时上传），使用 0 作为索引
+            // 后续创建资产后，需要更新 assetId
+            imageIndex = 0;
         }
         
         // 创建 AssetImage 实体
         AssetImage assetImage = new AssetImage();
-        assetImage.setAssetId(assetId);
+        assetImage.setAssetId(assetId); // 允许为 null
         assetImage.setImageIndex(imageIndex);
         assetImage.setImageData(imageData);
         assetImage.setContentType(contentType);
@@ -297,7 +374,48 @@ public class AssetService {
             return "/api/assets/" + assetId + "/images/" + imageIndex;
         } else {
             // 如果还没有 assetId，返回图片ID，后续需要关联资产
-            return assetImage.getId();
+            // 格式：image:{imageId}，前端可以识别这是临时图片
+            return "image:" + assetImage.getId();
+        }
+    }
+    
+    /**
+     * 将临时图片（assetId 为 null）关联到资产
+     * @param imageIds 图片ID列表（格式：image:{imageId} 或直接是 imageId）
+     * @param assetId 资产ID
+     */
+    @Transactional
+    public void associateImagesToAsset(List<String> imageIds, String assetId) {
+        if (imageIds == null || imageIds.isEmpty() || assetId == null || assetId.isEmpty()) {
+            return;
+        }
+        
+        int imageIndex = 0;
+        // 先统计该资产已有的图片数量，从该数量开始索引
+        long existingCount = assetImageRepository.countByAssetId(assetId);
+        imageIndex = (int) existingCount;
+        
+        for (String imageIdOrUrl : imageIds) {
+            try {
+                // 处理格式：image:{imageId} 或直接是 imageId
+                String imageId = imageIdOrUrl;
+                if (imageIdOrUrl.startsWith("image:")) {
+                    imageId = imageIdOrUrl.substring(6); // 去掉 "image:" 前缀
+                }
+                
+                // 查找图片
+                AssetImage image = assetImageRepository.findById(imageId).orElse(null);
+                if (image != null && (image.getAssetId() == null || image.getAssetId().isEmpty())) {
+                    // 更新 assetId 和 imageIndex
+                    image.setAssetId(assetId);
+                    image.setImageIndex(imageIndex);
+                    assetImageRepository.save(image);
+                    logger.info("Associated image {} to asset {} with index {}", imageId, assetId, imageIndex);
+                    imageIndex++;
+                }
+            } catch (Exception e) {
+                logger.error("Failed to associate image {} to asset {}: {}", imageIdOrUrl, assetId, e.getMessage());
+            }
         }
     }
     

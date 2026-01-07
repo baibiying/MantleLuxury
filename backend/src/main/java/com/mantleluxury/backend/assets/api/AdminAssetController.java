@@ -272,6 +272,57 @@ public class AdminAssetController {
 
         return ResponseEntity.ok(stats);
     }
+    
+    /**
+     * 批量删除资产（按ID列表）
+     * DELETE /api/admin/assets/batch
+     * Body: { "assetIds": ["id1", "id2", ...] }
+     */
+    @DeleteMapping("/batch")
+    public ResponseEntity<?> deleteBatch(
+            @RequestBody Map<String, List<String>> request,
+            @RequestHeader(value = "X-Wallet-Address", required = false) String walletAddress
+    ) {
+        ResponseEntity<?> permissionCheck = checkAdminPermission(walletAddress);
+        if (permissionCheck != null) {
+            return permissionCheck;
+        }
+        
+        List<String> assetIds = request.get("assetIds");
+        if (assetIds == null || assetIds.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "assetIds is required and cannot be empty"));
+        }
+        
+        logger.info("Admin {} requested batch delete of {} assets", walletAddress, assetIds.size());
+        Map<String, Object> result = assetService.deleteBatch(assetIds);
+        logger.info("Batch delete completed: {}", result);
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * 按状态批量删除资产
+     * DELETE /api/admin/assets/by-status/{status}
+     */
+    @DeleteMapping("/by-status/{status}")
+    public ResponseEntity<?> deleteByStatus(
+            @PathVariable String status,
+            @RequestHeader(value = "X-Wallet-Address", required = false) String walletAddress
+    ) {
+        ResponseEntity<?> permissionCheck = checkAdminPermission(walletAddress);
+        if (permissionCheck != null) {
+            return permissionCheck;
+        }
+        
+        logger.info("Admin {} requested delete all assets with status: {}", walletAddress, status);
+        int deletedCount = assetService.deleteByStatus(status);
+        
+        return ResponseEntity.ok(Map.of(
+                "status", status,
+                "deletedCount", deletedCount,
+                "message", "Deleted " + deletedCount + " assets with status: " + status
+        ));
+    }
 }
 
 
