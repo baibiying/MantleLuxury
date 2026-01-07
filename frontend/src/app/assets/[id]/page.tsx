@@ -111,6 +111,8 @@ export default function AssetDetailPage() {
   const [viewMode, setViewMode] = useState<"image" | "3d">("image"); // 图片或3D模型查看模式
   const [retryCount, setRetryCount] = useState(0); // 重试计数
   const [activeImageIndex, setActiveImageIndex] = useState(0); // 当前展示的图片索引
+  const [showInvestPanel, setShowInvestPanel] = useState(false); // 是否显示投资面板
+  const [agreedToRisks, setAgreedToRisks] = useState(false); // 是否同意风险提示
 
   useEffect(() => {
     async function fetchAsset() {
@@ -494,21 +496,28 @@ export default function AssetDetailPage() {
       subtitle={asset.description || ""}
       maxWidth="7xl"
     >
-      {/* 头部导航 */}
-      <div className="mb-4 flex items-center justify-start">
-          <button
-            onClick={() => router.back()}
-            className="text-sm text-slate-400 hover:text-slate-200 transition"
-          >
-            ← 返回
-          </button>
-        </div>
+      {/* 头部导航 + 右上角投资按钮 */}
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          onClick={() => router.back()}
+          className="text-sm text-slate-400 hover:text-slate-200 transition"
+        >
+          ← 返回
+        </button>
+        <button
+          onClick={() => {
+            setAgreedToRisks(false);
+            setShowInvestPanel(true);
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium text-white shadow-lg shadow-emerald-500/20 transition-colors"
+        >
+          <span>投资此资产</span>
+        </button>
+      </div>
 
-        {/* 资产详情 */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* 左侧：资产信息 */}
-          <div className="space-y-6">
-            <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
+      {/* 资产详情：占据整页宽度 */}
+      <div className="space-y-6">
+        <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
               {/* 背景渐变 */}
               <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
               <div className="relative z-10">
@@ -876,416 +885,276 @@ export default function AssetDetailPage() {
                   </p>
                 </div>
               )}
-              </div>
             </div>
           </div>
+      </div>
 
-          {/* 右侧：投资模块 */}
-          <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden">
-            {/* 背景渐变 */}
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
-            <div className="relative z-10">
-            <h2 className="text-xl font-semibold mb-4 gradient-text">投资此资产</h2>
-
-            {/* 检查资产是否符合投资条件 */}
-            {(() => {
-              const hasVerifiedAuth = asset.authentications && asset.authentications.some(
-                (auth) => auth.authenticationStatus === "verified"
-              );
-              const hasCustody = asset.custody != null;
-              const hasInsurance = asset.insurance != null && asset.insurance.isActive;
-              const canInvest = asset.status === "fundraising" && hasVerifiedAuth && hasCustody && hasInsurance;
-              
-              if (!canInvest) {
-                if (asset.status === "registered") {
-                  return (
-                    <div className="mb-4 p-4 bg-blue-950/40 border border-blue-500/40 rounded-lg">
-                      <p className="text-sm text-blue-200">
-                        此资产正在等待认证审核，认证通过后才能开始募集。
-                      </p>
-                    </div>
-                  );
-                }
-                if (!hasVerifiedAuth) {
-                  return (
-                    <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
-                      <p className="text-sm text-amber-200">
-                        此资产尚未通过真伪认证，无法投资。
-                      </p>
-                    </div>
-                  );
-                }
-                if (!hasCustody) {
-                  return (
-                    <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
-                      <p className="text-sm text-amber-200">
-                        此资产尚未进入托管，为保障资产安全，无法投资。
-                      </p>
-                    </div>
-                  );
-                }
-                if (!hasInsurance) {
-                  return (
-                    <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
-                      <p className="text-sm text-amber-200">
-                        此资产尚未购买保险，为保障投资者权益，无法投资。
-                      </p>
-                    </div>
-                  );
-                }
-                return (
-                  <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
-                    <p className="text-sm text-amber-200">
-                      此资产当前不在募集中，无法投资。
-                    </p>
-                  </div>
-                );
+      {/* 投资面板模态框 */}
+      {showInvestPanel && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 z-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowInvestPanel(false);
               }
-              return null;
-            })()}
-
-            {!isConnected && (
-              <div className="mb-4 p-4 bg-blue-950/40 border border-blue-500/40 rounded-lg">
-                <p className="text-sm text-blue-200">
-                  请先在页面右上角连接钱包以进行投资
-                </p>
-              </div>
-            )}
-
-            {chainId !== mantleSepoliaTestnet.id && isConnected && (
-              <div className="mb-4 p-4 bg-orange-950/40 border border-orange-500/40 rounded-lg">
-                <p className="text-sm text-orange-200 mb-3">
-                  请切换到 Mantle Sepolia 测试网
-                </p>
-                <button
-                  onClick={() => switchChainAsync({ chainId: mantleSepoliaTestnet.id })}
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-white text-sm"
-                >
-                  切换网络
-                </button>
-              </div>
-            )}
-
-            {(() => {
-              const hasVerifiedAuth = asset.authentications && asset.authentications.some(
-                (auth) => auth.authenticationStatus === "verified"
-              );
-              const hasCustody = asset.custody != null;
-              const hasInsurance = asset.insurance != null && asset.insurance.isActive;
-              const canInvest = asset.status === "fundraising" && hasVerifiedAuth && hasCustody && hasInsurance;
-              return canInvest && isConnected && chainId === mantleSepoliaTestnet.id;
-            })() && (
-              <div className="space-y-4">
-                {kycStatus !== "approved" && (
-                  <div className="p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg text-sm text-amber-200">
-                    为符合合规要求，你需要先完成{" "}
-                    <a
-                      href="/kyc"
-                      className="underline text-amber-100 hover:text-amber-50"
-                    >
-                      KYC / AML 审核
-                    </a>
-                    ，通过后才能进行投资。
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    投资金额 (MNT)
-                  </label>
-                  <input
-                    type="number"
-                    value={investAmount}
-                    onChange={(e) => setInvestAmount(e.target.value)}
-                    step="0.01"
-                    min={asset.pricePerShare}
-                    placeholder={`最少 ${asset.pricePerShare} MNT`}
-                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                  {investAmount && parseFloat(investAmount) > 0 && (
-                    <p className="text-xs text-slate-400 mt-1">
-                    将获得约 {calculateShares(investAmount)} 份代币（假设 1 份 = 1 代币）
-                    </p>
-                  )}
+            }}
+          >
+            <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden max-w-md w-full bg-slate-900">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold gradient-text">投资此资产</h2>
+                  <button
+                    onClick={() => setShowInvestPanel(false)}
+                    className="text-slate-400 hover:text-slate-100 text-xl leading-none"
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                {investError && (
-                  <div className="p-3 bg-red-950/40 border border-red-500/40 rounded-lg">
-                    <p className="text-xs text-red-200">{investError}</p>
-                  </div>
-                )}
+                {/* 检查资产是否符合投资条件 */}
+                {(() => {
+                  const hasVerifiedAuth =
+                    asset.authentications && asset.authentications.some(
+                      (auth) => auth.authenticationStatus === "verified"
+                    );
+                  const hasCustody = asset.custody != null;
+                  const hasInsurance =
+                    asset.insurance != null && asset.insurance.isActive;
+                  const canInvest =
+                    asset.status === "fundraising" &&
+                    hasVerifiedAuth &&
+                    hasCustody &&
+                    hasInsurance;
 
-                <button
-                  onClick={handleInvest}
-                  disabled={
-                    investing ||
-                    isWriting ||
-                    isConfirming ||
-                    !investAmount ||
-                    parseFloat(investAmount) <= 0 ||
-                    kycStatus !== "approved" ||
-                    kycLoading
+                  if (!canInvest) {
+                    if (asset.status === "registered") {
+                      return (
+                        <div className="mb-4 p-4 bg-blue-950/40 border border-blue-500/40 rounded-lg">
+                          <p className="text-sm text-blue-200">
+                            此资产正在等待认证审核，认证通过后才能开始募集。
+                          </p>
+                        </div>
+                      );
+                    }
+                    if (!hasVerifiedAuth) {
+                      return (
+                        <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
+                          <p className="text-sm text-amber-200">
+                            此资产尚未通过真伪认证，无法投资。
+                          </p>
+                        </div>
+                      );
+                    }
+                    if (!hasCustody) {
+                      return (
+                        <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
+                          <p className="text-sm text-amber-200">
+                            此资产尚未进入托管，为保障资产安全，无法投资。
+                          </p>
+                        </div>
+                      );
+                    }
+                    if (!hasInsurance) {
+                      return (
+                        <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
+                          <p className="text-sm text-amber-200">
+                            此资产尚未购买保险，为保障投资者权益，无法投资。
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg">
+                        <p className="text-sm text-amber-200">
+                          此资产当前不在募集中，无法投资。
+                        </p>
+                      </div>
+                    );
                   }
-                  className="group relative w-full px-6 py-4 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] disabled:hover:scale-100 shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70 disabled:shadow-none"
-                >
-                  <span className="relative z-10">
-                    {kycLoading
-                      ? "检查 KYC / AML 状态..."
-                      : kycStatus !== "approved"
-                      ? "请先完成 KYC / AML"
-                      : isWriting
-                      ? "发送交易..."
-                      : isConfirming
-                      ? "等待确认..."
-                      : investing
-                      ? "处理中..."
-                      : "确认投资"}
-                  </span>
-                  <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                </button>
+                  return null;
+                })()}
 
-                {hash && (
-                  <div className="mt-2 text-xs text-slate-400">
-                    交易哈希: {hash.slice(0, 10)}...{hash.slice(-8)}
-                    <a
-                      href={`https://explorer.sepolia.mantle.xyz/tx/${hash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-2 text-sky-400 hover:text-sky-300"
-                    >
-                      查看 →
-                    </a>
+                {!isConnected && (
+                  <div className="mb-4 p-4 bg-blue-950/40 border border-blue-500/40 rounded-lg">
+                    <p className="text-sm text-blue-200">
+                      请先在页面右上角连接钱包以进行投资
+                    </p>
                   </div>
                 )}
 
-                <div className="text-xs text-slate-500 space-y-1">
-                  <p>• 你需要发送 MNT 来购买代币份额</p>
-                  <p>• 代币将从资产提供者转移到你的钱包地址</p>
-                  <p>• 你支付的 MNT 会转给资产提供者</p>
-                  <p>• 交易需要支付 Gas 费（额外的 MNT）</p>
-                  <p>• 当前 UI 以 MNT 为单位展示金额（后续可接入预言机换算 USD）</p>
-                </div>
-              </div>
-            )}
-            </div>
-          </div>
-        </div>
-
-        {/* 风险提示与合规说明 */}
-        <div className="mt-8 card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-6 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-red-500/5"></div>
-          <div className="relative z-10">
-            <h2 className="text-2xl font-semibold mb-6 gradient-text">风险提示与合规说明</h2>
-            
-            <div className="space-y-6">
-              {/* 重要风险提示 */}
-              <div className="p-5 bg-red-950/20 border border-red-500/30 rounded-xl">
-                <div className="flex items-start gap-3 mb-3">
-                  <svg className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  <div>
-                    <h3 className="text-lg font-semibold text-red-300 mb-2">重要风险提示</h3>
-                    <p className="text-sm text-red-200/80 leading-relaxed">
-                      投资奢侈品 RWA 代币存在多种风险，包括但不限于市场风险、流动性风险、技术风险、监管风险等。
-                      请仔细阅读以下风险揭示，充分了解投资风险后再做出投资决策。
+                {chainId !== mantleSepoliaTestnet.id && isConnected && (
+                  <div className="mb-4 p-4 bg-orange-950/40 border border-orange-500/40 rounded-lg">
+                    <p className="text-sm text-orange-200 mb-3">
+                      请切换到 Mantle Sepolia 测试网
                     </p>
+                    <button
+                      onClick={() =>
+                        switchChainAsync({ chainId: mantleSepoliaTestnet.id })
+                      }
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-white text-sm"
+                    >
+                      切换网络
+                    </button>
                   </div>
-                </div>
-              </div>
+                )}
 
-              {/* 风险类型 */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-200">投资风险类型</h3>
-                
-                <div className="grid gap-4 md:grid-cols-2">
-                  {/* 市场风险 */}
-                  <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
-                    <h4 className="text-sm font-semibold text-amber-300 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                      </svg>
-                      市场风险
-                    </h4>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      奢侈品市场价格受多种因素影响，包括品牌价值、市场供需、经济环境等。
-                      资产价值可能出现波动，投资本金可能遭受损失。
-                    </p>
-                  </div>
+                {(() => {
+                  const hasVerifiedAuth =
+                    asset.authentications && asset.authentications.some(
+                      (auth) => auth.authenticationStatus === "verified"
+                    );
+                  const hasCustody = asset.custody != null;
+                  const hasInsurance =
+                    asset.insurance != null && asset.insurance.isActive;
+                  const canInvest =
+                    asset.status === "fundraising" &&
+                    hasVerifiedAuth &&
+                    hasCustody &&
+                    hasInsurance;
+                  return canInvest && isConnected && chainId === mantleSepoliaTestnet.id;
+                })() && (
+                  <div className="space-y-4">
+                    {kycStatus !== "approved" && (
+                      <div className="p-4 bg-amber-950/40 border border-amber-500/40 rounded-lg text-sm text-amber-200">
+                        为符合合规要求，你需要先完成{" "}
+                        <a
+                          href="/kyc"
+                          className="underline text-amber-100 hover:text-amber-50"
+                        >
+                          KYC / AML 审核
+                        </a>
+                        ，通过后才能进行投资。
+                      </div>
+                    )}
+                    <div className="space-y-1 text-sm text-slate-300">
+                      <div>
+                        <span className="text-slate-400">单份价格：</span>
+                        <span className="font-semibold text-sky-400">
+                          {asset.pricePerShare} MNT
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">剩余可购：</span>
+                        <span className="font-semibold text-emerald-400">
+                          {displayRemaining} 份
+                        </span>
+                      </div>
+                    </div>
 
-                  {/* 流动性风险 */}
-                  <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
-                    <h4 className="text-sm font-semibold text-amber-300 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                      </svg>
-                      流动性风险
-                    </h4>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      代币可能缺乏足够的市场流动性，导致难以在需要时以合理价格出售。
-                      资产退出可能需要较长时间，或需等待资产整体出售。
-                    </p>
-                  </div>
-
-                  {/* 技术风险 */}
-                  <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
-                    <h4 className="text-sm font-semibold text-amber-300 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                      </svg>
-                      技术风险
-                    </h4>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      区块链技术、智能合约、钱包安全等存在技术风险。
-                      可能面临黑客攻击、智能合约漏洞、私钥丢失等风险。
-                    </p>
-                  </div>
-
-                  {/* 监管风险 */}
-                  <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg">
-                    <h4 className="text-sm font-semibold text-amber-300 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                      监管风险
-                    </h4>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      各国对数字资产和 RWA 的监管政策可能发生变化。
-                      监管变化可能影响代币交易、持有或收益分配的合法性。
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 合规要求 */}
-              <div className="pt-4 border-t border-slate-800">
-                <h3 className="text-lg font-semibold text-slate-200 mb-4">合规要求</h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 bg-slate-800/30 rounded-lg">
-                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
                     <div>
-                      <h4 className="text-sm font-medium text-slate-200 mb-1">KYC / AML 要求</h4>
-                      <p className="text-xs text-slate-400">
-                        所有投资者必须完成 KYC（了解你的客户）和 AML（反洗钱）审核。
-                        未通过审核的用户无法购买或持有代币。
-                      </p>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        投资金额 (MNT)
+                      </label>
+                      <input
+                        type="number"
+                        value={investAmount}
+                        onChange={(e) => setInvestAmount(e.target.value)}
+                        step="0.01"
+                        min={asset.pricePerShare}
+                        placeholder={`最少 ${asset.pricePerShare} MNT`}
+                        className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                      {investAmount && parseFloat(investAmount) > 0 && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          将获得约 {calculateShares(investAmount)} 份代币（假设 1 份 = 1 代币）
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex items-start gap-2">
+                      <input
+                        id="agree-risks"
+                        type="checkbox"
+                        checked={agreedToRisks}
+                        onChange={(e) => setAgreedToRisks(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500"
+                      />
+                      <label
+                        htmlFor="agree-risks"
+                        className="text-xs text-slate-300 leading-relaxed"
+                      >
+                        我已仔细阅读并理解风险提示与合规说明（包括使用条款、风险揭示书、投资者适当性说明），
+                        同意自行承担相应投资风险。
+                      </label>
+                    </div>
+
+                    {investError && (
+                      <div className="p-3 bg-red-950/40 border border-red-500/40 rounded-lg">
+                        <p className="text-xs text-red-200">{investError}</p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleInvest}
+                      disabled={
+                        investing ||
+                        isWriting ||
+                        isConfirming ||
+                        !investAmount ||
+                        parseFloat(investAmount) <= 0 ||
+                        kycStatus !== "approved" ||
+                        kycLoading ||
+                        !agreedToRisks
+                      }
+                      className="group relative w-full px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed rounded-xl text-white font-semibold transition-all duration-300"
+                    >
+                      <span className="relative z-10">
+                        {kycLoading
+                          ? "检查 KYC / AML 状态..."
+                          : kycStatus !== "approved"
+                          ? "请先完成 KYC / AML"
+                          : isWriting
+                          ? "发送交易..."
+                          : isConfirming
+                          ? "等待确认..."
+                          : investing
+                          ? "处理中..."
+                          : "确认投资"}
+                      </span>
+                      <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                    </button>
+
+                    {hash && (
+                      <div className="mt-2 text-xs text-slate-400">
+                        交易哈希: {hash.slice(0, 10)}...{hash.slice(-8)}
+                        <a
+                          href={`https://explorer.sepolia.mantle.xyz/tx/${hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 text-sky-400 hover:text-sky-300"
+                        >
+                          查看 →
+                        </a>
+                      </div>
+                    )}
+
+                    <div className="text-xs text-slate-500 space-y-2 mt-3">
+                      <p className="font-medium text-slate-300">基础说明</p>
+                      <p>• 你需要发送 MNT 来购买代币份额，代币将从资产提供者转移到你的钱包地址，你支付的 MNT 会转给资产提供者。</p>
+                      <p>• 交易需要支付 Gas 费（额外的 MNT），当前界面以 MNT 为单位展示金额（后续可接入预言机换算 USD）。</p>
+
+                      <p className="font-medium text-slate-300 pt-1">主要风险提示</p>
+                      <p>• 市场风险：奢侈品及代币价格可能随市场环境、供需关系、宏观经济等因素波动，存在本金亏损的可能。</p>
+                      <p>• 流动性风险：代币可能在一段时间内缺乏买方，无法在你期望的时间和价格卖出或退出。</p>
+                      <p>• 技术风险：区块链、智能合约、钱包等存在被攻击、漏洞或操作失误（如私钥丢失）等技术风险。</p>
+                      <p>• 监管风险：各国/地区对数字资产和 RWA 的监管政策可能变化，极端情况下可能影响代币交易、持有或收益分配。</p>
+
+                      <p className="font-medium text-slate-300 pt-1">合规与适当性</p>
+                      <p>• 所有投资者必须完成 KYC / AML 审核，未通过审核的用户无法购买或持有代币。</p>
+                      <p>• 本产品适合具备一定风险承受能力和投资经验的投资者，请根据自身财务状况和风险偏好谨慎决策，不要使用生活必需资金或杠杆资金进行投资。</p>
+                      <p>• 你需自行承担投资收益的税务申报责任，平台仅在可能的情况下提供交易记录等辅助工具。</p>
+
+                      <p className="font-medium text-slate-300 pt-1">免责声明</p>
+                      <p>• 平台不对任何投资损失承担责任，平台提供的资产信息、估值报告等仅供参考，不构成投资建议，过往表现不代表未来收益。</p>
+                      <p>• 点击“确认投资”并完成交易，即表示你已阅读并理解上述风险与合规说明，并同意自行承担相应风险。</p>
                     </div>
                   </div>
-
-                  <div className="flex items-start gap-3 p-3 bg-slate-800/30 rounded-lg">
-                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-200 mb-1">投资者适当性</h4>
-                      <p className="text-xs text-slate-400">
-                        本产品适合具有一定风险承受能力和投资经验的投资者。
-                        请根据自身情况评估是否适合投资。
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 bg-slate-800/30 rounded-lg">
-                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-200 mb-1">税务责任</h4>
-                      <p className="text-xs text-slate-400">
-                        投资者需自行承担投资收益的税务申报责任。
-                        平台提供交易记录导出功能，方便用户完成税务申报。
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 免责声明 */}
-              <div className="pt-4 border-t border-slate-800">
-                <h3 className="text-lg font-semibold text-slate-200 mb-3">免责声明</h3>
-                <div className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg">
-                  <p className="text-xs text-slate-400 leading-relaxed space-y-2">
-                    <span className="block">
-                      1. 本平台不对任何投资损失承担责任。投资决策由投资者自行做出，投资风险由投资者自行承担。
-                    </span>
-                    <span className="block">
-                      2. 平台提供的资产信息、估值报告等仅供参考，不构成投资建议。
-                    </span>
-                    <span className="block">
-                      3. 代币价格可能因市场因素波动，过往表现不代表未来收益。
-                    </span>
-                    <span className="block">
-                      4. 投资者应充分了解区块链技术和数字资产的特点，谨慎投资。
-                    </span>
-                    <span className="block">
-                      5. 如遇监管政策变化，平台可能暂停或终止相关服务。
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              {/* 法律文件链接 */}
-              <div className="pt-4 border-t border-slate-800">
-                <h3 className="text-lg font-semibold text-slate-200 mb-3">相关法律文件</h3>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <Link
-                    href="/legal/terms-of-use"
-                    className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg hover:border-slate-600/50 transition-colors group"
-                  >
-                    <div className="text-sm font-medium text-slate-200 mb-1 group-hover:text-sky-300 transition-colors">
-                      使用条款
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      平台服务使用条款和条件
-                    </div>
-                  </Link>
-                  <Link
-                    href="/legal/risk-disclosure"
-                    className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg hover:border-slate-600/50 transition-colors group"
-                  >
-                    <div className="text-sm font-medium text-slate-200 mb-1 group-hover:text-sky-300 transition-colors">
-                      风险揭示书
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      完整的投资风险提示和免责声明
-                    </div>
-                  </Link>
-                  <Link
-                    href="/legal/investor-suitability"
-                    className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg hover:border-slate-600/50 transition-colors group"
-                  >
-                    <div className="text-sm font-medium text-slate-200 mb-1 group-hover:text-sky-300 transition-colors">
-                      投资者适当性说明
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      适合性评估和投资建议
-                    </div>
-                  </Link>
-                </div>
-              </div>
-
-              {/* 确认提示 */}
-              <div className="pt-4 border-t border-slate-800">
-                <div className="p-4 bg-blue-950/20 border border-blue-500/30 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <h4 className="text-sm font-medium text-blue-300 mb-1">投资确认</h4>
-                      <p className="text-xs text-blue-200/80">
-                        点击"确认投资"即表示您已充分理解并接受上述所有风险提示和合规要求，
-                        同意承担投资风险，并确认您符合投资者适当性要求。
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        )}
     </PageContainer>
   );
 }
-
