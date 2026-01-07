@@ -403,6 +403,133 @@ export default function AssetDetailPage() {
     ? formatEther(BigInt(onchainAvailable))
     : asset?.remainingSupply ?? "0";
 
+  // 计算 hero image URL（必须在所有 hooks 之前定义）
+  const getDefaultImage = () => {
+    if (!asset) {
+      return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";
+    }
+    if (asset.assetType === "watch") {
+      return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80";
+    }
+    if (asset.assetType === "jewelry") {
+      return "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=1200&q=80";
+    }
+    return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";
+  };
+
+  // 使用 useMemo 稳定 imageList 的引用，避免 useEffect 无限循环
+  // 必须在所有早期返回之前调用
+  const imageList = useMemo(() => {
+    if (!asset) return [];
+    
+    // 如果 imageUrls 存在，先解析它（可能是旧的 /uploads/ 路径或新的 API 路径）
+    const urlsFromJson: string[] = [];
+    if (asset.imageUrls) {
+      try {
+        const arr = JSON.parse(asset.imageUrls);
+        if (Array.isArray(arr) && arr.length > 0) {
+          arr.forEach((url: string, index: number) => {
+            if (!url) return;
+            // 如果是旧的 /uploads/ 路径，直接使用文件系统路径（兼容旧图片）
+            if (url.startsWith("/uploads/")) {
+              urlsFromJson.push(`${API_BASE}${url}`);
+            } else if (url.startsWith("/api/assets/")) {
+              // 如果已经是新的 API 路径，直接使用
+              urlsFromJson.push(url.startsWith("http") ? url : `${API_BASE}${url}`);
+            } else if (url.startsWith("image:")) {
+              // 如果是临时图片格式（这种情况应该不会出现，因为后端已经更新了）
+              // 但为了兼容，尝试从数据库获取
+              if (asset.id) {
+                urlsFromJson.push(`${API_BASE}/api/assets/${asset.id}/images/${index}`);
+              }
+            } else {
+              // 外部URL，直接使用
+              urlsFromJson.push(url);
+            }
+          });
+        }
+      } catch {
+        // ignore
+      }
+    }
+    
+    // 如果从 JSON 解析到了 URL，使用它们
+    if (urlsFromJson.length > 0) {
+      return urlsFromJson;
+    }
+    
+    // 否则，使用从数据库获取的图片索引列表
+    if (imageIndices.length > 0 && asset.id) {
+      return imageIndices.map(index => `${API_BASE}/api/assets/${asset.id}/images/${index}`);
+    }
+    
+    // 如果都没有，尝试索引 0（兼容旧数据）
+    if (asset.id) {
+      return [`${API_BASE}/api/assets/${asset.id}/images/0`];
+    }
+    
+    return [];
+    // 使用 imageIndices 的长度和字符串表示来稳定依赖项
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asset?.id, asset?.imageUrls, asset?.assetType, imageIndices.length, imageIndices.join(',')]);
+  
+  // 使用 useMemo 稳定 heroImage
+  const heroImage = useMemo(() => {
+    return imageList[activeImageIndex] ?? getDefaultImage();
+  }, [imageList, activeImageIndex]);
+
+  // 同步 ref 和 state（必须在所有早期返回之前）
+  useEffect(() => {
+    imageLoadingRef.current = imageLoading;
+  }, [imageLoading]);
+  
+  useEffect(() => {
+    imageErrorsRef.current = imageErrors;
+  }, [imageErrors]);
+
+  // 预加载图片：当图片列表或当前索引变化时，预加载当前和相邻图片
+  useEffect(() => {
+    if (!imageList || imageList.length === 0) return;
+    
+    // 预加载当前图片
+    const currentImageUrl = imageList[activeImageIndex];
+    if (currentImageUrl) {
+      const img = new Image();
+      img.onload = () => {
+        setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
+      };
+      img.onerror = () => {
+        setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
+        setImageErrors(prev => ({ ...prev, [activeImageIndex]: true }));
+      };
+      // 只有在图片还没有加载过且没有错误时才设置加载状态
+      const currentLoading = imageLoadingRef.current[activeImageIndex];
+      const currentError = imageErrorsRef.current[activeImageIndex];
+      if (!currentLoading && !currentError) {
+        setImageLoading(prev => ({ ...prev, [activeImageIndex]: true }));
+      }
+      img.src = currentImageUrl;
+    }
+    
+    // 预加载下一张图片
+    if (activeImageIndex < imageList.length - 1) {
+      const nextImageUrl = imageList[activeImageIndex + 1];
+      if (nextImageUrl) {
+        const img = new Image();
+        img.src = nextImageUrl;
+      }
+    }
+    
+    // 预加载上一张图片
+    if (activeImageIndex > 0) {
+      const prevImageUrl = imageList[activeImageIndex - 1];
+      if (prevImageUrl) {
+        const img = new Image();
+        img.src = prevImageUrl;
+      }
+    }
+  }, [activeImageIndex, imageList]);
+
   // 在客户端挂载之前，显示加载状态
   if (!mounted || loading) {
     return (
@@ -474,135 +601,10 @@ export default function AssetDetailPage() {
     );
   }
 
-  // 确保 asset 存在后再处理
+  // 确保 asset 存在后再处理（在早期返回之前，所有 hooks 必须已经调用）
   if (!asset) {
     return null;
   }
-
-  // 计算 hero image URL
-  const getDefaultImage = () => {
-    if (asset.assetType === "watch") {
-      return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80";
-    }
-    if (asset.assetType === "jewelry") {
-      return "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=1200&q=80";
-    }
-    return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";
-  };
-
-  // 使用 useMemo 稳定 imageList 的引用，避免 useEffect 无限循环
-  // 将逻辑内联到 useMemo 中，确保依赖项正确
-  // 使用 imageIndices 的长度和内容来稳定依赖项
-  const imageList = useMemo(() => {
-    if (!asset) return [];
-    
-    // 如果 imageUrls 存在，先解析它（可能是旧的 /uploads/ 路径或新的 API 路径）
-    const urlsFromJson: string[] = [];
-    if (asset.imageUrls) {
-      try {
-        const arr = JSON.parse(asset.imageUrls);
-        if (Array.isArray(arr) && arr.length > 0) {
-          arr.forEach((url: string, index: number) => {
-            if (!url) return;
-            // 如果是旧的 /uploads/ 路径，直接使用文件系统路径（兼容旧图片）
-            if (url.startsWith("/uploads/")) {
-              urlsFromJson.push(`${API_BASE}${url}`);
-            } else if (url.startsWith("/api/assets/")) {
-              // 如果已经是新的 API 路径，直接使用
-              urlsFromJson.push(url.startsWith("http") ? url : `${API_BASE}${url}`);
-            } else if (url.startsWith("image:")) {
-              // 如果是临时图片格式（这种情况应该不会出现，因为后端已经更新了）
-              // 但为了兼容，尝试从数据库获取
-              if (asset.id) {
-                urlsFromJson.push(`${API_BASE}/api/assets/${asset.id}/images/${index}`);
-              }
-            } else {
-              // 外部URL，直接使用
-              urlsFromJson.push(url);
-            }
-          });
-        }
-      } catch {
-        // ignore
-      }
-    }
-    
-    // 如果从 JSON 解析到了 URL，使用它们
-    if (urlsFromJson.length > 0) {
-      return urlsFromJson;
-    }
-    
-    // 否则，使用从数据库获取的图片索引列表
-    if (imageIndices.length > 0) {
-      return imageIndices.map(index => `${API_BASE}/api/assets/${asset.id}/images/${index}`);
-    }
-    
-    // 如果都没有，尝试索引 0（兼容旧数据）
-    if (asset.id) {
-      return [`${API_BASE}/api/assets/${asset.id}/images/0`];
-    }
-    
-    return [];
-    // 使用 imageIndices 的长度和字符串表示来稳定依赖项
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asset?.id, asset?.imageUrls, asset?.assetType, imageIndices.length, imageIndices.join(',')]);
-  
-  // 使用 useMemo 稳定 heroImage
-  const heroImage = useMemo(() => {
-    return imageList[activeImageIndex] ?? getDefaultImage();
-  }, [imageList, activeImageIndex]);
-
-  // 同步 ref 和 state
-  useEffect(() => {
-    imageLoadingRef.current = imageLoading;
-  }, [imageLoading]);
-  
-  useEffect(() => {
-    imageErrorsRef.current = imageErrors;
-  }, [imageErrors]);
-
-  // 预加载图片：当图片列表或当前索引变化时，预加载当前和相邻图片
-  useEffect(() => {
-    if (!imageList || imageList.length === 0) return;
-    
-    // 预加载当前图片
-    const currentImageUrl = imageList[activeImageIndex];
-    if (currentImageUrl) {
-      const img = new Image();
-      img.onload = () => {
-        setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
-      };
-      img.onerror = () => {
-        setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
-        setImageErrors(prev => ({ ...prev, [activeImageIndex]: true }));
-      };
-      // 只有在图片还没有加载过且没有错误时才设置加载状态
-      const currentLoading = imageLoadingRef.current[activeImageIndex];
-      const currentError = imageErrorsRef.current[activeImageIndex];
-      if (!currentLoading && !currentError) {
-        setImageLoading(prev => ({ ...prev, [activeImageIndex]: true }));
-      }
-      img.src = currentImageUrl;
-    }
-    
-    // 预加载下一张图片
-    if (activeImageIndex < imageList.length - 1) {
-      const nextImageUrl = imageList[activeImageIndex + 1];
-      if (nextImageUrl) {
-        const img = new Image();
-        img.src = nextImageUrl;
-      }
-    }
-    
-    // 预加载上一张图片
-    if (activeImageIndex > 0) {
-      const prevImageUrl = imageList[activeImageIndex - 1];
-      if (prevImageUrl) {
-        const img = new Image();
-        img.src = prevImageUrl;
-      }
-    }
-  }, [activeImageIndex, imageList]);
 
   return (
     <PageContainer
