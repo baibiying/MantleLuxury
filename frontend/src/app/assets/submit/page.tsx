@@ -39,7 +39,7 @@ export default function AssetSubmitPage() {
   const [kycLoading, setKycLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploading3dModel, setUploading3dModel] = useState(false);
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<Map<number, string>>(new Map()); // 本地预览 URL（blob URL）
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]); // 本地预览 URL（blob URL）数组，与 imageBackendUrls 一一对应
   const [imageBackendUrls, setImageBackendUrls] = useState<string[]>([]); // 后端返回的 URL（用于提交）
 
   const [formData, setFormData] = useState<FormData>({
@@ -465,7 +465,7 @@ export default function AssetSubmitPage() {
                           imageUrl = backendUrl.startsWith('http') ? backendUrl : `${API_BASE}${backendUrl}`;
                         } else if (backendUrl.startsWith('image:')) {
                           // 如果是临时图片格式，无法预览，显示占位符
-                          imageUrl = null;
+                          imageUrl = undefined;
                         } else {
                           imageUrl = backendUrl;
                         }
