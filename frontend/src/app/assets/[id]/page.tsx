@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { mantleSepoliaTestnet, mantleSepoliaMetaMaskConfig } from "@/lib/web3/config";
@@ -561,13 +562,22 @@ export default function AssetDetailPage() {
                 ) : (
                   <div className="flex flex-col">
                     <div
-                      className="h-64 w-full bg-cover bg-center cursor-pointer hover:opacity-90 transition-opacity"
-                      style={{ backgroundImage: `url(${heroImage})` }}
+                      className="relative h-64 w-full cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => {
                         setModalImageIndex(activeImageIndex);
                         setShowImageModal(true);
                       }}
-                    />
+                    >
+                      <Image
+                        src={heroImage}
+                        alt={`${asset.brand} ${asset.model}`}
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 1024px) 640px, 100vw"
+                        // 开发环境下不走优化管道，避免本地调试时的域名限制
+                        unoptimized={process.env.NODE_ENV !== "production"}
+                      />
+                    </div>
                     {imageList.length > 1 && (
                       <div className="flex items-center gap-2 px-3 py-3 border-t border-slate-800 overflow-x-auto bg-slate-900/80">
                         {imageList.map((url, idx) => (

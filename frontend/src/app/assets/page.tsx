@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAccount, useChainId, usePublicClient } from "wagmi";
 import { formatEther } from "viem";
 import { mantleSepoliaTestnet } from "@/lib/web3/config";
@@ -387,11 +388,18 @@ export default function AssetsPage() {
               <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
               <div className="relative z-10">
-        <div className="overflow-hidden rounded-xl mb-3 border border-slate-800/60 shadow-inner bg-slate-900">
-                  <div
-                    className="h-40 w-full bg-cover bg-center transform transition duration-500 group-hover:scale-105"
-                    style={{ backgroundImage: `url(${imageFor(asset)})` }}
-                  />
+                <div className="overflow-hidden rounded-xl mb-3 border border-slate-800/60 shadow-inner bg-slate-900">
+                  <div className="relative h-40 w-full">
+                    <Image
+                      src={imageFor(asset)}
+                      alt={`${asset.brand} ${asset.model}`}
+                      fill
+                      className="object-cover transform transition duration-500 group-hover:scale-105"
+                      sizes="(min-width: 1024px) 50vw, 100vw"
+                      // 开发环境下不走优化管道，避免本地调试时各种域名限制
+                      unoptimized={process.env.NODE_ENV !== "production"}
+                    />
+                  </div>
                 </div>
                 <div className="flex items-baseline justify-between gap-4 mb-3">
                   <div className="flex-1">
