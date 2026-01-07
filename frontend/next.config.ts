@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 // 为了让 Vercel 对后端图片做优化，需要在这里声明远程图片域名
-const remotePatterns: NextConfig["images"]["remotePatterns"] = [];
+// 这里不用从 NextConfig 上取类型，直接写成一个简单的结构即可，避免可选属性的类型报错
+const remotePatterns: { protocol: "http" | "https"; hostname: string; pathname: string }[] = [];
 
 // 1. 允许从后端加载图片（/uploads/**）
 if (process.env.NEXT_PUBLIC_API_BASE_URL) {
