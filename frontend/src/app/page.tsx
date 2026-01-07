@@ -261,7 +261,13 @@ export default function Home() {
                                   <div>
                                     <div className="text-sm text-slate-400 mb-1">剩余份额</div>
                                     <div className="text-2xl font-bold text-emerald-400">
-                                      {parseFloat(asset.remainingSupply).toFixed(0)} 份
+                                      {(() => {
+                                        const num = parseFloat(asset.remainingSupply ?? "0");
+                                        if (isNaN(num) || num <= 0) {
+                                          return "暂不可购";
+                                        }
+                                        return `${num.toFixed(0)} 份`;
+                                      })()}
                                     </div>
                                   </div>
                                   {asset.totalYield && parseFloat(asset.totalYield) > 0 && (
