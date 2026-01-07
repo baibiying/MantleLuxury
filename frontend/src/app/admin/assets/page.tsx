@@ -1606,7 +1606,7 @@ export default function AdminAssetsPage() {
                 }}
               >
                 <div 
-                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[calc(100vh-160px)] overflow-y-auto p-6"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-4">
