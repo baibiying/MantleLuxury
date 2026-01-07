@@ -497,7 +497,7 @@ export default function AssetSubmitPage() {
                             setImageBackendUrls(newBackendUrls);
                             
                             // 更新预览映射（重新索引）
-                            const newPreviewMap = new Map<string, string>();
+                            const newPreviewMap = new Map<number, string>();
                             newBackendUrls.forEach((_, i) => {
                               const oldIndex = i < idx ? i : i + 1;
                               const oldPreview = imagePreviewUrls.get(oldIndex);
