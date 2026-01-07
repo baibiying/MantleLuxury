@@ -8,7 +8,9 @@ import com.mantleluxury.backend.assets.domain.Custody;
 import com.mantleluxury.backend.assets.domain.Insurance;
 import com.mantleluxury.backend.assets.domain.YieldDistribution;
 import com.mantleluxury.backend.assets.repository.AssetRepository;
+import com.mantleluxury.backend.assets.repository.AssetImageRepository;
 import com.mantleluxury.backend.assets.repository.YieldDistributionRepository;
+import com.mantleluxury.backend.assets.domain.AssetImage;
 import com.mantleluxury.backend.assets.service.AssetAuthenticationService;
 import com.mantleluxury.backend.assets.service.CustodyService;
 import com.mantleluxury.backend.assets.service.InsuranceService;
@@ -33,6 +35,7 @@ public class AssetService {
     private static final Logger logger = LoggerFactory.getLogger(AssetService.class);
     
     private final AssetRepository assetRepository;
+    private final AssetImageRepository assetImageRepository;
     private final TokenDeploymentService tokenDeploymentService;
     private final YieldDistributionRepository yieldDistributionRepository;
     private final AssetAuthenticationService authenticationService;
@@ -43,6 +46,7 @@ public class AssetService {
     
     public AssetService(
             AssetRepository assetRepository,
+            AssetImageRepository assetImageRepository,
             TokenDeploymentService tokenDeploymentService,
             YieldDistributionRepository yieldDistributionRepository,
             AssetAuthenticationService authenticationService,
@@ -52,6 +56,7 @@ public class AssetService {
             TokenQueryService tokenQueryService
     ) {
         this.assetRepository = assetRepository;
+        this.assetImageRepository = assetImageRepository;
         this.tokenDeploymentService = tokenDeploymentService;
         this.yieldDistributionRepository = yieldDistributionRepository;
         this.authenticationService = authenticationService;
@@ -249,41 +254,60 @@ public class AssetService {
     }
 
     /**
-     * 保存上传的图片到本地 uploads 目录，返回相对访问路径
+     * 保存上传的图片到数据库，返回图片ID（用于后续通过API访问）
+     * @param file 上传的文件
+     * @param assetId 资产ID（如果为null，则只保存图片，不关联资产）
+     * @return 图片ID，前端通过 /api/assets/{assetId}/images/{index} 访问
      */
-    public String saveImage(org.springframework.web.multipart.MultipartFile file) throws Exception {
+    public String saveImage(org.springframework.web.multipart.MultipartFile file, String assetId) throws Exception {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File is empty or null");
         }
         
-        // 使用绝对路径，确保目录创建在项目根目录下
-        java.nio.file.Path uploadsDir = java.nio.file.Paths.get("uploads").toAbsolutePath();
-        
-        // 创建目录（如果不存在）
-        if (!java.nio.file.Files.exists(uploadsDir)) {
-            java.nio.file.Files.createDirectories(uploadsDir);
-            logger.info("Created uploads directory: {}", uploadsDir);
+        // 读取文件内容
+        byte[] imageData = file.getBytes();
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            contentType = "image/jpeg"; // 默认类型
         }
         
-        // 生成安全的文件名
-        String original = file.getOriginalFilename();
-        String safeName = original != null 
-                ? original.replaceAll("[^a-zA-Z0-9._-]", "_") 
-                : "image";
-        String filename = java.util.UUID.randomUUID().toString() + "_" + safeName;
-        java.nio.file.Path dest = uploadsDir.resolve(filename);
-        
-        // 保存文件
-        try {
-            file.transferTo(dest.toFile());
-            logger.info("Image saved successfully: {}", dest);
-        } catch (Exception e) {
-            logger.error("Failed to save image to: {}", dest, e);
-            throw new Exception("Failed to save image: " + e.getMessage(), e);
+        // 确定图片索引（如果是新资产，从0开始；如果是已有资产，找到下一个索引）
+        int imageIndex = 0;
+        if (assetId != null && !assetId.isEmpty()) {
+            long existingCount = assetImageRepository.countByAssetId(assetId);
+            imageIndex = (int) existingCount;
         }
         
-        // 返回相对路径，前端通过 /uploads/** 访问
-        return "/uploads/" + filename;
+        // 创建 AssetImage 实体
+        AssetImage assetImage = new AssetImage();
+        assetImage.setAssetId(assetId);
+        assetImage.setImageIndex(imageIndex);
+        assetImage.setImageData(imageData);
+        assetImage.setContentType(contentType);
+        assetImage.setOriginalFilename(file.getOriginalFilename());
+        assetImage.setFileSize(file.getSize());
+        
+        // 保存到数据库
+        assetImageRepository.save(assetImage);
+        logger.info("Image saved to database. AssetId: {}, ImageIndex: {}, Size: {} bytes", 
+                assetId, imageIndex, imageData.length);
+        
+        // 返回图片访问路径（格式：/api/assets/{assetId}/images/{index}）
+        if (assetId != null && !assetId.isEmpty()) {
+            return "/api/assets/" + assetId + "/images/" + imageIndex;
+        } else {
+            // 如果还没有 assetId，返回图片ID，后续需要关联资产
+            return assetImage.getId();
+        }
+    }
+    
+    /**
+     * 保存上传的图片到数据库（兼容旧接口，不关联资产）
+     * @deprecated 使用 saveImage(file, assetId) 替代
+     */
+    @Deprecated
+    public String saveImage(org.springframework.web.multipart.MultipartFile file) throws Exception {
+        return saveImage(file, null);
     }
     
     /**

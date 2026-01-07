@@ -474,20 +474,40 @@ export default function AssetDetailPage() {
   };
 
   const getImageList = () => {
-    if (!asset.imageUrls) return [] as string[];
-    try {
-      const arr = JSON.parse(asset.imageUrls);
-      if (!Array.isArray(arr)) return [] as string[];
-      return arr
-        .map((url: string) => {
-          if (!url) return null;
-          // 如果是相对路径，拼接后端地址
-          return url.startsWith("/uploads/") ? `${API_BASE}${url}` : url;
-        })
-        .filter((u): u is string => !!u);
-    } catch {
-      return [] as string[];
+    // 如果 imageUrls 存在，先解析它（可能是旧的 /uploads/ 路径或新的 API 路径）
+    const urlsFromJson: string[] = [];
+    if (asset.imageUrls) {
+      try {
+        const arr = JSON.parse(asset.imageUrls);
+        if (Array.isArray(arr)) {
+          arr.forEach((url: string, index: number) => {
+            if (!url) return;
+            // 如果是旧的 /uploads/ 路径，直接使用文件系统路径（兼容旧图片）
+            if (url.startsWith("/uploads/")) {
+              urlsFromJson.push(`${API_BASE}${url}`);
+            } else if (url.startsWith("/api/assets/")) {
+              // 如果已经是新的 API 路径，直接使用
+              urlsFromJson.push(url.startsWith("http") ? url : `${API_BASE}${url}`);
+            } else {
+              // 外部URL，直接使用
+              urlsFromJson.push(url);
+            }
+          });
+        }
+      } catch {
+        // ignore
+      }
     }
+    
+    // 如果从 JSON 解析到了 URL，使用它们
+    if (urlsFromJson.length > 0) {
+      return urlsFromJson;
+    }
+    
+    // 否则，尝试从数据库获取（假设至少有索引0的图片）
+    // 注意：这里我们不知道有多少张图片，所以先尝试索引0
+    // 更好的方案是前端调用 /api/assets/{id}/images 获取索引列表，但为了简化，先这样
+    return [`${API_BASE}/api/assets/${asset.id}/images/0`];
   };
 
   const imageList = getImageList();

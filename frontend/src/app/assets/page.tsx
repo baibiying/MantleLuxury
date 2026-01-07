@@ -227,13 +227,28 @@ export default function AssetsPage() {
         const arr = JSON.parse(asset.imageUrls);
         if (Array.isArray(arr) && arr.length > 0) {
           const url = arr[0];
-          // 如果是相对路径，拼接后端地址
-          return url.startsWith('/uploads/') ? `${API_BASE}${url}` : url;
+          // 如果是旧的 /uploads/ 路径，优先尝试数据库 API，失败则回退到文件系统
+          if (url.startsWith('/uploads/')) {
+            // 先尝试从数据库获取（索引0），如果数据库没有，回退到文件系统路径
+            // 注意：这里我们直接使用文件系统路径，因为旧的图片可能还在文件系统里
+            return `${API_BASE}${url}`;
+          }
+          // 如果已经是新的 API 路径，直接使用
+          if (url.startsWith('/api/assets/')) {
+            return url.startsWith('http') ? url : `${API_BASE}${url}`;
+          }
+          // 其他情况（如外部URL），直接返回
+          return url;
         }
       } catch {
         // ignore
       }
     }
+    // 如果没有图片URL，尝试从数据库获取（索引0）
+    if (asset.id) {
+      return `${API_BASE}/api/assets/${asset.id}/images/0`;
+    }
+    // 最后回退到默认图片
     if (asset.assetType === "watch") {
       return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
     }

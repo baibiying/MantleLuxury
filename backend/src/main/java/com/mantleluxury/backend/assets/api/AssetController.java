@@ -112,12 +112,16 @@ public class AssetController {
         }
     }
 
-    // 上传资产图片（简单本地存储）
+    // 上传资产图片（存储到数据库）
     @PostMapping("/upload-image")
-    public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
-        logger.info("Received image upload request. File name: {}, Size: {} bytes", 
+    public ResponseEntity<?> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "assetId", required = false) String assetId
+    ) {
+        logger.info("Received image upload request. File name: {}, Size: {} bytes, AssetId: {}", 
                 file != null ? file.getOriginalFilename() : "null",
-                file != null ? file.getSize() : 0);
+                file != null ? file.getSize() : 0,
+                assetId);
         
         try {
             if (file == null || file.isEmpty()) {
@@ -126,7 +130,7 @@ public class AssetController {
                         .body(Map.of("error", "File is empty or null"));
             }
             
-            String url = assetService.saveImage(file);
+            String url = assetService.saveImage(file, assetId);
             logger.info("Image uploaded successfully. URL: {}", url);
             return ResponseEntity.ok(new AssetImageUploadResponse(url));
         } catch (IllegalArgumentException e) {
