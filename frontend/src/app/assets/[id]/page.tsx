@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { mantleSepoliaTestnet, mantleSepoliaMetaMaskConfig } from "@/lib/web3/config";
@@ -117,6 +116,9 @@ export default function AssetDetailPage() {
   const [showImageModal, setShowImageModal] = useState(false); // 是否显示图片查看模态框
   const [modalImageIndex, setModalImageIndex] = useState(0); // 模态框中显示的图片索引
   const [imageIndices, setImageIndices] = useState<number[]>([]); // 从数据库获取的图片索引列表
+  const [imageLoading, setImageLoading] = useState<{ [key: number]: boolean }>({}); // 图片加载状态
+  const [imageErrors, setImageErrors] = useState<{ [key: number]: boolean }>({}); // 图片加载错误状态
+  const [modalImageLoading, setModalImageLoading] = useState(false); // 模态框图片加载状态
 
   useEffect(() => {
     async function fetchAsset() {
@@ -538,6 +540,41 @@ export default function AssetDetailPage() {
   const imageList = getImageList();
   const heroImage = imageList[activeImageIndex] ?? getDefaultImage();
 
+  // 预加载图片：当图片列表或当前索引变化时，预加载当前和相邻图片
+  useEffect(() => {
+    if (imageList.length === 0) return;
+    
+    // 当切换图片时，重置当前图片的加载状态（如果之前没有加载过）
+    if (!imageLoading[activeImageIndex] && !imageErrors[activeImageIndex]) {
+      setImageLoading(prev => ({ ...prev, [activeImageIndex]: true }));
+    }
+    
+    // 预加载当前图片
+    if (imageList[activeImageIndex]) {
+      const img = new Image();
+      img.onload = () => {
+        setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
+      };
+      img.onerror = () => {
+        setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
+        setImageErrors(prev => ({ ...prev, [activeImageIndex]: true }));
+      };
+      img.src = imageList[activeImageIndex];
+    }
+    
+    // 预加载下一张图片
+    if (activeImageIndex < imageList.length - 1 && imageList[activeImageIndex + 1]) {
+      const img = new Image();
+      img.src = imageList[activeImageIndex + 1];
+    }
+    
+    // 预加载上一张图片
+    if (activeImageIndex > 0 && imageList[activeImageIndex - 1]) {
+      const img = new Image();
+      img.src = imageList[activeImageIndex - 1];
+    }
+  }, [imageList, activeImageIndex]);
+
   return (
     <PageContainer
       title={`${asset.brand} ${asset.model}` || "资产详情"}
@@ -607,40 +644,97 @@ export default function AssetDetailPage() {
                 ) : (
                   <div className="flex flex-col">
                     <div
-                      className="relative h-64 w-full cursor-pointer hover:opacity-90 transition-opacity"
+                      className="relative h-64 w-full cursor-pointer hover:opacity-90 transition-opacity bg-slate-900/50 rounded-lg overflow-hidden"
                       onClick={() => {
                         setModalImageIndex(activeImageIndex);
                         setShowImageModal(true);
                       }}
                     >
-                      <Image
-                        src={heroImage}
-                        alt={`${asset.brand} ${asset.model}`}
-                        fill
-                        className="object-cover"
-                        sizes="(min-width: 1024px) 640px, 100vw"
-                        // 开发环境下不走优化管道，避免本地调试时的域名限制
-                        unoptimized={process.env.NODE_ENV !== "production"}
-                      />
+                      {imageLoading[activeImageIndex] && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-sky-400"></div>
+                        </div>
+                      )}
+                      {imageErrors[activeImageIndex] ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
+                          <div className="text-center">
+                            <svg className="w-12 h-12 text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p className="text-xs text-slate-400">图片加载失败</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={heroImage}
+                          alt={`${asset.brand} ${asset.model}`}
+                          className="w-full h-full object-cover"
+                          loading="eager"
+                          onLoad={() => {
+                            setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
+                          }}
+                          onError={() => {
+                            setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
+                            setImageErrors(prev => ({ ...prev, [activeImageIndex]: true }));
+                          }}
+                          onLoadStart={() => {
+                            setImageLoading(prev => ({ ...prev, [activeImageIndex]: true }));
+                            setImageErrors(prev => ({ ...prev, [activeImageIndex]: false }));
+                          }}
+                        />
+                      )}
                     </div>
                     {imageList.length > 1 && (
                       <div className="flex items-center gap-2 px-3 py-3 border-t border-slate-800 overflow-x-auto bg-slate-900/80">
                         {imageList.map((url, idx) => (
                           <button
                             key={`${url}-${idx}`}
-                            onClick={() => setActiveImageIndex(idx)}
+                            onClick={() => {
+                              setActiveImageIndex(idx);
+                              // 预加载下一张图片
+                              if (idx < imageList.length - 1) {
+                                const nextUrl = imageList[idx + 1];
+                                const img = new Image();
+                                img.src = nextUrl;
+                              }
+                            }}
                             className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border transition-all ${
                               idx === activeImageIndex
                                 ? "border-sky-400 ring-2 ring-sky-500/60"
                                 : "border-slate-700 hover:border-slate-500"
                             }`}
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={url}
-                              alt={`缩略图 ${idx + 1}`}
-                              className="w-full h-full object-cover"
-                            />
+                            {imageLoading[idx] && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
+                                <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-sky-400"></div>
+                              </div>
+                            )}
+                            {imageErrors[idx] ? (
+                              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
+                                <svg className="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                            ) : (
+                              <img
+                                src={url}
+                                alt={`缩略图 ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                                loading={idx < 3 ? "eager" : "lazy"}
+                                onLoad={() => {
+                                  setImageLoading(prev => ({ ...prev, [idx]: false }));
+                                }}
+                                onError={() => {
+                                  setImageLoading(prev => ({ ...prev, [idx]: false }));
+                                  setImageErrors(prev => ({ ...prev, [idx]: true }));
+                                }}
+                                onLoadStart={() => {
+                                  if (!imageLoading[idx]) {
+                                    setImageLoading(prev => ({ ...prev, [idx]: true }));
+                                  }
+                                }}
+                              />
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1243,31 +1337,58 @@ export default function AssetDetailPage() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setModalImageIndex((prev) => (prev > 0 ? prev - 1 : imageList.length - 1));
+                  const newIndex = modalImageIndex > 0 ? modalImageIndex - 1 : imageList.length - 1;
+                  setModalImageIndex(newIndex);
+                  setModalImageLoading(true);
+                  // 预加载相邻图片
+                  if (newIndex > 0) {
+                    const prevUrl = imageList[newIndex - 1];
+                    const img = new Image();
+                    img.src = prevUrl;
+                  }
                 }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-lg transition-colors z-10"
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-lg transition-colors z-10 disabled:opacity-50"
+                disabled={modalImageLoading}
               >
                 ←
               </button>
             )}
 
             {/* 图片 */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageList[modalImageIndex]}
-              alt={`${asset.brand} ${asset.model} - 图片 ${modalImageIndex + 1}`}
-              className="max-w-full max-h-[90vh] w-auto h-auto object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div className="relative max-w-full max-h-[90vh] flex items-center justify-center">
+              {modalImageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg z-10">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                </div>
+              )}
+              <img
+                src={imageList[modalImageIndex]}
+                alt={`${asset.brand} ${asset.model} - 图片 ${modalImageIndex + 1}`}
+                className="max-w-full max-h-[90vh] w-auto h-auto object-contain rounded-lg"
+                onClick={(e) => e.stopPropagation()}
+                onLoad={() => setModalImageLoading(false)}
+                onError={() => setModalImageLoading(false)}
+                onLoadStart={() => setModalImageLoading(true)}
+              />
+            </div>
 
             {/* 下一张按钮 */}
             {imageList.length > 1 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setModalImageIndex((prev) => (prev < imageList.length - 1 ? prev + 1 : 0));
+                  const newIndex = modalImageIndex < imageList.length - 1 ? modalImageIndex + 1 : 0;
+                  setModalImageIndex(newIndex);
+                  setModalImageLoading(true);
+                  // 预加载相邻图片
+                  if (newIndex < imageList.length - 1) {
+                    const nextUrl = imageList[newIndex + 1];
+                    const img = new Image();
+                    img.src = nextUrl;
+                  }
                 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-lg transition-colors z-10"
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-lg transition-colors z-10 disabled:opacity-50"
+                disabled={modalImageLoading}
               >
                 →
               </button>
