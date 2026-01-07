@@ -227,15 +227,20 @@ export default function AssetsPage() {
         const arr = JSON.parse(asset.imageUrls);
         if (Array.isArray(arr) && arr.length > 0) {
           const url = arr[0];
-          // 如果是旧的 /uploads/ 路径，优先尝试数据库 API，失败则回退到文件系统
+          // 如果是旧的 /uploads/ 路径，直接使用文件系统路径（兼容旧图片）
           if (url.startsWith('/uploads/')) {
-            // 先尝试从数据库获取（索引0），如果数据库没有，回退到文件系统路径
-            // 注意：这里我们直接使用文件系统路径，因为旧的图片可能还在文件系统里
             return `${API_BASE}${url}`;
           }
-          // 如果已经是新的 API 路径，直接使用
+          // 如果是新的 API 路径，直接使用
           if (url.startsWith('/api/assets/')) {
             return url.startsWith('http') ? url : `${API_BASE}${url}`;
+          }
+          // 如果是临时图片格式 image:{imageId}，转换为 API 路径（这种情况应该不会出现，因为后端已经更新了）
+          if (url.startsWith('image:')) {
+            // 如果后端没有更新 imageUrls，尝试从数据库获取（索引0）
+            if (asset.id) {
+              return `${API_BASE}/api/assets/${asset.id}/images/0`;
+            }
           }
           // 其他情况（如外部URL），直接返回
           return url;

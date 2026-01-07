@@ -116,6 +116,7 @@ export default function AssetDetailPage() {
   const [agreedToRisks, setAgreedToRisks] = useState(false); // 是否同意风险提示
   const [showImageModal, setShowImageModal] = useState(false); // 是否显示图片查看模态框
   const [modalImageIndex, setModalImageIndex] = useState(0); // 模态框中显示的图片索引
+  const [imageIndices, setImageIndices] = useState<number[]>([]); // 从数据库获取的图片索引列表
 
   useEffect(() => {
     async function fetchAsset() {
@@ -140,6 +141,17 @@ export default function AssetDetailPage() {
         setAsset(data);
         setError(null);
         setRetryCount(0); // 成功后重置重试计数
+        
+        // 尝试从数据库获取图片索引列表
+        try {
+          const imagesRes = await fetch(`${API_BASE}/api/assets/${params.id}/images`);
+          if (imagesRes.ok) {
+            const indices: number[] = await imagesRes.json();
+            setImageIndices(indices);
+          }
+        } catch (e) {
+          console.error("Failed to fetch image indices:", e);
+        }
       } catch (e: any) {
         const errorMessage = e.message ?? "加载资产失败";
         setError(errorMessage);
@@ -479,7 +491,7 @@ export default function AssetDetailPage() {
     if (asset.imageUrls) {
       try {
         const arr = JSON.parse(asset.imageUrls);
-        if (Array.isArray(arr)) {
+        if (Array.isArray(arr) && arr.length > 0) {
           arr.forEach((url: string, index: number) => {
             if (!url) return;
             // 如果是旧的 /uploads/ 路径，直接使用文件系统路径（兼容旧图片）
@@ -488,6 +500,12 @@ export default function AssetDetailPage() {
             } else if (url.startsWith("/api/assets/")) {
               // 如果已经是新的 API 路径，直接使用
               urlsFromJson.push(url.startsWith("http") ? url : `${API_BASE}${url}`);
+            } else if (url.startsWith("image:")) {
+              // 如果是临时图片格式（这种情况应该不会出现，因为后端已经更新了）
+              // 但为了兼容，尝试从数据库获取
+              if (asset.id) {
+                urlsFromJson.push(`${API_BASE}/api/assets/${asset.id}/images/${index}`);
+              }
             } else {
               // 外部URL，直接使用
               urlsFromJson.push(url);
@@ -504,10 +522,17 @@ export default function AssetDetailPage() {
       return urlsFromJson;
     }
     
-    // 否则，尝试从数据库获取（假设至少有索引0的图片）
-    // 注意：这里我们不知道有多少张图片，所以先尝试索引0
-    // 更好的方案是前端调用 /api/assets/{id}/images 获取索引列表，但为了简化，先这样
-    return [`${API_BASE}/api/assets/${asset.id}/images/0`];
+    // 否则，使用从数据库获取的图片索引列表
+    if (imageIndices.length > 0) {
+      return imageIndices.map(index => `${API_BASE}/api/assets/${asset.id}/images/${index}`);
+    }
+    
+    // 如果都没有，尝试索引 0（兼容旧数据）
+    if (asset.id) {
+      return [`${API_BASE}/api/assets/${asset.id}/images/0`];
+    }
+    
+    return [];
   };
 
   const imageList = getImageList();

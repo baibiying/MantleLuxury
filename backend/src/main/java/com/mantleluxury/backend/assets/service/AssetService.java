@@ -164,9 +164,21 @@ public class AssetService {
                     } catch (Exception e) {
                         logger.warn("Failed to parse imageUrls JSON: {}", imageUrlsStr, e);
                     }
-                    // 关联临时图片到资产
+                    // 关联临时图片到资产，并获取更新后的 API 路径列表
                     if (!imageUrls.isEmpty()) {
-                        associateImagesToAsset(imageUrls, asset.getId());
+                        java.util.List<String> updatedImageUrls = associateImagesToAsset(imageUrls, asset.getId());
+                        // 更新资产的 imageUrls 字段为新的 API 路径
+                        if (!updatedImageUrls.isEmpty()) {
+                            try {
+                                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                                String updatedImageUrlsJson = mapper.writeValueAsString(updatedImageUrls);
+                                asset.setImageUrls(updatedImageUrlsJson);
+                                asset = assetRepository.save(asset);
+                                logger.info("Updated asset {} imageUrls to API paths: {}", asset.getId(), updatedImageUrlsJson);
+                            } catch (Exception e) {
+                                logger.error("Failed to update asset imageUrls: {}", e.getMessage(), e);
+                            }
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -383,17 +395,20 @@ public class AssetService {
      * 将临时图片（assetId 为 null）关联到资产
      * @param imageIds 图片ID列表（格式：image:{imageId} 或直接是 imageId）
      * @param assetId 资产ID
+     * @return 更新后的图片URL列表（API路径格式）
      */
     @Transactional
-    public void associateImagesToAsset(List<String> imageIds, String assetId) {
+    public List<String> associateImagesToAsset(List<String> imageIds, String assetId) {
         if (imageIds == null || imageIds.isEmpty() || assetId == null || assetId.isEmpty()) {
-            return;
+            return new java.util.ArrayList<>();
         }
         
         int imageIndex = 0;
         // 先统计该资产已有的图片数量，从该数量开始索引
         long existingCount = assetImageRepository.countByAssetId(assetId);
         imageIndex = (int) existingCount;
+        
+        List<String> updatedImageUrls = new java.util.ArrayList<>();
         
         for (String imageIdOrUrl : imageIds) {
             try {
@@ -411,12 +426,20 @@ public class AssetService {
                     image.setImageIndex(imageIndex);
                     assetImageRepository.save(image);
                     logger.info("Associated image {} to asset {} with index {}", imageId, assetId, imageIndex);
+                    
+                    // 生成新的 API 路径并添加到列表
+                    updatedImageUrls.add("/api/assets/" + assetId + "/images/" + imageIndex);
                     imageIndex++;
+                } else if (image != null && assetId.equals(image.getAssetId())) {
+                    // 图片已经关联到这个资产，直接使用现有路径
+                    updatedImageUrls.add("/api/assets/" + assetId + "/images/" + image.getImageIndex());
                 }
             } catch (Exception e) {
                 logger.error("Failed to associate image {} to asset {}: {}", imageIdOrUrl, assetId, e.getMessage());
             }
         }
+        
+        return updatedImageUrls;
     }
     
     /**
