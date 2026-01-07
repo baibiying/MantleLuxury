@@ -1593,7 +1593,7 @@ export default function AdminAssetsPage() {
             {/* 添加平台审核记录模态框 - 使用 Portal */}
             {showReviewModal && selectedAsset && portalContainer && createPortal(
               <div 
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto" 
                 style={{ 
                   paddingTop: '120px',
                   zIndex: 100000,
@@ -1606,7 +1606,7 @@ export default function AdminAssetsPage() {
                 }}
               >
                 <div 
-                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[calc(100vh-160px)] overflow-y-auto p-6"
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -1621,8 +1621,8 @@ export default function AdminAssetsPage() {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-base font-medium mb-2">
-                        审核状态 *
+                      <label className="block text-base font-medium mb-2 text-white">
+                        审核状态 <span className="text-red-400">*</span>
                       </label>
                       <select
                         value={reviewStatus}
@@ -1637,7 +1637,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         操作类型
                       </label>
                       <select
@@ -1654,7 +1654,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         审核备注
                       </label>
                       <textarea
@@ -1667,7 +1667,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         下一步操作建议
                       </label>
                       <input
@@ -1702,7 +1702,7 @@ export default function AdminAssetsPage() {
             {/* 添加真伪认证记录模态框 - 使用 Portal */}
             {showAuthModal && selectedAsset && portalContainer && createPortal(
               <div 
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto" 
                 style={{ 
                   paddingTop: '120px',
                   zIndex: 100000,
@@ -1715,7 +1715,7 @@ export default function AdminAssetsPage() {
                 }}
               >
                 <div 
-                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -1730,7 +1730,7 @@ export default function AdminAssetsPage() {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         鉴定机构名称 *
                       </label>
                       <input
@@ -1743,7 +1743,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         鉴定类型
                       </label>
                       <select
@@ -1758,7 +1758,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         认证报告链接
                       </label>
                       <input
@@ -1771,7 +1771,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         报告哈希（可选）
                       </label>
                       <input
@@ -1784,7 +1784,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         鉴定师签名/证书信息（可选）
                       </label>
                       <textarea
@@ -1797,7 +1797,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         备注（可选）
                       </label>
                       <textarea
@@ -1832,7 +1832,7 @@ export default function AdminAssetsPage() {
             {/* 添加估值报告模态框 - 使用 Portal */}
             {showValuationModal && selectedAsset && portalContainer && createPortal(
               <div 
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto" 
                 style={{ 
                   paddingTop: '120px',
                   zIndex: 100000,
@@ -1845,7 +1845,7 @@ export default function AdminAssetsPage() {
                 }}
               >
                 <div 
-                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -1860,8 +1860,8 @@ export default function AdminAssetsPage() {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">
-                        估值机构名称 *
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        估值机构名称 <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -1874,8 +1874,8 @@ export default function AdminAssetsPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-2">
-                          估值金额 *
+                        <label className="block text-sm font-medium mb-2 text-white">
+                          估值金额 <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="number"
@@ -1887,7 +1887,7 @@ export default function AdminAssetsPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-2">
+                        <label className="block text-sm font-medium mb-2 text-white">
                           币种
                         </label>
                         <select
@@ -1903,7 +1903,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         估值日期
                       </label>
                       <input
@@ -1915,7 +1915,7 @@ export default function AdminAssetsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-sm font-medium mb-2 text-white">
                         估值报告链接
                       </label>
                       <input
@@ -1950,7 +1950,7 @@ export default function AdminAssetsPage() {
             {/* 添加托管信息模态框 - 使用 Portal */}
             {showCustodyModal && selectedAsset && portalContainer && createPortal(
               <div 
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto" 
                 style={{ 
                   paddingTop: '120px',
                   zIndex: 100000,
@@ -1963,7 +1963,7 @@ export default function AdminAssetsPage() {
                 }}
               >
                 <div 
-                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -2103,7 +2103,7 @@ export default function AdminAssetsPage() {
             {/* 添加保险信息模态框 - 使用 Portal */}
             {showInsuranceModal && selectedAsset && portalContainer && createPortal(
               <div 
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto" 
                 style={{ 
                   paddingTop: '120px',
                   zIndex: 100000,
@@ -2116,7 +2116,7 @@ export default function AdminAssetsPage() {
                 }}
               >
                 <div 
-                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-4">
