@@ -62,11 +62,48 @@ type Valuation = {
   createdAt: string;
 };
 
+type Custody = {
+  id: string;
+  assetId: string;
+  custodyStatus: string;
+  custodyOrganization: string;
+  warehouseLocation: string | null;
+  warehouseAddressHash: string | null;
+  entryDate: string | null;
+  custodyContractUrl: string | null;
+  custodyContractHash: string | null;
+  facilityStandards: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type Insurance = {
+  id: string;
+  assetId: string;
+  insuranceCompany: string;
+  policyNumber: string | null;
+  coverageAmount: string;
+  coverageCurrency: string;
+  policyStartDate: string;
+  policyEndDate: string;
+  premiumAmount: string | null;
+  coverageType: string | null;
+  policyDocumentUrl: string | null;
+  policyDocumentHash: string | null;
+  isActive: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type AssetDetail = {
   asset: any;
   reviews: AssetReview[];
   authentications?: AssetAuthentication[];
   valuations?: Valuation[];
+  custody?: Custody;
+  insurance?: Insurance;
 };
 
 type Stats = {
@@ -110,6 +147,32 @@ export default function AdminAssetsPage() {
   const [valuationDate, setValuationDate] = useState("");
   const [valuationAgency, setValuationAgency] = useState("");
   const [valuationReportUrl, setValuationReportUrl] = useState("");
+
+  // 托管表单
+  const [showCustodyModal, setShowCustodyModal] = useState(false);
+  const [custodyOrganization, setCustodyOrganization] = useState("");
+  const [warehouseLocation, setWarehouseLocation] = useState("");
+  const [warehouseAddressHash, setWarehouseAddressHash] = useState("");
+  const [entryDate, setEntryDate] = useState("");
+  const [custodyContractUrl, setCustodyContractUrl] = useState("");
+  const [custodyContractHash, setCustodyContractHash] = useState("");
+  const [facilityStandards, setFacilityStandards] = useState("");
+  const [custodyNotes, setCustodyNotes] = useState("");
+
+  // 保险表单
+  const [showInsuranceModal, setShowInsuranceModal] = useState(false);
+  const [insuranceCompany, setInsuranceCompany] = useState("");
+  const [policyNumber, setPolicyNumber] = useState("");
+  const [coverageAmount, setCoverageAmount] = useState("");
+  const [coverageCurrency, setCoverageCurrency] = useState("USD");
+  const [policyStartDate, setPolicyStartDate] = useState("");
+  const [policyEndDate, setPolicyEndDate] = useState("");
+  const [premiumAmount, setPremiumAmount] = useState("");
+  const [coverageType, setCoverageType] = useState("全险");
+  const [policyDocumentUrl, setPolicyDocumentUrl] = useState("");
+  const [policyDocumentHash, setPolicyDocumentHash] = useState("");
+  const [insuranceNotes, setInsuranceNotes] = useState("");
+
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -274,6 +337,46 @@ export default function AdminAssetsPage() {
     }
   };
 
+  const loadCustody = async (assetId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/custodies/asset/${assetId}`);
+      if (!res.ok) {
+        return;
+      }
+      const data: Custody = await res.json();
+      setSelectedAsset((prev) =>
+        prev
+          ? {
+              ...prev,
+              custody: data,
+            }
+          : prev
+      );
+    } catch {
+      // ignore
+    }
+  };
+
+  const loadInsurance = async (assetId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/insurances/asset/${assetId}`);
+      if (!res.ok) {
+        return;
+      }
+      const data: Insurance = await res.json();
+      setSelectedAsset((prev) =>
+        prev
+          ? {
+              ...prev,
+              insurance: data,
+            }
+          : prev
+      );
+    } catch {
+      // ignore
+    }
+  };
+
   const handleCreateReview = async () => {
     if (!address || !selectedAsset) return;
     if (!reviewStatus) {
@@ -301,18 +404,20 @@ export default function AdminAssetsPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "创建审核记录失败");
+        throw new Error(text || "创建平台审核记录失败");
       }
 
-      setSuccess("✅ 审核记录已创建");
+      setSuccess("✅ 平台审核记录已创建");
       setTimeout(() => setSuccess(null), 3000);
       setShowReviewModal(false);
       setReviewNotes("");
       setNextStep("");
-      loadAssetDetail(selectedAsset.asset.id);
+      await loadAssetDetail(selectedAsset.asset.id);
+      await loadCustody(selectedAsset.asset.id);
+      await loadInsurance(selectedAsset.asset.id);
       loadData();
     } catch (e: any) {
-      setError(e.message ?? "创建审核记录失败");
+      setError(e.message ?? "创建平台审核记录失败");
     }
   };
 
@@ -388,6 +493,8 @@ export default function AdminAssetsPage() {
           loadAssetDetail(selectedAsset.asset.id),
           loadAuthentications(selectedAsset.asset.id),
           loadValuations(selectedAsset.asset.id),
+          loadCustody(selectedAsset.asset.id),
+          loadInsurance(selectedAsset.asset.id),
         ]);
       }
     } catch (e: any) {
@@ -455,6 +562,115 @@ export default function AdminAssetsPage() {
       }
     } catch (e: any) {
       setError(e.message ?? "删除估值记录失败");
+    }
+  };
+
+  const handleCreateCustody = async () => {
+    if (!selectedAsset) return;
+    if (!custodyOrganization.trim()) {
+      setError("请输入托管机构名称");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/custodies`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          assetId: selectedAsset.asset.id,
+          custodyOrganization: custodyOrganization.trim(),
+          warehouseLocation: warehouseLocation.trim() || null,
+          warehouseAddressHash: warehouseAddressHash.trim() || null,
+          entryDate: entryDate || null,
+          custodyContractUrl: custodyContractUrl.trim() || null,
+          custodyContractHash: custodyContractHash.trim() || null,
+          facilityStandards: facilityStandards.trim() || null,
+          notes: custodyNotes.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "创建托管记录失败");
+      }
+      setSuccess("✅ 托管记录已创建");
+      setTimeout(() => setSuccess(null), 3000);
+      setShowCustodyModal(false);
+      setCustodyOrganization("");
+      setWarehouseLocation("");
+      setWarehouseAddressHash("");
+      setEntryDate("");
+      setCustodyContractUrl("");
+      setCustodyContractHash("");
+      setFacilityStandards("");
+      setCustodyNotes("");
+      await loadCustody(selectedAsset.asset.id);
+    } catch (e: any) {
+      setError(e.message ?? "创建托管记录失败");
+    }
+  };
+
+  const handleCreateInsurance = async () => {
+    console.log("handleCreateInsurance called");
+    setError(null); // 清除之前的错误
+    setSuccess(null); // 清除之前的成功消息
+    if (!selectedAsset) {
+      console.log("No selected asset");
+      setError("请先选择资产");
+      return;
+    }
+    if (!insuranceCompany.trim() || !coverageAmount.trim() || !policyEndDate) {
+      console.log("Validation failed:", { insuranceCompany, coverageAmount, policyEndDate });
+      setError("请输入保险公司、保额和到期日期");
+      return;
+    }
+    try {
+      console.log("Sending request to create insurance");
+      const res = await fetch(`${API_BASE}/api/insurances`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          assetId: selectedAsset.asset.id,
+          insuranceCompany: insuranceCompany.trim(),
+          policyNumber: policyNumber.trim() || null,
+          coverageAmount: coverageAmount.trim(),
+          coverageCurrency: coverageCurrency,
+          policyStartDate: policyStartDate || null,
+          policyEndDate: policyEndDate,
+          premiumAmount: premiumAmount.trim() || null,
+          coverageType: coverageType || "全险",
+          policyDocumentUrl: policyDocumentUrl.trim() || null,
+          policyDocumentHash: policyDocumentHash.trim() || null,
+          notes: insuranceNotes.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Insurance creation failed:", res.status, text);
+        throw new Error(text || "创建保险记录失败");
+      }
+      const data = await res.json();
+      console.log("Insurance created successfully:", data);
+      setSuccess("✅ 保险记录已创建");
+      setTimeout(() => setSuccess(null), 3000);
+      setShowInsuranceModal(false);
+      setInsuranceCompany("");
+      setPolicyNumber("");
+      setCoverageAmount("");
+      setCoverageCurrency("USD");
+      setPolicyStartDate("");
+      setPolicyEndDate("");
+      setPremiumAmount("");
+      setCoverageType("全险");
+      setPolicyDocumentUrl("");
+      setPolicyDocumentHash("");
+      setInsuranceNotes("");
+      await loadInsurance(selectedAsset.asset.id);
+    } catch (e: any) {
+      console.error("Error creating insurance:", e);
+      setError(e.message ?? "创建保险记录失败");
     }
   };
 
@@ -638,11 +854,13 @@ export default function AdminAssetsPage() {
                         <tr
                           key={asset.id}
                           className="border-b border-slate-800/40 last:border-0 hover:bg-slate-800/20 cursor-pointer"
-                          onClick={async () => {
-                            await loadAssetDetail(asset.id);
-                            await loadAuthentications(asset.id);
-                            await loadValuations(asset.id);
-                          }}
+                              onClick={async () => {
+                                await loadAssetDetail(asset.id);
+                                await loadAuthentications(asset.id);
+                                await loadValuations(asset.id);
+                                await loadCustody(asset.id);
+                                await loadInsurance(asset.id);
+                              }}
                         >
                           <td className="py-3 min-w-[280px]">
                             <div className="flex flex-col">
@@ -798,8 +1016,10 @@ export default function AdminAssetsPage() {
                                 }
                                 setSuccess(`✅ 资产状态已更新为 "${newStatus}"`);
                                 setTimeout(() => setSuccess(null), 3000);
-                                await loadAssetDetail(selectedAsset.asset.id);
-                                loadData();
+      await loadAssetDetail(selectedAsset.asset.id);
+      await loadCustody(selectedAsset.asset.id);
+      await loadInsurance(selectedAsset.asset.id);
+      loadData();
                               } catch (e: any) {
                                 setError(e.message ?? "更新资产状态失败");
                               }
@@ -837,20 +1057,20 @@ export default function AdminAssetsPage() {
                       )}
                     </div>
 
-                    {/* 审核记录 */}
+                    {/* 平台审核记录 */}
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-white">审核记录</h3>
+                        <h3 className="font-semibold text-white">平台审核记录</h3>
                         <button
                           onClick={() => setShowReviewModal(true)}
                           className="px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white text-base font-medium transition-colors"
                         >
-                          + 添加审核记录
+                          + 添加平台审核记录
                         </button>
                       </div>
                       {selectedAsset.reviews.length === 0 ? (
                         <div className="text-center py-8 text-slate-300 text-base">
-                          暂无审核记录
+                          暂无平台审核记录
                         </div>
                       ) : (
                         <div className="space-y-3">
@@ -1087,50 +1307,282 @@ export default function AdminAssetsPage() {
                       )}
                     </div>
 
-                    {/* 操作按钮 */}
-                    <div className="flex gap-3 items-center flex-wrap">
-                      {selectedAsset.asset.status === "registered" && (
+                    {/* 托管信息 */}
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-white">托管信息</h3>
                         <button
-                          onClick={async () => {
-                            if (!address || !selectedAsset) return;
-                            if (!confirm("确定要审核通过此资产并上线募资吗？\n\n资产状态将从'待认证'改为'募集中'，用户将可以投资此资产。")) {
-                              return;
-                            }
-                            try {
-                              const res = await fetch(
-                                `${API_BASE}/api/admin/assets/${selectedAsset.asset.id}/status`,
-                                {
-                                  method: "PUT",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                    "X-Wallet-Address": address,
-                                  },
-                                  body: JSON.stringify({ status: "fundraising" }),
-                                }
-                              );
-                              if (!res.ok) {
-                                const text = await res.text();
-                                throw new Error(text || "更新资产状态失败");
-                              }
-                              setSuccess("✅ 资产已审核通过，状态已更新为'募集中'");
-                              setTimeout(() => setSuccess(null), 3000);
-                              await loadAssetDetail(selectedAsset.asset.id);
-                              loadData();
-                            } catch (e: any) {
-                              setError(e.message ?? "更新资产状态失败");
-                            }
+                          onClick={() => {
+                            setShowCustodyModal(true);
                           }}
                           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors"
                         >
-                          ✓ 审核通过并上线
+                          {selectedAsset.custody ? "编辑托管信息" : "+ 添加托管信息"}
                         </button>
-                      )}
-                      {selectedAsset.asset.authentications && selectedAsset.asset.authentications.length > 0 && (
-                        <div className="px-4 py-2 bg-slate-700/50 rounded-lg text-base text-slate-300">
-                          认证记录：{selectedAsset.asset.authentications.length} 条
+                      </div>
+                      {!selectedAsset.custody ? (
+                        <div className="text-center py-6 text-slate-300 text-base">
+                          暂无托管信息
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                          <div className="grid grid-cols-2 gap-4 text-base">
+                            <div>
+                              <span className="text-slate-300">托管机构：</span>
+                              <span className="ml-2 text-white font-medium">{selectedAsset.custody.custodyOrganization}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-300">托管状态：</span>
+                              <span className="ml-2 text-white font-medium">{selectedAsset.custody.custodyStatus}</span>
+                            </div>
+                            {selectedAsset.custody.warehouseLocation && (
+                              <div>
+                                <span className="text-slate-300">仓储位置：</span>
+                                <span className="ml-2 text-white font-medium">{selectedAsset.custody.warehouseLocation}</span>
+                              </div>
+                            )}
+                            {selectedAsset.custody.entryDate && (
+                              <div>
+                                <span className="text-slate-300">入库日期：</span>
+                                <span className="ml-2 text-white font-medium">
+                                  {new Date(selectedAsset.custody.entryDate).toLocaleDateString("zh-CN")}
+                                </span>
+                              </div>
+                            )}
+                            {selectedAsset.custody.custodyContractUrl && (
+                              <div className="col-span-2">
+                                <span className="text-slate-300">托管合同：</span>
+                                <a
+                                  href={selectedAsset.custody.custodyContractUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-2 text-cyan-400 hover:text-cyan-300 underline"
+                                >
+                                  查看合同 →
+                                </a>
+                              </div>
+                            )}
+                            {selectedAsset.custody.facilityStandards && (
+                              <div className="col-span-2">
+                                <span className="text-slate-300">设施标准：</span>
+                                <p className="mt-1 text-white">{selectedAsset.custody.facilityStandards}</p>
+                              </div>
+                            )}
+                            {selectedAsset.custody.notes && (
+                              <div className="col-span-2">
+                                <span className="text-slate-300">备注：</span>
+                                <p className="mt-1 text-white">{selectedAsset.custody.notes}</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
+
+                    {/* 保险信息 */}
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-white">保险信息</h3>
+                        <button
+                          onClick={() => {
+                            setShowInsuranceModal(true);
+                          }}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors"
+                        >
+                          {selectedAsset.insurance ? "编辑保险信息" : "+ 添加保险信息"}
+                        </button>
+                      </div>
+                      {!selectedAsset.insurance ? (
+                        <div className="text-center py-6 text-slate-300 text-base">
+                          暂无保险信息
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                          <div className="grid grid-cols-2 gap-4 text-base">
+                            <div>
+                              <span className="text-slate-300">保险公司：</span>
+                              <span className="ml-2 text-white font-medium">{selectedAsset.insurance.insuranceCompany}</span>
+                            </div>
+                            {selectedAsset.insurance.policyNumber && (
+                              <div>
+                                <span className="text-slate-300">保单号：</span>
+                                <span className="ml-2 text-white font-medium">{selectedAsset.insurance.policyNumber}</span>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-slate-300">保额：</span>
+                              <span className="ml-2 text-white font-medium text-emerald-400">
+                                {parseFloat(selectedAsset.insurance.coverageAmount).toLocaleString("zh-CN", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}{" "}
+                                {selectedAsset.insurance.coverageCurrency}
+                              </span>
+                            </div>
+                            {selectedAsset.insurance.coverageType && (
+                              <div>
+                                <span className="text-slate-300">保险类型：</span>
+                                <span className="ml-2 text-white font-medium">{selectedAsset.insurance.coverageType}</span>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-slate-300">生效日期：</span>
+                              <span className="ml-2 text-white font-medium">
+                                {new Date(selectedAsset.insurance.policyStartDate).toLocaleDateString("zh-CN")}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-300">到期日期：</span>
+                              <span className="ml-2 text-white font-medium">
+                                {new Date(selectedAsset.insurance.policyEndDate).toLocaleDateString("zh-CN")}
+                              </span>
+                            </div>
+                            {selectedAsset.insurance.policyDocumentUrl && (
+                              <div className="col-span-2">
+                                <span className="text-slate-300">保单文档：</span>
+                                <a
+                                  href={selectedAsset.insurance.policyDocumentUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-2 text-cyan-400 hover:text-cyan-300 underline"
+                                >
+                                  查看保单 →
+                                </a>
+                              </div>
+                            )}
+                            <div className="col-span-2">
+                              <span className="text-slate-300">保单状态：</span>
+                              <span className={`ml-2 px-2 py-1 rounded text-sm font-medium ${
+                                selectedAsset.insurance.isActive
+                                  ? "bg-emerald-600 text-emerald-100"
+                                  : "bg-red-600 text-red-100"
+                              }`}>
+                                {selectedAsset.insurance.isActive ? "有效" : "已失效"}
+                              </span>
+                            </div>
+                            {selectedAsset.insurance.notes && (
+                              <div className="col-span-2">
+                                <span className="text-slate-300">备注：</span>
+                                <p className="mt-1 text-white">{selectedAsset.insurance.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 操作按钮 */}
+                    {(() => {
+                      const hasApprovedReview =
+                        selectedAsset.reviews?.some(
+                          (r) => r.reviewStatus === "approved"
+                        ) ?? false;
+                      const hasVerifiedAuth =
+                        (selectedAsset.authentications ?? []).some(
+                          (a) => a.authenticationStatus === "verified"
+                        );
+                      const hasValuation =
+                        (selectedAsset.valuations ?? []).length > 0;
+                      const hasCustody = !!selectedAsset.custody;
+                      const hasInsurance = !!selectedAsset.insurance;
+
+                      const canApprove =
+                        hasApprovedReview &&
+                        hasVerifiedAuth &&
+                        hasValuation &&
+                        hasCustody &&
+                        hasInsurance;
+
+                      const approveDisabledReason = !canApprove
+                        ? [
+                            !hasApprovedReview &&
+                              "需要至少一条平台审核记录状态为“已通过”",
+                            !hasVerifiedAuth &&
+                              "需要至少一条真伪认证记录状态为“已认证”",
+                            !hasValuation && "需要至少一条估值报告记录",
+                            !hasCustody && "需要填写托管信息",
+                            !hasInsurance && "需要填写保险信息",
+                          ]
+                            .filter(Boolean)
+                            .join("；")
+                        : "";
+
+                      return (
+                        <div className="flex gap-3 items-center flex-wrap">
+                          {selectedAsset.asset.status === "registered" && (
+                            <button
+                              disabled={!canApprove}
+                              title={
+                                !canApprove
+                                  ? approveDisabledReason ||
+                                    "托管、保险、真伪认证、估值和平台审核记录都完成后才能审核通过并上线"
+                                  : undefined
+                              }
+                              onClick={async () => {
+                                if (!address || !selectedAsset || !canApprove)
+                                  return;
+                                if (
+                                  !confirm(
+                                    "确定要审核通过此资产并上线募资吗？\n\n资产状态将从'待认证'改为'募集中'，用户将可以投资此资产。"
+                                  )
+                                ) {
+                                  return;
+                                }
+                                try {
+                                  const res = await fetch(
+                                    `${API_BASE}/api/admin/assets/${selectedAsset.asset.id}/status`,
+                                    {
+                                      method: "PUT",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                        "X-Wallet-Address": address,
+                                      },
+                                      body: JSON.stringify({
+                                        status: "fundraising",
+                                      }),
+                                    }
+                                  );
+                                  if (!res.ok) {
+                                    const text = await res.text();
+                                    throw new Error(
+                                      text || "更新资产状态失败"
+                                    );
+                                  }
+                                  setSuccess(
+                                    "✅ 资产已审核通过，状态已更新为'募集中'"
+                                  );
+                                  setTimeout(() => setSuccess(null), 3000);
+                                  await loadAssetDetail(
+                                    selectedAsset.asset.id
+                                  );
+                                  await loadCustody(selectedAsset.asset.id);
+                                  await loadInsurance(selectedAsset.asset.id);
+                                  loadData();
+                                } catch (e: any) {
+                                  setError(
+                                    e.message ?? "更新资产状态失败"
+                                  );
+                                }
+                              }}
+                              className={`px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors ${
+                                !canApprove
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : ""
+                              }`}
+                            >
+                              ✓ 审核通过并上线
+                            </button>
+                          )}
+                          {selectedAsset.asset.authentications &&
+                            selectedAsset.asset.authentications.length > 0 && (
+                              <div className="px-4 py-2 bg-slate-700/50 rounded-lg text-base text-slate-300">
+                                认证记录：
+                                {selectedAsset.asset.authentications.length} 条
+                              </div>
+                            )}
+                        </div>
+                      );
+                    })()}
                     </div>
                   </div>
                 </div>
@@ -1138,7 +1590,7 @@ export default function AdminAssetsPage() {
               portalContainer
             )}
 
-            {/* 添加审核记录模态框 - 使用 Portal */}
+            {/* 添加平台审核记录模态框 - 使用 Portal */}
             {showReviewModal && selectedAsset && portalContainer && createPortal(
               <div 
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
@@ -1158,7 +1610,7 @@ export default function AdminAssetsPage() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-semibold">添加审核记录</h2>
+                    <h2 className="text-2xl font-semibold">添加平台审核记录</h2>
                     <button
                       onClick={() => setShowReviewModal(false)}
                       className="text-slate-300 hover:text-white"
@@ -1232,7 +1684,7 @@ export default function AdminAssetsPage() {
                         onClick={handleCreateReview}
                         className="flex-1 px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white font-medium transition-colors"
                       >
-                        提交审核记录
+                        提交平台审核记录
                       </button>
                       <button
                         onClick={() => setShowReviewModal(false)}
@@ -1484,6 +1936,377 @@ export default function AdminAssetsPage() {
                       </button>
                       <button
                         onClick={() => setShowValuationModal(false)}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>,
+              portalContainer
+            )}
+
+            {/* 添加托管信息模态框 - 使用 Portal */}
+            {showCustodyModal && selectedAsset && portalContainer && createPortal(
+              <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                style={{ 
+                  paddingTop: '120px',
+                  zIndex: 100000,
+                  pointerEvents: 'auto'
+                }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setShowCustodyModal(false);
+                  }
+                }}
+              >
+                <div 
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-semibold text-white">添加托管信息</h2>
+                    <button
+                      onClick={() => setShowCustodyModal(false)}
+                      className="text-slate-300 hover:text-white text-2xl leading-none"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        托管机构名称 *
+                      </label>
+                      <input
+                        type="text"
+                        value={custodyOrganization}
+                        onChange={(e) => setCustodyOrganization(e.target.value)}
+                        placeholder="例如：香港XX托管中心"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        仓储位置（可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={warehouseLocation}
+                        onChange={(e) => setWarehouseLocation(e.target.value)}
+                        placeholder="例如：香港-XX区（模糊位置）"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        详细地址哈希（可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={warehouseAddressHash}
+                        onChange={(e) => setWarehouseAddressHash(e.target.value)}
+                        placeholder="链上存证的地址哈希"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        入库日期（可选）
+                      </label>
+                      <input
+                        type="date"
+                        value={entryDate}
+                        onChange={(e) => setEntryDate(e.target.value)}
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        托管合同链接（可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={custodyContractUrl}
+                        onChange={(e) => setCustodyContractUrl(e.target.value)}
+                        placeholder="IPFS / S3 / 其他存储的合同 URL"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        合同哈希（可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={custodyContractHash}
+                        onChange={(e) => setCustodyContractHash(e.target.value)}
+                        placeholder="链上存证的合同哈希"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        设施标准（可选）
+                      </label>
+                      <textarea
+                        value={facilityStandards}
+                        onChange={(e) => setFacilityStandards(e.target.value)}
+                        placeholder="例如：恒温恒湿、防火防盗监控、访问控制等"
+                        rows={3}
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        备注（可选）
+                      </label>
+                      <textarea
+                        value={custodyNotes}
+                        onChange={(e) => setCustodyNotes(e.target.value)}
+                        placeholder="补充说明"
+                        rows={3}
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        onClick={handleCreateCustody}
+                        className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-medium transition-colors"
+                      >
+                        提交托管信息
+                      </button>
+                      <button
+                        onClick={() => setShowCustodyModal(false)}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>,
+              portalContainer
+            )}
+
+            {/* 添加保险信息模态框 - 使用 Portal */}
+            {showInsuranceModal && selectedAsset && portalContainer && createPortal(
+              <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                style={{ 
+                  paddingTop: '120px',
+                  zIndex: 100000,
+                  pointerEvents: 'auto'
+                }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setShowInsuranceModal(false);
+                  }
+                }}
+              >
+                <div 
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-semibold text-white">添加保险信息</h2>
+                    <button
+                      onClick={() => setShowInsuranceModal(false)}
+                      className="text-slate-300 hover:text-white text-2xl leading-none"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {error && (
+                    <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-200 text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  {success && (
+                    <div className="mb-4 p-3 bg-emerald-900/50 border border-emerald-700 rounded-lg text-emerald-200 text-sm">
+                      {success}
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        保险公司名称 *
+                      </label>
+                      <input
+                        type="text"
+                        value={insuranceCompany}
+                        onChange={(e) => setInsuranceCompany(e.target.value)}
+                        placeholder="例如：XX保险公司"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-white">
+                          保单号（可选）
+                        </label>
+                        <input
+                          type="text"
+                          value={policyNumber}
+                          onChange={(e) => setPolicyNumber(e.target.value)}
+                          placeholder="保单编号"
+                          className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-white">
+                          保险类型
+                        </label>
+                        <select
+                          value={coverageType}
+                          onChange={(e) => setCoverageType(e.target.value)}
+                          className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        >
+                          <option value="全险">全险</option>
+                          <option value="盗窃险">盗窃险</option>
+                          <option value="火灾险">火灾险</option>
+                          <option value="综合险">综合险</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-white">
+                          保额 *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={coverageAmount}
+                          onChange={(e) => setCoverageAmount(e.target.value)}
+                          placeholder="例如：50000"
+                          className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-white">
+                          币种
+                        </label>
+                        <select
+                          value={coverageCurrency}
+                          onChange={(e) => setCoverageCurrency(e.target.value)}
+                          className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        >
+                          <option value="USD">USD</option>
+                          <option value="MNT">MNT</option>
+                          <option value="CNY">CNY</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-white">
+                          生效日期（可选）
+                        </label>
+                        <input
+                          type="date"
+                          value={policyStartDate}
+                          onChange={(e) => setPolicyStartDate(e.target.value)}
+                          className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-white">
+                          到期日期 *
+                        </label>
+                        <input
+                          type="date"
+                          value={policyEndDate}
+                          onChange={(e) => setPolicyEndDate(e.target.value)}
+                          className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        保费（可选）
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={premiumAmount}
+                        onChange={(e) => setPremiumAmount(e.target.value)}
+                        placeholder="例如：5000"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        保单文档链接（可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={policyDocumentUrl}
+                        onChange={(e) => setPolicyDocumentUrl(e.target.value)}
+                        placeholder="IPFS / S3 / 其他存储的保单 URL"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        保单文档哈希（可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={policyDocumentHash}
+                        onChange={(e) => setPolicyDocumentHash(e.target.value)}
+                        placeholder="链上存证的保单哈希"
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-white">
+                        备注（可选）
+                      </label>
+                      <textarea
+                        value={insuranceNotes}
+                        onChange={(e) => setInsuranceNotes(e.target.value)}
+                        placeholder="补充说明"
+                        rows={3}
+                        className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log("Button clicked");
+                          handleCreateInsurance();
+                        }}
+                        className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-medium transition-colors"
+                      >
+                        提交保险信息
+                      </button>
+                      <button
+                        onClick={() => setShowInsuranceModal(false)}
                         className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors"
                       >
                         取消
