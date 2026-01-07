@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
@@ -121,6 +121,7 @@ export default function AssetDetailPage() {
   const [modalImageLoading, setModalImageLoading] = useState(false); // 模态框图片加载状态
   const imageLoadingRef = useRef<{ [key: number]: boolean }>({}); // 用于 useEffect 的 ref
   const imageErrorsRef = useRef<{ [key: number]: boolean }>({}); // 用于 useEffect 的 ref
+  const imageIndicesRef = useRef<number[]>([]); // 用于存储上一次的 imageIndices
 
   useEffect(() => {
     async function fetchAsset() {
@@ -489,7 +490,12 @@ export default function AssetDetailPage() {
     return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";
   };
 
-  const getImageList = () => {
+  // 使用 useMemo 稳定 imageList 的引用，避免 useEffect 无限循环
+  // 将逻辑内联到 useMemo 中，确保依赖项正确
+  // 使用 imageIndices 的长度和内容来稳定依赖项
+  const imageList = useMemo(() => {
+    if (!asset) return [];
+    
     // 如果 imageUrls 存在，先解析它（可能是旧的 /uploads/ 路径或新的 API 路径）
     const urlsFromJson: string[] = [];
     if (asset.imageUrls) {
@@ -537,15 +543,9 @@ export default function AssetDetailPage() {
     }
     
     return [];
-  };
-
-  // 使用 useMemo 稳定 imageList 的引用，避免 useEffect 无限循环
-  // 使用 JSON.stringify 来比较数组内容，而不是引用
-  const imageIndicesKey = useMemo(() => JSON.stringify(imageIndices), [imageIndices]);
-  const imageList = useMemo(() => {
-    if (!asset) return [];
-    return getImageList();
-  }, [asset?.id, asset?.imageUrls, imageIndicesKey]);
+    // 使用 imageIndices 的长度和字符串表示来稳定依赖项
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asset?.id, asset?.imageUrls, asset?.assetType, imageIndices.length, imageIndices.join(',')]);
   
   // 使用 useMemo 稳定 heroImage
   const heroImage = useMemo(() => {
