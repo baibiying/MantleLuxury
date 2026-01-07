@@ -39,6 +39,8 @@ export default function AssetSubmitPage() {
   const [kycLoading, setKycLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploading3dModel, setUploading3dModel] = useState(false);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<Map<number, string>>(new Map()); // 本地预览 URL（blob URL）
+  const [imageBackendUrls, setImageBackendUrls] = useState<string[]>([]); // 后端返回的 URL（用于提交）
 
   const [formData, setFormData] = useState<FormData>({
     assetType: "watch",
@@ -158,7 +160,7 @@ export default function AssetSubmitPage() {
           totalSupply: formData.totalSupply ? parseFloat(formData.totalSupply) : null,
           pricePerShare: formData.pricePerShare ? parseFloat(formData.pricePerShare) : null,
           submittedBy: formData.submittedBy || "anonymous",
-          imageUrls: JSON.stringify(formData.imageUrls ?? []),
+          imageUrls: JSON.stringify(imageBackendUrls.length > 0 ? imageBackendUrls : (formData.imageUrls ?? [])),
           model3dUrl: formData.model3dUrl || null,
         }),
       });
@@ -379,8 +381,14 @@ export default function AssetSubmitPage() {
                       setUploadingImages(true);
                       setError(null);
                       try {
-                        const uploaded: string[] = [];
+                        const newBackendUrls: string[] = [];
+                        const newPreviewMap = new Map(imagePreviewUrls);
+                        let currentIndex = imageBackendUrls.length;
+                        
                         for (const f of files) {
+                          // 先创建本地预览 URL（用于立即显示缩略图）
+                          const localPreviewUrl = URL.createObjectURL(f);
+                          
                           const form = new FormData();
                           form.append("file", f);
                           const res = await fetch(`${API_BASE}/api/assets/upload-image`, {
@@ -388,6 +396,8 @@ export default function AssetSubmitPage() {
                             body: form,
                           });
                           if (!res.ok) {
+                            // 上传失败，释放本地预览 URL
+                            URL.revokeObjectURL(localPreviewUrl);
                             let errorMsg = "上传失败";
                             try {
                               const errorData = await res.json();
@@ -400,15 +410,29 @@ export default function AssetSubmitPage() {
                           }
                           const data = await res.json();
                           if (data.url) {
-                            // 确保URL格式正确
-                            const url = data.url.startsWith('/') ? `${API_BASE}${data.url}` : data.url;
-                            uploaded.push(url);
+                            // 保存后端返回的 URL（用于提交时发送给后端）
+                            newBackendUrls.push(data.url);
+                            // 保存本地预览 URL（用于立即显示）
+                            newPreviewMap.set(currentIndex, localPreviewUrl);
+                            currentIndex++;
+                          } else {
+                            // 如果没有返回 URL，释放本地预览
+                            URL.revokeObjectURL(localPreviewUrl);
                           }
                         }
-                        if (uploaded.length > 0) {
+                        
+                        if (newBackendUrls.length > 0) {
+                          // 更新后端 URL 列表（限制最多 3 张）
+                          const updatedBackendUrls = [...imageBackendUrls, ...newBackendUrls].slice(0, 3);
+                          setImageBackendUrls(updatedBackendUrls);
+                          
+                          // 更新预览 URL 映射
+                          setImagePreviewUrls(newPreviewMap);
+                          
+                          // 更新 formData（用于显示数量）
                           setFormData((prev) => ({
                             ...prev,
-                            imageUrls: [...(prev.imageUrls ?? []), ...uploaded].slice(0, 3),
+                            imageUrls: updatedBackendUrls, // 保存后端 URL，但预览时用本地 blob URL
                           }));
                         }
                       } catch (err: any) {
@@ -428,26 +452,68 @@ export default function AssetSubmitPage() {
                 </div>
                 {formData.imageUrls && formData.imageUrls.length > 0 && (
                   <div className="mt-4 grid grid-cols-3 gap-3">
-                    {formData.imageUrls.map((url, idx) => {
-                      // 如果是相对路径，拼接后端地址
-                      const imageUrl = url.startsWith('/uploads/') 
-                        ? `${API_BASE}${url}` 
-                        : url;
+                    {formData.imageUrls.map((backendUrl, idx) => {
+                      // 优先使用本地预览 URL（blob URL），如果没有则尝试使用后端 URL
+                      const previewUrl = imagePreviewUrls.get(idx);
+                      let imageUrl = previewUrl;
+                      
+                      if (!imageUrl) {
+                        // 如果没有本地预览，尝试使用后端 URL
+                        if (backendUrl.startsWith('/uploads/')) {
+                          imageUrl = `${API_BASE}${backendUrl}`;
+                        } else if (backendUrl.startsWith('/api/assets/')) {
+                          imageUrl = backendUrl.startsWith('http') ? backendUrl : `${API_BASE}${backendUrl}`;
+                        } else if (backendUrl.startsWith('image:')) {
+                          // 如果是临时图片格式，无法预览，显示占位符
+                          imageUrl = null;
+                        } else {
+                          imageUrl = backendUrl;
+                        }
+                      }
+                      
                       return (
                       <div key={idx} className="relative">
-                        <div
-                          className="h-24 w-full rounded-lg border border-slate-700 bg-cover bg-center"
-                          style={{ backgroundImage: `url(${imageUrl})` }}
-                        />
+                        {imageUrl ? (
+                          <div
+                            className="h-24 w-full rounded-lg border border-slate-700 bg-cover bg-center"
+                            style={{ backgroundImage: `url(${imageUrl})` }}
+                          />
+                        ) : (
+                          <div className="h-24 w-full rounded-lg border border-slate-700 bg-slate-800 flex items-center justify-center">
+                            <span className="text-xs text-slate-500">预览不可用</span>
+                          </div>
+                        )}
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={() => {
+                            // 移除图片时，释放本地预览 URL
+                            const previewToRemove = imagePreviewUrls.get(idx);
+                            if (previewToRemove) {
+                              URL.revokeObjectURL(previewToRemove);
+                            }
+                            
+                            // 更新状态
+                            const newBackendUrls = imageBackendUrls.filter((_, i) => i !== idx);
+                            setImageBackendUrls(newBackendUrls);
+                            
+                            // 更新预览映射（重新索引）
+                            const newPreviewMap = new Map<string, string>();
+                            newBackendUrls.forEach((_, i) => {
+                              const oldIndex = i < idx ? i : i + 1;
+                              const oldPreview = imagePreviewUrls.get(oldIndex);
+                              if (oldPreview) {
+                                newPreviewMap.set(i, oldPreview);
+                              }
+                            });
+                            setImagePreviewUrls(newPreviewMap);
+                            
+                            // 更新 formData
                             setFormData((prev) => ({
                               ...prev,
-                              imageUrls: prev.imageUrls.filter((_, i) => i !== idx),
-                            }))
-                          }
-                          className="absolute top-1 right-1 text-[10px] px-2 py-1 bg-slate-900/80 text-slate-200 rounded"
+                              imageUrls: newBackendUrls,
+                            }));
+                          }}
+                          className="absolute top-1 right-1 text-[10px] px-2 py-1 bg-slate-900/80 text-slate-200 rounded hover:bg-slate-800"
                         >
                           移除
                         </button>
