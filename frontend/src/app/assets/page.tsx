@@ -465,10 +465,17 @@ export default function AssetsPage() {
                   <div className="space-y-1 col-span-2">
                     <dt className="text-slate-500 text-xs">剩余可购</dt>
                     <dd className="font-semibold text-emerald-400">
-                      {asset.tokenAddress &&
-                      onchainRemaining[asset.tokenAddress] !== undefined
-                        ? `${onchainRemaining[asset.tokenAddress]} 份`
-                        : `${asset.remainingSupply} 份`}
+                      {(() => {
+                        const remaining = asset.tokenAddress &&
+                          onchainRemaining[asset.tokenAddress] !== undefined
+                          ? onchainRemaining[asset.tokenAddress]
+                          : asset.remainingSupply;
+                        const remainingNum = parseFloat(remaining ?? "0");
+                        if (!remaining || isNaN(remainingNum) || remainingNum <= 0) {
+                          return "暂不可购";
+                        }
+                        return `${remaining} 份`;
+                      })()}
                     </dd>
                   </div>
                   {asset.totalYield && parseFloat(asset.totalYield) > 0 && (
