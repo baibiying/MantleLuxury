@@ -207,16 +207,42 @@ export default function AssetSubmitPage() {
 
         {/* KYC / AML 合规提示 - 放在页面最上方 */}
         {isConnected && (
-          <div className="mb-6 bg-amber-950/40 border border-amber-500/40 rounded-xl px-6 py-4">
-            <p className="text-sm text-amber-200">
-              为符合合规要求，提交资产前需要完成{" "}
-              <a
-                href="/kyc"
-                className="underline decoration-amber-300 hover:text-amber-100 font-medium"
-              >
-                KYC / AML 审核
-              </a>
-              ，通过后才能提交。
+          <div className={`mb-6 rounded-xl px-6 py-4 border ${
+            kycStatus === "approved"
+              ? "bg-emerald-950/40 border-emerald-500/40"
+              : kycStatus === "pending"
+              ? "bg-blue-950/40 border-blue-500/40"
+              : kycStatus === "rejected"
+              ? "bg-red-950/40 border-red-500/40"
+              : "bg-amber-950/40 border-amber-500/40"
+          }`}>
+            <p className={`text-sm ${
+              kycStatus === "approved"
+                ? "text-emerald-200"
+                : kycStatus === "pending"
+                ? "text-blue-200"
+                : kycStatus === "rejected"
+                ? "text-red-200"
+                : "text-amber-200"
+            }`}>
+              {kycStatus === "approved" ? (
+                <>✓ KYC / AML 审核已通过，可以提交资产。</>
+              ) : kycStatus === "pending" ? (
+                <>⏳ KYC / AML 审核进行中，请等待审核完成后再提交资产。</>
+              ) : kycStatus === "rejected" ? (
+                <>✗ KYC / AML 审核未通过，请重新提交审核后再提交资产。</>
+              ) : (
+                <>
+                  为符合合规要求，提交资产前需要完成{" "}
+                  <a
+                    href="/kyc"
+                    className="underline decoration-amber-300 hover:text-amber-100 font-medium"
+                  >
+                    KYC / AML 审核
+                  </a>
+                  ，通过后才能提交。
+                </>
+              )}
             </p>
           </div>
         )}
@@ -670,10 +696,21 @@ export default function AssetSubmitPage() {
             </button>
             <button
               type="submit"
-              disabled={loading || kycStatus !== "approved" || kycLoading}
-              className="flex-1 px-6 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg text-white font-medium transition"
+              disabled={!isConnected || loading || kycStatus !== "approved" || kycLoading}
+              className="flex-1 px-6 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-600 disabled:text-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-600 rounded-lg text-white font-medium transition-colors"
+              title={
+                !isConnected
+                  ? "请先连接钱包"
+                  : kycLoading
+                  ? "正在检查 KYC / AML 状态..."
+                  : kycStatus !== "approved"
+                  ? "请先完成 KYC / AML 审核"
+                  : undefined
+              }
             >
-              {kycLoading
+              {!isConnected
+                ? "请先连接钱包"
+                : kycLoading
                 ? "检查 KYC / AML 状态..."
                 : kycStatus !== "approved"
                 ? "请先完成 KYC / AML"
