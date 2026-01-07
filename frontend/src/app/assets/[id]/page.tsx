@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
@@ -119,6 +119,8 @@ export default function AssetDetailPage() {
   const [imageLoading, setImageLoading] = useState<{ [key: number]: boolean }>({}); // 图片加载状态
   const [imageErrors, setImageErrors] = useState<{ [key: number]: boolean }>({}); // 图片加载错误状态
   const [modalImageLoading, setModalImageLoading] = useState(false); // 模态框图片加载状态
+  const imageLoadingRef = useRef<{ [key: number]: boolean }>({}); // 用于 useEffect 的 ref
+  const imageErrorsRef = useRef<{ [key: number]: boolean }>({}); // 用于 useEffect 的 ref
 
   useEffect(() => {
     async function fetchAsset() {
@@ -540,14 +542,18 @@ export default function AssetDetailPage() {
   const imageList = getImageList();
   const heroImage = imageList[activeImageIndex] ?? getDefaultImage();
 
+  // 同步 ref 和 state
+  useEffect(() => {
+    imageLoadingRef.current = imageLoading;
+  }, [imageLoading]);
+  
+  useEffect(() => {
+    imageErrorsRef.current = imageErrors;
+  }, [imageErrors]);
+
   // 预加载图片：当图片列表或当前索引变化时，预加载当前和相邻图片
   useEffect(() => {
     if (imageList.length === 0) return;
-    
-    // 当切换图片时，重置当前图片的加载状态（如果之前没有加载过）
-    if (!imageLoading[activeImageIndex] && !imageErrors[activeImageIndex]) {
-      setImageLoading(prev => ({ ...prev, [activeImageIndex]: true }));
-    }
     
     // 预加载当前图片
     if (imageList[activeImageIndex]) {
@@ -559,6 +565,12 @@ export default function AssetDetailPage() {
         setImageLoading(prev => ({ ...prev, [activeImageIndex]: false }));
         setImageErrors(prev => ({ ...prev, [activeImageIndex]: true }));
       };
+      // 只有在图片还没有加载过且没有错误时才设置加载状态
+      const currentLoading = imageLoadingRef.current[activeImageIndex];
+      const currentError = imageErrorsRef.current[activeImageIndex];
+      if (!currentLoading && !currentError) {
+        setImageLoading(prev => ({ ...prev, [activeImageIndex]: true }));
+      }
       img.src = imageList[activeImageIndex];
     }
     
@@ -573,7 +585,7 @@ export default function AssetDetailPage() {
       const img = new Image();
       img.src = imageList[activeImageIndex - 1];
     }
-  }, [imageList, activeImageIndex]);
+  }, [activeImageIndex, imageList]);
 
   return (
     <PageContainer

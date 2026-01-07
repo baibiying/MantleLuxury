@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useAccount, useChainId, usePublicClient } from "wagmi";
 import { formatEther } from "viem";
 import { mantleSepoliaTestnet } from "@/lib/web3/config";
@@ -410,14 +409,11 @@ export default function AssetsPage() {
               <div className="relative z-10">
                 <div className="overflow-hidden rounded-xl mb-3 border border-slate-800/60 shadow-inner bg-slate-900">
                   <div className="relative h-40 w-full">
-                    <Image
+                    <img
                       src={imageFor(asset)}
                       alt={`${asset.brand} ${asset.model}`}
-                      fill
-                      className="object-cover transform transition duration-500 group-hover:scale-105"
-                      sizes="(min-width: 1024px) 50vw, 100vw"
-                      // 开发环境下不走优化管道，避免本地调试时各种域名限制
-                      unoptimized={process.env.NODE_ENV !== "production"}
+                      className="w-full h-full object-cover transform transition duration-500 group-hover:scale-105"
+                      loading="lazy"
                     />
                   </div>
                 </div>
