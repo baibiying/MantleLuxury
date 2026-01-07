@@ -113,6 +113,8 @@ export default function AssetDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0); // 当前展示的图片索引
   const [showInvestPanel, setShowInvestPanel] = useState(false); // 是否显示投资面板
   const [agreedToRisks, setAgreedToRisks] = useState(false); // 是否同意风险提示
+  const [showImageModal, setShowImageModal] = useState(false); // 是否显示图片查看模态框
+  const [modalImageIndex, setModalImageIndex] = useState(0); // 模态框中显示的图片索引
 
   useEffect(() => {
     async function fetchAsset() {
@@ -550,8 +552,8 @@ export default function AssetDetailPage() {
               <div className="overflow-hidden rounded-xl mb-4 border border-slate-800/60 shadow-inner bg-slate-900">
                 {viewMode === "3d" && asset.model3dUrl ? (
                   <div className="h-96 w-full">
-                    <Model3DViewer 
-                      modelUrl={asset.model3dUrl} 
+                    <Model3DViewer
+                      modelUrl={asset.model3dUrl}
                       autoRotate={true}
                       className="rounded-xl"
                     />
@@ -559,8 +561,12 @@ export default function AssetDetailPage() {
                 ) : (
                   <div className="flex flex-col">
                     <div
-                      className="h-64 w-full bg-cover bg-center"
+                      className="h-64 w-full bg-cover bg-center cursor-pointer hover:opacity-90 transition-opacity"
                       style={{ backgroundImage: `url(${heroImage})` }}
+                      onClick={() => {
+                        setModalImageIndex(activeImageIndex);
+                        setShowImageModal(true);
+                      }}
                     />
                     {imageList.length > 1 && (
                       <div className="flex items-center gap-2 px-3 py-3 border-t border-slate-800 overflow-x-auto bg-slate-900/80">
@@ -574,9 +580,11 @@ export default function AssetDetailPage() {
                                 : "border-slate-700 hover:border-slate-500"
                             }`}
                           >
-                            <div
-                              className="w-full h-full bg-cover bg-center"
-                              style={{ backgroundImage: `url(${url})` }}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`缩略图 ${idx + 1}`}
+                              className="w-full h-full object-cover"
                             />
                           </button>
                         ))}
@@ -1155,6 +1163,70 @@ export default function AssetDetailPage() {
             </div>
           </div>
         )}
+
+      {/* 图片查看模态框 */}
+      {showImageModal && imageList.length > 0 && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowImageModal(false);
+            }
+          }}
+        >
+          <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center">
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute -top-10 right-0 text-white hover:text-slate-300 text-2xl leading-none z-10"
+            >
+              ✕
+            </button>
+
+            {/* 上一张按钮 */}
+            {imageList.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalImageIndex((prev) => (prev > 0 ? prev - 1 : imageList.length - 1));
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-lg transition-colors z-10"
+              >
+                ←
+              </button>
+            )}
+
+            {/* 图片 */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageList[modalImageIndex]}
+              alt={`${asset.brand} ${asset.model} - 图片 ${modalImageIndex + 1}`}
+              className="max-w-full max-h-[90vh] w-auto h-auto object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* 下一张按钮 */}
+            {imageList.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalImageIndex((prev) => (prev < imageList.length - 1 ? prev + 1 : 0));
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-lg transition-colors z-10"
+              >
+                →
+              </button>
+            )}
+
+            {/* 图片计数器 */}
+            {imageList.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-lg text-sm">
+                {modalImageIndex + 1} / {imageList.length}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </PageContainer>
   );
 }
