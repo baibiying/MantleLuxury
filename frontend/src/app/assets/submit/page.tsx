@@ -39,7 +39,7 @@ export default function AssetSubmitPage() {
   const [kycLoading, setKycLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploading3dModel, setUploading3dModel] = useState(false);
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]); // 本地预览 URL（blob URL）数组，与 imageBackendUrls 一一对应
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<Map<number, string>>(new Map()); // 本地预览 URL（blob URL）Map，key 为索引，value 为 blob URL
   const [imageBackendUrls, setImageBackendUrls] = useState<string[]>([]); // 后端返回的 URL（用于提交）
 
   const [formData, setFormData] = useState<FormData>({
