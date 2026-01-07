@@ -22,7 +22,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update  # 临时改为 update，让 Hibernate 自动创建 asset_images 表（创建后建议改回 validate）
+      ddl-auto: validate  # 改为 validate，避免 Hibernate 自动修改表结构
     show-sql: true
     properties:
       hibernate:
