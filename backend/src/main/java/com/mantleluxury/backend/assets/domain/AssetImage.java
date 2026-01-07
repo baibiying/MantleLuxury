@@ -15,7 +15,7 @@ public class AssetImage {
     @Column(columnDefinition = "CHAR(36)")
     private String id;
     
-    @Column(name = "asset_id", nullable = true, length = 36)
+    @Column(name = "asset_id", nullable = true, length = 36, columnDefinition = "VARCHAR(36)")
     private String assetId;
     
     @Column(name = "image_index", nullable = false)

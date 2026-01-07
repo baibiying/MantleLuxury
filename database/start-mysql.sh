@@ -644,10 +644,19 @@ ensure_schema() {
             AND COLUMN_NAME = @columnname
         );
         
-        -- 如果列存在且不允许 null，则修改为允许 null
+        -- 如果列存在，检查类型和是否允许 null，并修改为 VARCHAR(36) NULL
+        SET @column_type = (
+            SELECT DATA_TYPE 
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = @dbname
+            AND TABLE_NAME = @tablename
+            AND COLUMN_NAME = @columnname
+        );
+        
+        -- 如果类型不是 VARCHAR 或不允许 null，则修改
         SET @preparedStatement = (SELECT IF(
-            @is_nullable = 'NO',
-            CONCAT('ALTER TABLE ', @tablename, ' MODIFY COLUMN ', @columnname, ' CHAR(36) NULL COMMENT ''关联的资产ID（允许为null，用于临时存储）'''),
+            @is_nullable = 'NO' OR @column_type != 'varchar',
+            CONCAT('ALTER TABLE ', @tablename, ' MODIFY COLUMN ', @columnname, ' VARCHAR(36) NULL COMMENT ''关联的资产ID（允许为null，用于临时存储）'''),
             'SELECT 1'
         ));
         PREPARE alterIfNotNull FROM @preparedStatement;
