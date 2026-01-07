@@ -995,6 +995,14 @@ export default function AdminAssetsPage() {
                             onChange={async (e) => {
                               if (!address || !selectedAsset) return;
                               const newStatus = e.target.value;
+                              // 禁止从募集中切回待认证
+                              if (
+                                selectedAsset.asset.status === "fundraising" &&
+                                newStatus === "registered"
+                              ) {
+                                setError("募集中资产不允许切换回待认证状态");
+                                return;
+                              }
                               if (!confirm(`确定要将资产状态从 "${selectedAsset.asset.status}" 更改为 "${newStatus}" 吗？`)) {
                                 return;
                               }
@@ -1016,17 +1024,19 @@ export default function AdminAssetsPage() {
                                 }
                                 setSuccess(`✅ 资产状态已更新为 "${newStatus}"`);
                                 setTimeout(() => setSuccess(null), 3000);
-      await loadAssetDetail(selectedAsset.asset.id);
-      await loadCustody(selectedAsset.asset.id);
-      await loadInsurance(selectedAsset.asset.id);
-      loadData();
+                                await loadAssetDetail(selectedAsset.asset.id);
+                                await loadCustody(selectedAsset.asset.id);
+                                await loadInsurance(selectedAsset.asset.id);
+                                loadData();
                               } catch (e: any) {
                                 setError(e.message ?? "更新资产状态失败");
                               }
                             }}
                             className="ml-3 px-3 py-1 bg-slate-700 border border-slate-600 rounded text-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                           >
-                            <option value="registered">待认证</option>
+                            <option value="registered" disabled={selectedAsset.asset.status !== "registered"}>
+                              待认证
+                            </option>
                             <option value="fundraising">募集中</option>
                             <option value="funded">已满额</option>
                             <option value="sold">已售出</option>
