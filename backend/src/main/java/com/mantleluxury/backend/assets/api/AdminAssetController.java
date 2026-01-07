@@ -196,6 +196,54 @@ public class AdminAssetController {
     }
 
     /**
+     * 更新资产状态
+     */
+    @PutMapping("/{assetId}/status")
+    public ResponseEntity<?> updateAssetStatus(
+            @PathVariable String assetId,
+            @RequestBody Map<String, String> request,
+            @RequestHeader(value = "X-Wallet-Address", required = false) String walletAddress
+    ) {
+        ResponseEntity<?> permissionCheck = checkAdminPermission(walletAddress);
+        if (permissionCheck != null) {
+            return permissionCheck;
+        }
+
+        String newStatus = request.get("status");
+        if (newStatus == null || newStatus.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "status is required"));
+        }
+
+        // 验证状态值
+        List<String> validStatuses = List.of("registered", "fundraising", "funded", "sold");
+        if (!validStatuses.contains(newStatus)) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Invalid status. Must be one of: " + String.join(", ", validStatuses)
+            ));
+        }
+
+        Asset asset = assetRepository.findById(assetId).orElse(null);
+        if (asset == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Asset not found"));
+        }
+
+        String oldStatus = asset.getStatus();
+        asset.setStatus(newStatus);
+        asset = assetRepository.save(asset);
+
+        logger.info("Updated asset {} status from {} to {} by {}", assetId, oldStatus, newStatus, walletAddress);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", asset.getId());
+        result.put("status", asset.getStatus());
+        result.put("oldStatus", oldStatus);
+        result.put("updatedAt", asset.getUpdatedAt());
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * 获取审核统计信息
      */
     @GetMapping("/stats")

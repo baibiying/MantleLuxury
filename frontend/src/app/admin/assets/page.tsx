@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAccount } from "wagmi";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
@@ -109,9 +110,27 @@ export default function AdminAssetsPage() {
   const [valuationDate, setValuationDate] = useState("");
   const [valuationAgency, setValuationAgency] = useState("");
   const [valuationReportUrl, setValuationReportUrl] = useState("");
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    // 创建或获取 Portal 容器
+    if (typeof window !== "undefined") {
+      let container = document.getElementById("modal-portal");
+      if (!container) {
+        container = document.createElement("div");
+        container.id = "modal-portal";
+        container.style.position = "fixed";
+        container.style.top = "0";
+        container.style.left = "0";
+        container.style.width = "100%";
+        container.style.height = "100%";
+        container.style.zIndex = "99999";
+        container.style.pointerEvents = "none";
+        document.body.appendChild(container);
+      }
+      setPortalContainer(container);
+    }
   }, []);
 
   useEffect(() => {
@@ -203,6 +222,8 @@ export default function AdminAssetsPage() {
         throw new Error("Failed to load asset detail");
       }
       const data = await res.json();
+      console.log("Asset detail data:", data);
+      console.log("Token address:", data?.asset?.tokenAddress);
       setSelectedAsset(data);
     } catch (e: any) {
       setError(e.message ?? "加载资产详情失败");
@@ -439,7 +460,7 @@ export default function AdminAssetsPage() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      registered: "bg-slate-600 text-slate-200",
+      registered: "bg-slate-600 text-white",
       fundraising: "bg-blue-600 text-blue-100",
       funded: "bg-emerald-600 text-emerald-100",
       sold: "bg-purple-600 text-purple-100",
@@ -552,23 +573,23 @@ export default function AdminAssetsPage() {
             {stats && (
               <div className="grid gap-4 md:grid-cols-5">
                 <TechCard className="px-4 py-4">
-                  <div className="text-sm text-slate-400 mb-1">总资产数</div>
+                  <div className="text-sm text-slate-300 mb-1">总资产数</div>
                   <div className="text-3xl font-bold">{stats.total}</div>
                 </TechCard>
                 <TechCard className="px-4 py-4">
-                  <div className="text-sm text-slate-400 mb-1">待认证</div>
-                  <div className="text-3xl font-bold text-slate-400">{stats.registered}</div>
+                  <div className="text-sm text-slate-300 mb-1">待认证</div>
+                  <div className="text-3xl font-bold text-slate-300">{stats.registered}</div>
                 </TechCard>
                 <TechCard className="px-4 py-4">
-                  <div className="text-sm text-slate-400 mb-1">募集中</div>
+                  <div className="text-sm text-slate-300 mb-1">募集中</div>
                   <div className="text-3xl font-bold text-blue-400">{stats.fundraising}</div>
                 </TechCard>
                 <TechCard className="px-4 py-4">
-                  <div className="text-sm text-slate-400 mb-1">已满额</div>
+                  <div className="text-sm text-slate-300 mb-1">已满额</div>
                   <div className="text-3xl font-bold text-emerald-400">{stats.funded}</div>
                 </TechCard>
                 <TechCard className="px-4 py-4">
-                  <div className="text-sm text-slate-400 mb-1">已售出</div>
+                  <div className="text-sm text-slate-300 mb-1">已售出</div>
                   <div className="text-3xl font-bold text-purple-400">{stats.sold}</div>
                 </TechCard>
               </div>
@@ -596,7 +617,7 @@ export default function AdminAssetsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-lg">
                   <thead>
-                    <tr className="text-slate-400 border-b border-slate-700/60">
+                    <tr className="text-slate-300 border-b border-slate-700/60">
                       <th className="py-3 text-left font-normal min-w-[280px]">资产信息</th>
                       <th className="py-3 text-left font-normal min-w-[100px]">状态</th>
                       <th className="py-3 text-left font-normal min-w-[200px]">提交者</th>
@@ -608,7 +629,7 @@ export default function AdminAssetsPage() {
                   <tbody>
                     {assets.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-slate-400">
+                        <td colSpan={6} className="py-8 text-center text-slate-300">
                           暂无资产数据
                         </td>
                       </tr>
@@ -616,14 +637,19 @@ export default function AdminAssetsPage() {
                       assets.map((asset) => (
                         <tr
                           key={asset.id}
-                          className="border-b border-slate-800/40 last:border-0 hover:bg-slate-800/20"
+                          className="border-b border-slate-800/40 last:border-0 hover:bg-slate-800/20 cursor-pointer"
+                          onClick={async () => {
+                            await loadAssetDetail(asset.id);
+                            await loadAuthentications(asset.id);
+                            await loadValuations(asset.id);
+                          }}
                         >
                           <td className="py-3 min-w-[280px]">
                             <div className="flex flex-col">
                               <span className="font-medium break-words">
                                 {asset.brand} {asset.model}
                               </span>
-                              <span className="text-base text-slate-500 mt-1">
+                              <span className="text-base text-slate-300 mt-1">
                                 {asset.assetType === "watch" ? "名表" : "珠宝"} ·{" "}
                                 {asset.year ?? "年份未知"}
                               </span>
@@ -639,7 +665,8 @@ export default function AdminAssetsPage() {
                                 href={`https://explorer.sepolia.mantle.xyz/address/${asset.tokenAddress}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sky-400 hover:text-sky-300 break-all"
+                                className="text-cyan-400 hover:text-cyan-300 break-all"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 {asset.tokenAddress}
                               </a>
@@ -647,19 +674,20 @@ export default function AdminAssetsPage() {
                               "-"
                             )}
                           </td>
-                          <td className="py-3 text-slate-400 text-base min-w-[180px] whitespace-nowrap">
+                          <td className="py-3 text-slate-300 text-base min-w-[180px] whitespace-nowrap">
                             {new Date(asset.createdAt).toLocaleString("zh-CN")}
                           </td>
                           <td className="py-3 text-right min-w-[120px]">
                             <button
-                              onClick={async () => {
+                              onClick={async (e) => {
+                                e.stopPropagation();
                                 await loadAssetDetail(asset.id);
                                 await loadAuthentications(asset.id);
                                 await loadValuations(asset.id);
                               }}
-                              className="px-3 py-1 bg-sky-600 hover:bg-sky-700 rounded text-white text-base font-medium transition-colors whitespace-nowrap"
+                              className="px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white text-base font-medium transition-colors whitespace-nowrap shadow-lg shadow-sky-500/20"
                             >
-                              查看详情
+                              📋 查看详情
                             </button>
                           </td>
                         </tr>
@@ -670,60 +698,140 @@ export default function AdminAssetsPage() {
               </div>
             </TechCard>
 
-            {/* 资产详情模态框 */}
-            {selectedAsset && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-semibold">资产详情</h2>
-                      <button
-                        onClick={() => {
-                          setSelectedAsset(null);
-                          setShowReviewModal(false);
-                        }}
-                        className="text-slate-400 hover:text-slate-200"
+            {/* 资产详情模态框 - 使用 Portal 渲染到最顶层 */}
+            {selectedAsset && portalContainer && createPortal(
+              <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                style={{ 
+                  paddingTop: '120px',
+                  zIndex: 99999,
+                  pointerEvents: 'auto'
+                }}
+                onClick={(e) => {
+                  // 点击背景关闭模态框
+                  if (e.target === e.currentTarget) {
+                    setSelectedAsset(null);
+                    setShowReviewModal(false);
+                  }
+                }}
+              >
+                <div 
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[calc(100vh-140px)] overflow-hidden flex flex-col shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* 固定标题栏 */}
+                  <div className="flex items-center justify-between p-6 border-b border-slate-700 flex-shrink-0 bg-slate-900 sticky top-0 z-10">
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-2xl font-semibold text-white">资产详情</h2>
+                      <Link
+                        href={`/assets/${selectedAsset.asset.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyan-400 hover:text-cyan-300 text-sm font-medium underline flex items-center gap-1 transition-colors"
                       >
-                        ✕
-                      </button>
+                        <span>查看用户端页面</span>
+                        <span>→</span>
+                      </Link>
                     </div>
+                    <button
+                      onClick={() => {
+                        setSelectedAsset(null);
+                        setShowReviewModal(false);
+                      }}
+                      className="text-slate-300 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-slate-800 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {/* 可滚动内容区域 */}
+                  <div className="overflow-y-auto flex-1">
+                    <div className="p-6">
 
                     {/* 资产基本信息 */}
                     <div className="mb-6 p-4 bg-slate-800/50 rounded-lg">
-                      <h3 className="font-semibold mb-3">基本信息</h3>
+                      <h3 className="font-semibold mb-3 text-white">基本信息</h3>
                       <div className="grid grid-cols-2 gap-4 text-base">
                         <div>
-                          <span className="text-slate-400">品牌：</span>
-                          <span className="ml-2">{selectedAsset.asset.brand}</span>
+                          <span className="text-slate-300">品牌：</span>
+                          <span className="ml-2 text-white font-medium">{selectedAsset.asset.brand}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400">型号：</span>
-                          <span className="ml-2">{selectedAsset.asset.model}</span>
+                          <span className="text-slate-300">型号：</span>
+                          <span className="ml-2 text-white font-medium">{selectedAsset.asset.model}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400">类型：</span>
-                          <span className="ml-2">
+                          <span className="text-slate-300">类型：</span>
+                          <span className="ml-2 text-white font-medium">
                             {selectedAsset.asset.assetType === "watch" ? "名表" : "珠宝"}
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-400">年份：</span>
-                          <span className="ml-2">{selectedAsset.asset.year ?? "-"}</span>
+                          <span className="text-slate-300">年份：</span>
+                          <span className="ml-2 text-white font-medium">{selectedAsset.asset.year ?? "-"}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400">状态：</span>
+                          <span className="text-slate-300">状态：</span>
                           <span className="ml-2">{getStatusBadge(selectedAsset.asset.status)}</span>
+                          <select
+                            value={selectedAsset.asset.status}
+                            onChange={async (e) => {
+                              if (!address || !selectedAsset) return;
+                              const newStatus = e.target.value;
+                              if (!confirm(`确定要将资产状态从 "${selectedAsset.asset.status}" 更改为 "${newStatus}" 吗？`)) {
+                                return;
+                              }
+                              try {
+                                const res = await fetch(
+                                  `${API_BASE}/api/admin/assets/${selectedAsset.asset.id}/status`,
+                                  {
+                                    method: "PUT",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                      "X-Wallet-Address": address,
+                                    },
+                                    body: JSON.stringify({ status: newStatus }),
+                                  }
+                                );
+                                if (!res.ok) {
+                                  const text = await res.text();
+                                  throw new Error(text || "更新资产状态失败");
+                                }
+                                setSuccess(`✅ 资产状态已更新为 "${newStatus}"`);
+                                setTimeout(() => setSuccess(null), 3000);
+                                await loadAssetDetail(selectedAsset.asset.id);
+                                loadData();
+                              } catch (e: any) {
+                                setError(e.message ?? "更新资产状态失败");
+                              }
+                            }}
+                            className="ml-3 px-3 py-1 bg-slate-700 border border-slate-600 rounded text-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          >
+                            <option value="registered">待认证</option>
+                            <option value="fundraising">募集中</option>
+                            <option value="funded">已满额</option>
+                            <option value="sold">已售出</option>
+                          </select>
                         </div>
                         <div>
-                          <span className="text-slate-400">合约地址：</span>
-                          <span className="ml-2 font-mono text-sm">
-                            {selectedAsset.asset.tokenAddress || "-"}
+                          <span className="text-slate-300">合约地址：</span>
+                          <span className="ml-2 font-mono text-sm text-cyan-300">
+                            {selectedAsset.asset?.tokenAddress || selectedAsset.asset?.token_address || "-"}
                           </span>
+                          {selectedAsset.asset?.tokenAddress && (
+                            <a
+                              href={`https://explorer.sepolia.mantle.xyz/address/${selectedAsset.asset.tokenAddress}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-2 text-cyan-400 hover:text-cyan-300 text-sm underline"
+                            >
+                              查看 →
+                            </a>
+                          )}
                         </div>
                       </div>
                       {selectedAsset.asset.description && (
                         <div className="mt-4">
-                          <span className="text-slate-400">描述：</span>
+                          <span className="text-slate-300">描述：</span>
                           <p className="mt-1 text-slate-300">{selectedAsset.asset.description}</p>
                         </div>
                       )}
@@ -732,7 +840,7 @@ export default function AdminAssetsPage() {
                     {/* 审核记录 */}
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold">审核记录</h3>
+                        <h3 className="font-semibold text-white">审核记录</h3>
                         <button
                           onClick={() => setShowReviewModal(true)}
                           className="px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white text-base font-medium transition-colors"
@@ -741,7 +849,7 @@ export default function AdminAssetsPage() {
                         </button>
                       </div>
                       {selectedAsset.reviews.length === 0 ? (
-                        <div className="text-center py-8 text-slate-400 text-base">
+                        <div className="text-center py-8 text-slate-300 text-base">
                           暂无审核记录
                         </div>
                       ) : (
@@ -755,27 +863,27 @@ export default function AdminAssetsPage() {
                                 <div className="flex items-center gap-3">
                                   {getReviewStatusBadge(review.reviewStatus)}
                                   {review.actionType && (
-                                    <span className="text-sm text-slate-400">
+                                    <span className="text-sm text-white">
                                       {review.actionType}
                                     </span>
                                   )}
                                 </div>
-                                <span className="text-sm text-slate-400">
+                                <span className="text-sm text-white">
                                   {new Date(review.createdAt).toLocaleString("zh-CN")}
                                 </span>
                               </div>
                               {review.reviewNotes && (
-                                <p className="text-base text-slate-300 mt-2">
+                                <p className="text-base text-white mt-2 leading-relaxed">
                                   {review.reviewNotes}
                                 </p>
                               )}
                               {review.nextStep && (
-                                <p className="text-sm text-slate-400 mt-2">
+                                <p className="text-sm text-white mt-2">
                                   下一步：{review.nextStep}
                                 </p>
                               )}
-                              <p className="text-sm text-slate-500 mt-2">
-                                审核人：{review.reviewerAddress}
+                              <p className="text-sm text-white mt-2">
+                                审核人：<span className="font-mono text-cyan-300">{review.reviewerAddress}</span>
                               </p>
                             </div>
                           ))}
@@ -786,7 +894,7 @@ export default function AdminAssetsPage() {
                     {/* 真伪认证记录 */}
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold">真伪认证记录</h3>
+                        <h3 className="font-semibold text-white">真伪认证记录</h3>
                         <button
                           onClick={() => {
                             setShowAuthModal(true);
@@ -798,7 +906,7 @@ export default function AdminAssetsPage() {
                       </div>
                       {!selectedAsset.authentications ||
                       selectedAsset.authentications.length === 0 ? (
-                        <div className="text-center py-6 text-slate-400 text-base">
+                        <div className="text-center py-6 text-slate-300 text-base">
                           暂无认证记录
                         </div>
                       ) : (
@@ -810,10 +918,10 @@ export default function AdminAssetsPage() {
                             >
                               <div className="flex items-start justify-between mb-2">
                                 <div>
-                                  <div className="text-base font-medium text-slate-200">
+                                  <div className="text-base font-medium text-white">
                                     {auth.authenticatorName}
                                   </div>
-                                  <div className="text-sm text-slate-400 mt-1">
+                                  <div className="text-sm text-slate-300 mt-1">
                                     {auth.authenticatorType === "official_brand"
                                       ? "官方品牌认证"
                                       : auth.authenticatorType === "third_party"
@@ -821,7 +929,7 @@ export default function AdminAssetsPage() {
                                       : "AI 系统认证"}
                                   </div>
                                   {auth.verificationDate && (
-                                    <div className="text-sm text-slate-500 mt-1">
+                                    <div className="text-sm text-slate-300 mt-1">
                                       鉴定日期：
                                       {new Date(
                                         auth.verificationDate
@@ -833,19 +941,19 @@ export default function AdminAssetsPage() {
                                       href={auth.reportUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-sm text-sky-400 hover:text-sky-300 mt-1 inline-block"
+                                      className="text-sm text-cyan-400 hover:text-cyan-300 mt-1 inline-block font-medium"
                                     >
                                       查看认证报告 →
                                     </a>
                                   )}
                                   {auth.reportHash && (
-                                    <div className="text-sm text-slate-500 mt-1 font-mono">
+                                    <div className="text-sm text-slate-300 mt-1 font-mono text-cyan-300">
                                       报告哈希：
                                       {auth.reportHash.slice(0, 18)}...
                                     </div>
                                   )}
                                   {auth.notes && (
-                                    <div className="text-sm text-slate-400 mt-1 whitespace-pre-line">
+                                    <div className="text-sm text-white mt-1 whitespace-pre-line leading-relaxed">
                                       备注：{auth.notes}
                                     </div>
                                   )}
@@ -879,7 +987,7 @@ export default function AdminAssetsPage() {
                                       disabled={
                                         auth.authenticationStatus === "verified"
                                       }
-                                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-400 rounded text-white text-sm font-medium transition-colors"
+                                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-300 rounded text-white text-sm font-medium transition-colors"
                                     >
                                       标记为通过
                                     </button>
@@ -893,7 +1001,7 @@ export default function AdminAssetsPage() {
                                       disabled={
                                         auth.authenticationStatus === "rejected"
                                       }
-                                      className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-400 rounded text-white text-sm font-medium transition-colors"
+                                      className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-300 rounded text-white text-sm font-medium transition-colors"
                                     >
                                       标记为拒绝
                                     </button>
@@ -909,7 +1017,7 @@ export default function AdminAssetsPage() {
                     {/* 估值报告记录 */}
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold">估值报告记录</h3>
+                        <h3 className="font-semibold text-white">估值报告记录</h3>
                         <button
                           onClick={() => {
                             setShowValuationModal(true);
@@ -921,7 +1029,7 @@ export default function AdminAssetsPage() {
                       </div>
                       {!selectedAsset.valuations ||
                       selectedAsset.valuations.length === 0 ? (
-                        <div className="text-center py-6 text-slate-400 text-base">
+                        <div className="text-center py-6 text-slate-300 text-base">
                           暂无估值报告
                         </div>
                       ) : (
@@ -933,11 +1041,11 @@ export default function AdminAssetsPage() {
                             >
                               <div className="flex items-start justify-between mb-2">
                                 <div>
-                                  <div className="text-base font-medium text-slate-200">
+                                  <div className="text-base font-medium text-white">
                                     {valuation.valuationAgency || "估值机构"}
                                   </div>
                                   {valuation.valuationDate && (
-                                    <div className="text-sm text-slate-400 mt-1">
+                                    <div className="text-sm text-slate-300 mt-1">
                                       估值日期：
                                       {new Date(
                                         valuation.valuationDate
@@ -949,7 +1057,7 @@ export default function AdminAssetsPage() {
                                       href={valuation.reportUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-sm text-sky-400 hover:text-sky-300 mt-1 inline-block"
+                                      className="text-sm text-cyan-400 hover:text-cyan-300 mt-1 inline-block"
                                     >
                                       查看估值报告 →
                                     </a>
@@ -980,33 +1088,80 @@ export default function AdminAssetsPage() {
                     </div>
 
                     {/* 操作按钮 */}
-                    <div className="flex gap-3">
-                      <Link
-                        href={`/assets/${selectedAsset.asset.id}`}
-                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-base font-medium transition-colors"
-                      >
-                        查看前端页面
-                      </Link>
+                    <div className="flex gap-3 items-center flex-wrap">
+                      {selectedAsset.asset.status === "registered" && (
+                        <button
+                          onClick={async () => {
+                            if (!address || !selectedAsset) return;
+                            if (!confirm("确定要审核通过此资产并上线募资吗？\n\n资产状态将从'待认证'改为'募集中'，用户将可以投资此资产。")) {
+                              return;
+                            }
+                            try {
+                              const res = await fetch(
+                                `${API_BASE}/api/admin/assets/${selectedAsset.asset.id}/status`,
+                                {
+                                  method: "PUT",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    "X-Wallet-Address": address,
+                                  },
+                                  body: JSON.stringify({ status: "fundraising" }),
+                                }
+                              );
+                              if (!res.ok) {
+                                const text = await res.text();
+                                throw new Error(text || "更新资产状态失败");
+                              }
+                              setSuccess("✅ 资产已审核通过，状态已更新为'募集中'");
+                              setTimeout(() => setSuccess(null), 3000);
+                              await loadAssetDetail(selectedAsset.asset.id);
+                              loadData();
+                            } catch (e: any) {
+                              setError(e.message ?? "更新资产状态失败");
+                            }
+                          }}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors"
+                        >
+                          ✓ 审核通过并上线
+                        </button>
+                      )}
                       {selectedAsset.asset.authentications && selectedAsset.asset.authentications.length > 0 && (
                         <div className="px-4 py-2 bg-slate-700/50 rounded-lg text-base text-slate-300">
                           认证记录：{selectedAsset.asset.authentications.length} 条
                         </div>
                       )}
                     </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </div>,
+              portalContainer
             )}
 
-            {/* 添加审核记录模态框 */}
-            {showReviewModal && selectedAsset && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6">
+            {/* 添加审核记录模态框 - 使用 Portal */}
+            {showReviewModal && selectedAsset && portalContainer && createPortal(
+              <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                style={{ 
+                  paddingTop: '120px',
+                  zIndex: 100000,
+                  pointerEvents: 'auto'
+                }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setShowReviewModal(false);
+                  }
+                }}
+              >
+                <div 
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-2xl font-semibold">添加审核记录</h2>
                     <button
                       onClick={() => setShowReviewModal(false)}
-                      className="text-slate-400 hover:text-slate-200"
+                      className="text-slate-300 hover:text-white"
                     >
                       ✕
                     </button>
@@ -1088,18 +1243,34 @@ export default function AdminAssetsPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div>,
+              portalContainer
             )}
 
-            {/* 添加真伪认证记录模态框 */}
-            {showAuthModal && selectedAsset && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6">
+            {/* 添加真伪认证记录模态框 - 使用 Portal */}
+            {showAuthModal && selectedAsset && portalContainer && createPortal(
+              <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                style={{ 
+                  paddingTop: '120px',
+                  zIndex: 100000,
+                  pointerEvents: 'auto'
+                }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setShowAuthModal(false);
+                  }
+                }}
+              >
+                <div 
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-2xl font-semibold">添加真伪认证记录</h2>
                     <button
                       onClick={() => setShowAuthModal(false)}
-                      className="text-slate-400 hover:text-slate-200"
+                      className="text-slate-300 hover:text-white"
                     >
                       ✕
                     </button>
@@ -1202,18 +1373,34 @@ export default function AdminAssetsPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div>,
+              portalContainer
             )}
 
-            {/* 添加估值报告模态框 */}
-            {showValuationModal && selectedAsset && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6">
+            {/* 添加估值报告模态框 - 使用 Portal */}
+            {showValuationModal && selectedAsset && portalContainer && createPortal(
+              <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4" 
+                style={{ 
+                  paddingTop: '120px',
+                  zIndex: 100000,
+                  pointerEvents: 'auto'
+                }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setShowValuationModal(false);
+                  }
+                }}
+              >
+                <div 
+                  className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-2xl font-semibold">添加估值报告</h2>
                     <button
                       onClick={() => setShowValuationModal(false)}
-                      className="text-slate-400 hover:text-slate-200"
+                      className="text-slate-300 hover:text-white"
                     >
                       ✕
                     </button>
@@ -1304,7 +1491,8 @@ export default function AdminAssetsPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div>,
+              portalContainer
             )}
           </div>
         )}
