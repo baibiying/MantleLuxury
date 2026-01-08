@@ -178,6 +178,13 @@ public class AdminKycController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found"));
         }
 
+        // 保存原始状态，以便在链上同步失败时回滚
+        String originalStatus = user.getKycStatus();
+        LocalDateTime originalApprovedAt = user.getKycApprovedAt();
+        LocalDateTime originalRejectedAt = user.getKycRejectedAt();
+        String originalRejectionReason = user.getKycRejectionReason();
+
+        // 更新数据库状态
         user.setKycStatus(status);
         if (status.equals("approved")) {
             user.setKycApprovedAt(LocalDateTime.now());
@@ -191,24 +198,46 @@ public class AdminKycController {
         userRepository.save(user);
 
         // 同步 KYC 状态到链上 KYCRegistry 合约
+        // 注意：只有在链上同步成功后才返回成功
+        // 如果链上同步失败，回滚数据库状态
         String transactionHash = null;
         String syncStatus = "success";
         String syncMessage = "KYC status synced to blockchain";
         try {
             transactionHash = kycRegistryService.setKYCStatus(walletAddress, status);
             if (transactionHash != null) {
-                logger.info("KYC status synced to blockchain. Transaction hash: {}", transactionHash);
+                logger.info("✅ KYC status synced to blockchain. Transaction hash: {}", transactionHash);
             } else {
-                logger.warn("KYC status sync to blockchain returned null. Blockchain may be disabled.");
+                // 区块链同步被禁用（可能是测试环境）
+                logger.warn("⚠️ KYC status sync to blockchain returned null. Blockchain may be disabled.");
                 syncStatus = "skipped";
                 syncMessage = "Blockchain sync skipped (blockchain may be disabled)";
+                // 如果区块链被禁用，允许链下状态更新成功
             }
         } catch (Exception e) {
-            logger.error("Failed to sync KYC status to blockchain for {}: {}", walletAddress, e.getMessage(), e);
+            logger.error("❌ Failed to sync KYC status to blockchain for {}: {}", walletAddress, e.getMessage(), e);
             syncStatus = "failed";
             syncMessage = "Blockchain sync failed: " + e.getMessage();
-            // 不抛出异常，允许链下状态更新成功，但记录错误
-            // 实际生产环境可能需要重试机制或告警
+            
+            // 回滚数据库状态
+            logger.warn("Rolling back database state for user {} due to blockchain sync failure", walletAddress);
+            user.setKycStatus(originalStatus);
+            user.setKycApprovedAt(originalApprovedAt);
+            user.setKycRejectedAt(originalRejectedAt);
+            user.setKycRejectionReason(originalRejectionReason);
+            userRepository.save(user);
+            
+            // 返回错误响应
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to sync KYC status to blockchain");
+            errorResponse.put("message", syncMessage);
+            errorResponse.put("walletAddress", walletAddress);
+            errorResponse.put("blockchainSync", Map.of(
+                    "status", syncStatus,
+                    "message", syncMessage,
+                    "transactionHash", "N/A"
+            ));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
 
         // 发送邮件通知（已禁用）

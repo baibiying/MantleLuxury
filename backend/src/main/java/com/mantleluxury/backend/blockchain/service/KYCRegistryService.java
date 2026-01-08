@@ -197,8 +197,29 @@ public class KYCRegistryService {
                     }
 
                     String transactionHash = ethSendTransaction.getTransactionHash();
-                    logger.info("✅ KYC status updated on-chain. Transaction hash: {} (attempt {})", transactionHash, attempt + 1);
-                    return transactionHash;
+                    logger.info("✅ KYC status transaction sent. Transaction hash: {} (attempt {}). Waiting for confirmation...", transactionHash, attempt + 1);
+                    
+                    // 等待交易确认（最多等待 60 秒）
+                    try {
+                        TransactionReceipt receipt = transactionManager.waitForTransactionReceipt(transactionHash);
+                        if (receipt != null && receipt.isStatusOK()) {
+                            logger.info("✅ KYC status updated on-chain. Transaction confirmed. Hash: {}, Block: {}", 
+                                    transactionHash, receipt.getBlockNumber());
+                            return transactionHash;
+                        } else if (receipt != null && !receipt.isStatusOK()) {
+                            // 交易失败
+                            logger.error("❌ KYC status transaction failed. Hash: {}, Status: {}", 
+                                    transactionHash, receipt.getStatus());
+                            throw new RuntimeException("Transaction failed on-chain. Status: " + receipt.getStatus());
+                        } else {
+                            // 交易收据为 null（不应该发生）
+                            logger.error("❌ KYC status transaction receipt is null. Hash: {}", transactionHash);
+                            throw new RuntimeException("Transaction receipt is null");
+                        }
+                    } catch (org.web3j.protocol.exceptions.TransactionException e) {
+                        logger.error("❌ KYC status transaction failed: {}", e.getMessage(), e);
+                        throw new RuntimeException("Transaction failed: " + e.getMessage(), e);
+                    }
                     
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

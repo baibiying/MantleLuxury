@@ -56,6 +56,7 @@ export default function AdminKycPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectingWalletAddress, setRejectingWalletAddress] = useState<string>("");
   const [rejectionReason, setRejectionReason] = useState<string>("");
+  const [reviewingWalletAddress, setReviewingWalletAddress] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -153,6 +154,10 @@ export default function AdminKycPage() {
 
   const handleReviewKyc = async (walletAddress: string, status: "approved" | "rejected", rejectionReason?: string) => {
     if (!address) return;
+    setReviewingWalletAddress(walletAddress);
+    setError(null);
+    setSuccess(null);
+    
     try {
       const requestBody: any = { status };
       if (status === "rejected" && rejectionReason) {
@@ -171,23 +176,49 @@ export default function AdminKycPage() {
         }
       );
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "审核失败");
+        // 检查是否是链上同步失败
+        if (data.blockchainSync && data.blockchainSync.status === "failed") {
+          throw new Error(`链上同步失败: ${data.blockchainSync.message || "未知错误"}`);
+        }
+        throw new Error(data.message || data.error || "审核失败");
       }
 
-      const data = await res.json();
-      
-      let successMessage = `✅ KYC ${status === "approved" ? "已通过" : "已拒绝"}`;
+      // 检查链上同步状态
+      const blockchainSync = data.blockchainSync || {};
+      if (blockchainSync.status === "success") {
+        let successMessage = `✅ KYC ${status === "approved" ? "已通过" : "已拒绝"}（已同步到链上）`;
+        if (blockchainSync.transactionHash && blockchainSync.transactionHash !== "N/A") {
+          successMessage += `，交易哈希: ${blockchainSync.transactionHash.substring(0, 10)}...`;
+        }
+        setSuccess(successMessage);
+        setTimeout(() => setSuccess(null), 8000);
+      } else if (blockchainSync.status === "skipped") {
+        // 区块链被禁用（测试环境）
+        let successMessage = `✅ KYC ${status === "approved" ? "已通过" : "已拒绝"}（链上同步已跳过，区块链可能被禁用）`;
+        setSuccess(successMessage);
+        setTimeout(() => setSuccess(null), 8000);
+      } else if (blockchainSync.status === "failed") {
+        // 链上同步失败（不应该发生，因为后端会在失败时返回错误响应）
+        throw new Error(`链上同步失败: ${blockchainSync.message || "未知错误"}`);
+      } else {
+        // 未知状态
+        let successMessage = `✅ KYC ${status === "approved" ? "已通过" : "已拒绝"}`;
+        setSuccess(successMessage);
+        setTimeout(() => setSuccess(null), 5000);
+      }
 
-      setSuccess(successMessage);
-      setTimeout(() => setSuccess(null), 5000);
       setShowRejectDialog(false);
       setRejectionReason("");
       setRejectingWalletAddress("");
       loadData();
     } catch (e: any) {
       setError(e.message ?? "审核失败");
+      setTimeout(() => setError(null), 8000);
+    } finally {
+      setReviewingWalletAddress(null);
     }
   };
 
@@ -510,20 +541,30 @@ export default function AdminKycPage() {
                             <div className="flex items-center justify-end gap-2">
                               {user.kycStatus === "pending" && (
                                 <>
-                                  <TechButton
-                                    onClick={() =>
-                                      handleReviewKyc(user.walletAddress, "approved")
-                                    }
-                                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium"
-                                  >
-                                    通过
-                                  </TechButton>
-                                  <TechButton
-                                    onClick={() => handleRejectClick(user.walletAddress)}
-                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium"
-                                  >
-                                    拒绝
-                                  </TechButton>
+                                  {reviewingWalletAddress === user.walletAddress ? (
+                                    <span className="px-3 py-1 bg-slate-600 text-white text-sm font-medium rounded">
+                                      同步中...
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <TechButton
+                                        onClick={() =>
+                                          handleReviewKyc(user.walletAddress, "approved")
+                                        }
+                                        disabled={reviewingWalletAddress !== null}
+                                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white text-sm font-medium"
+                                      >
+                                        通过
+                                      </TechButton>
+                                      <TechButton
+                                        onClick={() => handleRejectClick(user.walletAddress)}
+                                        disabled={reviewingWalletAddress !== null}
+                                        className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white text-sm font-medium"
+                                      >
+                                        拒绝
+                                      </TechButton>
+                                    </>
+                                  )}
                                 </>
                               )}
                             </div>
