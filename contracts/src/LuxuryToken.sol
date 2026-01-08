@@ -4,12 +4,14 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./KYCRegistry.sol";
+import "./CustodyManager.sol";
 
 /**
  * LuxuryToken：
  * - 代表单个实物奢侈品资产的份额
  * - 支持投资者购买代币份额
  * - 集成 KYCRegistry，仅通过 KYC 的用户可以购买和持有代币
+ * - 资金托管机制：投资者购买时资金存入合约，满足条件后释放给资产提交者
  */
 contract LuxuryToken is ERC20, Ownable {
     bytes32 public assetId;
@@ -24,14 +26,36 @@ contract LuxuryToken is ERC20, Ownable {
     // KYCRegistry 合约地址
     KYCRegistry public kycRegistry;
     
+    // CustodyManager 合约地址（用于验证托管状态）
+    CustodyManager public custodyManager;
+    
     // 是否启用 KYC 检查（owner 可以控制）
     bool public kycCheckEnabled;
+    
+    // 是否启用托管验证（owner 可以控制）
+    bool public custodyCheckEnabled;
+    
+    // 资金释放延迟时间（秒），默认 30 天
+    uint256 public releaseDelay = 30 days;
+    
+    // 首次购买的时间戳（用于计算释放时间）
+    uint256 public firstPurchaseTimestamp;
+    
+    // 是否已经释放资金
+    bool public fundsReleased;
+    
+    // 累计收到的资金总额
+    uint256 public totalEscrowedFunds;
 
     event TokensPurchased(address indexed buyer, uint256 amount, uint256 totalCost);
     event PriceUpdated(uint256 newPrice);
     event SalesToggled(bool enabled);
     event KYCRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
     event KYCCheckToggled(bool enabled);
+    event CustodyManagerUpdated(address indexed oldManager, address indexed newManager);
+    event CustodyCheckToggled(bool enabled);
+    event FundsReleased(address indexed recipient, uint256 amount);
+    event ReleaseDelayUpdated(uint256 newDelay);
 
     constructor(
         string memory name_,
@@ -41,7 +65,8 @@ contract LuxuryToken is ERC20, Ownable {
         uint256 initialSupply_,
         uint256 pricePerToken_,  // 每份代币的价格（wei）
         address owner_,
-        address kycRegistry_  // KYCRegistry 合约地址
+        address kycRegistry_,  // KYCRegistry 合约地址
+        address custodyManager_  // CustodyManager 合约地址（可选，可以是零地址）
     ) ERC20(name_, symbol_) Ownable(owner_) {
         assetId = assetId_;
         metadataHash = metadataHash_;
@@ -49,12 +74,24 @@ contract LuxuryToken is ERC20, Ownable {
         salesEnabled = true;  // 默认启用销售
         kycRegistry = KYCRegistry(kycRegistry_);
         kycCheckEnabled = true;  // 默认启用 KYC 检查
+        if (custodyManager_ != address(0)) {
+            custodyManager = CustodyManager(custodyManager_);
+            custodyCheckEnabled = true;  // 如果提供了 CustodyManager，默认启用托管检查
+        }
+        fundsReleased = false;
+        totalEscrowedFunds = 0;
         _mint(owner_, initialSupply_);
     }
 
     /**
      * 购买代币
      * @param amount 要购买的代币数量（以最小单位计算，例如：1 份 = 10^18）
+     * 
+     * 资金托管机制：
+     * - 投资者购买代币时，资金存入合约（而不是立即转给 owner）
+     * - 只有在满足以下条件后，owner 才能提取资金：
+     *   1. 达到释放延迟时间（默认 30 天）
+     *   2. 资产处于托管状态（如果启用了托管检查）
      */
     function buyTokens(uint256 amount) external payable {
         require(salesEnabled, "Sales are currently disabled");
@@ -64,6 +101,15 @@ contract LuxuryToken is ERC20, Ownable {
         // KYC 检查：购买者必须通过 KYC
         if (kycCheckEnabled) {
             require(kycRegistry.isKYCApproved(msg.sender), "KYC verification required");
+        }
+        
+        // 托管状态检查：如果启用了托管检查，资产必须处于托管状态
+        if (custodyCheckEnabled && address(custodyManager) != address(0)) {
+            CustodyManager.AssetStatus status = custodyManager.getAssetStatus(assetId);
+            require(
+                status == CustodyManager.AssetStatus.InCustody,
+                "Asset must be in custody before purchase"
+            );
         }
         
         uint256 totalCost = amount * pricePerToken;
@@ -77,8 +123,14 @@ contract LuxuryToken is ERC20, Ownable {
             payable(msg.sender).transfer(msg.value - totalCost);
         }
         
-        // 将收到的 MNT 转给 owner（用于后续分配收益等）
-        payable(owner()).transfer(totalCost);
+        // 资金托管：将收到的 MNT 存入合约，而不是立即转给 owner
+        // 资金将保留在合约中，直到满足释放条件
+        totalEscrowedFunds += totalCost;
+        
+        // 记录首次购买时间（用于计算释放时间）
+        if (firstPurchaseTimestamp == 0) {
+            firstPurchaseTimestamp = block.timestamp;
+        }
         
         emit TokensPurchased(msg.sender, amount, totalCost);
     }
@@ -134,6 +186,127 @@ contract LuxuryToken is ERC20, Ownable {
     function setKYCCheckEnabled(bool enabled) external onlyOwner {
         kycCheckEnabled = enabled;
         emit KYCCheckToggled(enabled);
+    }
+    
+    /**
+     * 设置 CustodyManager 合约地址（仅 owner）
+     */
+    function setCustodyManager(address custodyManager_) external onlyOwner {
+        address oldManager = address(custodyManager);
+        if (custodyManager_ != address(0)) {
+            custodyManager = CustodyManager(custodyManager_);
+            custodyCheckEnabled = true;  // 设置地址时自动启用检查
+        } else {
+            custodyCheckEnabled = false;
+        }
+        emit CustodyManagerUpdated(oldManager, custodyManager_);
+    }
+    
+    /**
+     * 启用/禁用托管检查（仅 owner）
+     */
+    function setCustodyCheckEnabled(bool enabled) external onlyOwner {
+        require(address(custodyManager) != address(0), "CustodyManager not set");
+        custodyCheckEnabled = enabled;
+        emit CustodyCheckToggled(enabled);
+    }
+    
+    /**
+     * 设置资金释放延迟时间（仅 owner）
+     */
+    function setReleaseDelay(uint256 newDelay) external onlyOwner {
+        require(newDelay > 0, "Release delay must be greater than 0");
+        releaseDelay = newDelay;
+        emit ReleaseDelayUpdated(newDelay);
+    }
+    
+    /**
+     * 释放资金给 owner
+     * 只有满足以下条件才能释放：
+     * 1. 达到释放延迟时间
+     * 2. 资产处于托管状态（如果启用了托管检查）
+     * 3. 资金尚未释放
+     */
+    function releaseFunds() external {
+        require(!fundsReleased, "Funds already released");
+        require(totalEscrowedFunds > 0, "No funds to release");
+        require(
+            firstPurchaseTimestamp > 0 && block.timestamp >= firstPurchaseTimestamp + releaseDelay,
+            "Release delay not met"
+        );
+        
+        // 如果启用了托管检查，验证资产仍在托管中
+        if (custodyCheckEnabled && address(custodyManager) != address(0)) {
+            CustodyManager.AssetStatus status = custodyManager.getAssetStatus(assetId);
+            require(
+                status == CustodyManager.AssetStatus.InCustody,
+                "Asset must be in custody to release funds"
+            );
+        }
+        
+        uint256 amount = totalEscrowedFunds;
+        totalEscrowedFunds = 0;
+        fundsReleased = true;
+        
+        // 将资金转给 owner（资产提交者）
+        payable(owner()).transfer(amount);
+        
+        emit FundsReleased(owner(), amount);
+    }
+    
+    /**
+     * 获取当前托管在合约中的资金总额
+     */
+    function getEscrowedFunds() external view returns (uint256) {
+        return totalEscrowedFunds;
+    }
+    
+    /**
+     * 获取资金可以释放的时间戳
+     */
+    function getReleaseTimestamp() external view returns (uint256) {
+        if (firstPurchaseTimestamp == 0) {
+            return 0;
+        }
+        return firstPurchaseTimestamp + releaseDelay;
+    }
+    
+    /**
+     * 检查资金是否可以释放
+     */
+    function canReleaseFunds() external view returns (bool) {
+        if (fundsReleased || totalEscrowedFunds == 0) {
+            return false;
+        }
+        
+        // 检查时间条件
+        if (firstPurchaseTimestamp == 0 || block.timestamp < firstPurchaseTimestamp + releaseDelay) {
+            return false;
+        }
+        
+        // 如果启用了托管检查，验证资产在托管中
+        if (custodyCheckEnabled && address(custodyManager) != address(0)) {
+            CustodyManager.AssetStatus status = custodyManager.getAssetStatus(assetId);
+            if (status != CustodyManager.AssetStatus.InCustody) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * 接收 ETH/MNT（防止直接转账到合约，应该使用 buyTokens）
+     */
+    receive() external payable {
+        revert("Use buyTokens() function to purchase tokens");
+    }
+    
+    /**
+     * 回退函数
+     */
+    fallback() external payable {
+        revert("Use buyTokens() function to purchase tokens");
     }
     
     /**

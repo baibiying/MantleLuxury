@@ -33,6 +33,7 @@ public class TokenDeploymentService {
      * @param totalSupply 总供应量
      * @param metadataHash 元数据哈希 (bytes32)
      * @param pricePerShare 每份价格（USD），用于设置合约中的代币价格
+     * @param ownerAddress 合约所有者地址（通常是资产提交者的地址，投资者购买代币时资金会转给此地址）
      * @return 合约地址
      */
     public String deployToken(
@@ -41,9 +42,10 @@ public class TokenDeploymentService {
             String symbol,
             BigInteger totalSupply,
             String metadataHash,
-            BigDecimal pricePerShare
+            BigDecimal pricePerShare,
+            String ownerAddress
     ) {
-        return mantleDeploymentService.deployToken(assetId, name, symbol, totalSupply, metadataHash, pricePerShare);
+        return mantleDeploymentService.deployToken(assetId, name, symbol, totalSupply, metadataHash, pricePerShare, ownerAddress);
     }
 }
 

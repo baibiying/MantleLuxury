@@ -33,6 +33,7 @@ public class MantleTokenDeploymentService {
     private final Credentials credentials;
     private final boolean enabled;
     private final String kycRegistryAddress;
+    private final String custodyManagerAddress;
     private final String privateKey;
     private final String rpcUrl;
 
@@ -45,6 +46,7 @@ public class MantleTokenDeploymentService {
             Credentials credentials,
             @Value("${blockchain.enabled:false}") boolean enabled,
             @Value("${blockchain.kyc-registry-contract:}") String kycRegistryAddress,
+            @Value("${blockchain.custody-manager-contract:}") String custodyManagerAddress,
             @Value("${blockchain.private-key:}") String privateKey,
             @Value("${blockchain.rpc-url:}") String rpcUrl
     ) {
@@ -52,6 +54,7 @@ public class MantleTokenDeploymentService {
         this.credentials = credentials;
         this.enabled = enabled;
         this.kycRegistryAddress = kycRegistryAddress;
+        this.custodyManagerAddress = custodyManagerAddress;
         this.privateKey = privateKey;
         this.rpcUrl = rpcUrl;
     }
@@ -61,6 +64,13 @@ public class MantleTokenDeploymentService {
      */
     private String getKYCRegistryAddress() {
         return kycRegistryAddress;
+    }
+    
+    /**
+     * 获取 CustodyManager 合约地址
+     */
+    private String getCustodyManagerAddress() {
+        return custodyManagerAddress;
     }
 
     /**
@@ -72,7 +82,8 @@ public class MantleTokenDeploymentService {
             String symbol,
             BigInteger totalSupply,
             String metadataHash,
-            BigDecimal pricePerShare
+            BigDecimal pricePerShare,
+            String ownerAddress
     ) {
         if (!enabled) {
             logger.warn("Blockchain deployment is disabled. Returning mock address.");
@@ -114,7 +125,8 @@ public class MantleTokenDeploymentService {
             // 通过调用 Hardhat 脚本或使用 web3j 的合约工厂
             
             // 方案1：使用 ProcessBuilder 调用 Hardhat 脚本（推荐用于 MVP）
-            String contractAddress = deployViaHardhatScript(assetId, name, symbol, totalSupply, metadataHash, pricePerShare);
+            // 注意：ownerAddress 参数在 deployViaHardhatScript 中处理
+            String contractAddress = deployViaHardhatScript(assetId, name, symbol, totalSupply, metadataHash, pricePerShare, ownerAddress);
             
             logger.info("✅ LuxuryToken deployed successfully at: {}", contractAddress);
             return contractAddress;
@@ -134,7 +146,8 @@ public class MantleTokenDeploymentService {
             String symbol,
             BigInteger totalSupply,
             String metadataHash,
-            BigDecimal pricePerShare
+            BigDecimal pricePerShare,
+            String ownerAddress
     ) throws Exception {
         logger.info("Deploying via Hardhat script...");
 
@@ -197,6 +210,9 @@ public class MantleTokenDeploymentService {
         // 获取 KYCRegistry 合约地址（从配置中读取）
         String kycRegistryAddress = getKYCRegistryAddress();
         
+        // 获取 CustodyManager 合约地址（从配置中读取）
+        String custodyManagerAddress = getCustodyManagerAddress();
+        
         // 设置环境变量
         processBuilder.environment().put("TOKEN_NAME", name);
         processBuilder.environment().put("TOKEN_SYMBOL", symbol);
@@ -205,7 +221,19 @@ public class MantleTokenDeploymentService {
         // totalSupply 以"份"为单位（与合约 decimals=18 对应），直接传给脚本，由脚本内部 parseEther 放大 10^18
         processBuilder.environment().put("INITIAL_SUPPLY", totalSupply.toString());
         processBuilder.environment().put("PRICE_PER_TOKEN", pricePerTokenWei.toString());
-        processBuilder.environment().put("OWNER_ADDRESS", credentials.getAddress());
+        // 如果提供了 owner 地址，使用提供的地址；否则使用后端服务的地址作为默认值
+        String finalOwnerAddress = (ownerAddress != null && !ownerAddress.trim().isEmpty()) 
+                ? ownerAddress.trim() 
+                : credentials.getAddress();
+        processBuilder.environment().put("OWNER_ADDRESS", finalOwnerAddress);
+        logger.info("Setting contract owner to: {}", finalOwnerAddress);
+        
+        // 设置 CustodyManager 地址（可选，如果配置了则使用，否则使用零地址）
+        String finalCustodyManagerAddress = (custodyManagerAddress != null && !custodyManagerAddress.trim().isEmpty())
+                ? custodyManagerAddress.trim()
+                : "0x0000000000000000000000000000000000000000"; // 零地址表示不使用托管检查
+        processBuilder.environment().put("CUSTODY_MANAGER_ADDRESS", finalCustodyManagerAddress);
+        logger.info("Setting custody manager to: {}", finalCustodyManagerAddress);
         
         // 设置私钥（Hardhat 需要这个来创建 signer）
         if (privateKey != null && !privateKey.isEmpty()) {

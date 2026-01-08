@@ -104,7 +104,7 @@ contract YieldDistribution is Ownable {
         require(!dist.isCompleted, "Distribution already completed");
         require(address(this).balance >= dist.totalAmount, "Insufficient balance");
         
-        LuxuryToken token = LuxuryToken(dist.tokenAddress);
+        LuxuryToken token = LuxuryToken(payable(dist.tokenAddress));
         uint256 totalSupply = token.totalSupply();
         require(totalSupply > 0, "Total supply is zero");
         
@@ -151,7 +151,7 @@ contract YieldDistribution is Ownable {
         require(!claimed[distributionId][msg.sender], "Already claimed");
         require(address(this).balance > 0, "Insufficient balance");
         
-        LuxuryToken token = LuxuryToken(dist.tokenAddress);
+        LuxuryToken token = LuxuryToken(payable(dist.tokenAddress));
         uint256 balance = token.balanceOf(msg.sender);
         require(balance > 0, "No tokens held");
         
@@ -200,7 +200,7 @@ contract YieldDistribution is Ownable {
             return 0;
         }
         
-        LuxuryToken token = LuxuryToken(dist.tokenAddress);
+        LuxuryToken token = LuxuryToken(payable(dist.tokenAddress));
         uint256 balance = token.balanceOf(user);
         if (balance == 0) {
             return 0;

@@ -43,6 +43,7 @@ async function main() {
   const pricePerTokenStr = process.env.PRICE_PER_TOKEN || "1000000000000000000"; // 默认 1 MNT (wei)
   const owner = process.env.OWNER_ADDRESS || deployer.address;
   const kycRegistry = process.env.KYC_REGISTRY_ADDRESS || ethers.ZeroAddress; // KYCRegistry 合约地址
+  const custodyManager = process.env.CUSTODY_MANAGER_ADDRESS || ethers.ZeroAddress; // CustodyManager 合约地址（可选）
 
   // 转换参数
   // assetId 和 metadataHash 应该是 0x 开头的 66 字符（32 字节的 hex）
@@ -76,11 +77,18 @@ async function main() {
   console.log("  Price Per Token (wei):", pricePerToken.toString());
   console.log("  Owner:", owner);
   console.log("  KYC Registry:", kycRegistry);
+  console.log("  Custody Manager:", custodyManager);
   
   // 验证 KYC Registry 地址
   if (kycRegistry === ethers.ZeroAddress) {
     console.warn("⚠️  Warning: KYC Registry address is not set. Token will be deployed without KYC check.");
     console.warn("   Please set KYC_REGISTRY_ADDRESS environment variable or deploy KYCRegistry first.");
+  }
+  
+  // 验证 CustodyManager 地址（可选）
+  if (custodyManager === ethers.ZeroAddress) {
+    console.warn("⚠️  Warning: CustodyManager address is not set. Token will be deployed without custody check.");
+    console.warn("   Please set CUSTODY_MANAGER_ADDRESS environment variable or deploy CustodyManager first.");
   }
 
   const LuxuryToken = await ethers.getContractFactory("LuxuryToken");
@@ -92,7 +100,8 @@ async function main() {
     initialSupply,
     pricePerToken,
     owner,
-    kycRegistry
+    kycRegistry,
+    custodyManager  // 传递 CustodyManager 地址（可以是零地址）
   );
 
   await token.waitForDeployment();
@@ -108,6 +117,9 @@ async function main() {
   console.log("Owner:", await token.owner());
   console.log("KYC Registry:", await token.kycRegistry());
   console.log("KYC Check Enabled:", await token.kycCheckEnabled());
+  console.log("Custody Manager:", await token.custodyManager());
+  console.log("Custody Check Enabled:", await token.custodyCheckEnabled());
+  console.log("Release Delay:", (await token.releaseDelay()).toString(), "seconds");
   
   // 输出 JSON 格式，方便后端解析
   console.log("\nJSON Output:");
@@ -120,7 +132,10 @@ async function main() {
     salesEnabled: await token.salesEnabled(),
     owner: await token.owner(),
     kycRegistry: await token.kycRegistry(),
-    kycCheckEnabled: await token.kycCheckEnabled()
+    kycCheckEnabled: await token.kycCheckEnabled(),
+    custodyManager: await token.custodyManager(),
+    custodyCheckEnabled: await token.custodyCheckEnabled(),
+    releaseDelay: (await token.releaseDelay()).toString()
   }));
 }
 

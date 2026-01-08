@@ -123,13 +123,19 @@ public class AssetService {
         
         String tokenAddress;
         try {
+            // 将资产提交者的地址作为合约 owner，这样投资者购买代币时资金会直接转给资产提交者
+            String ownerAddress = (request.submittedBy() != null && !request.submittedBy().trim().isEmpty()) 
+                    ? request.submittedBy().trim() 
+                    : null; // 如果没有提交者地址，使用默认值（平台地址）
+            
             tokenAddress = tokenDeploymentService.deployToken(
                     asset.getAssetIdBytes32(),
                     tokenName,
                     tokenSymbol,
                     totalSupply,
                     metadataHash,
-                    request.pricePerShare()  // 传递每份价格
+                    request.pricePerShare(),  // 传递每份价格
+                    ownerAddress  // 传递资产提交者的地址作为合约 owner
             );
             
             if (tokenAddress == null || tokenAddress.isEmpty()) {
