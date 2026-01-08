@@ -39,6 +39,11 @@ type Asset = {
   submittedBy?: string | null; // 提交者钱包地址
 };
 
+type TokenInfo = {
+  name: string;
+  symbol: string;
+};
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
@@ -47,6 +52,7 @@ export default function AssetsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [onchainRemaining, setOnchainRemaining] = useState<Record<string, string>>({});
+  const [tokenInfos, setTokenInfos] = useState<Record<string, TokenInfo>>({});
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
@@ -104,41 +110,75 @@ export default function AssetsPage() {
     fetchAssets();
   }, []);
 
-  // 从链上读取每个资产的剩余可购份数（getAvailableTokens）
+  // 从链上读取每个资产的剩余可购份数（getAvailableTokens）和代币信息（name, symbol）
   useEffect(() => {
-    const loadOnchainRemaining = async () => {
+    const loadOnchainData = async () => {
       if (!publicClient || chainId !== mantleSepoliaTestnet.id) return;
       const withToken = assets.filter(
-        (a) => a.tokenAddress && a.status === "fundraising"
+        (a) => a.tokenAddress
       );
       if (withToken.length === 0) return;
 
-      const entries = await Promise.all(
+      // 读取剩余可购份数
+      const remainingEntries = await Promise.all(
+        withToken
+          .filter((a) => a.status === "fundraising")
+          .map(async (asset) => {
+            try {
+              const raw = (await publicClient.readContract({
+                address: asset.tokenAddress as `0x${string}`,
+                abi: luxuryTokenAbi,
+                functionName: "getAvailableTokens",
+              })) as bigint;
+              const formatted = formatEther(raw);
+              return [asset.tokenAddress as string, formatted] as const;
+            } catch {
+              return null;
+            }
+          })
+      );
+
+      const nextRemaining: Record<string, string> = {};
+      for (const e of remainingEntries) {
+        if (e) {
+          nextRemaining[e[0]] = e[1];
+        }
+      }
+      setOnchainRemaining(nextRemaining);
+
+      // 读取代币名称和符号
+      const tokenInfoEntries = await Promise.all(
         withToken.map(async (asset) => {
           try {
-            const raw = (await publicClient.readContract({
-              address: asset.tokenAddress as `0x${string}`,
-              abi: luxuryTokenAbi,
-              functionName: "getAvailableTokens",
-            })) as bigint;
-            const formatted = formatEther(raw);
-            return [asset.tokenAddress as string, formatted] as const;
+            const [name, symbol] = await Promise.all([
+              publicClient.readContract({
+                address: asset.tokenAddress as `0x${string}`,
+                abi: luxuryTokenAbi,
+                functionName: "name",
+              }) as Promise<string>,
+              publicClient.readContract({
+                address: asset.tokenAddress as `0x${string}`,
+                abi: luxuryTokenAbi,
+                functionName: "symbol",
+              }) as Promise<string>,
+            ]);
+            return [asset.tokenAddress as string, { name, symbol }] as const;
           } catch {
             return null;
           }
         })
       );
 
-      const next: Record<string, string> = {};
-      for (const e of entries) {
+      const nextTokenInfos: Record<string, TokenInfo> = {};
+      for (const e of tokenInfoEntries) {
         if (e) {
-          next[e[0]] = e[1];
+          nextTokenInfos[e[0]] = e[1];
         }
       }
-      setOnchainRemaining(next);
+      setTokenInfos(nextTokenInfos);
     };
 
-    loadOnchainRemaining();
+    loadOnchainData();
   }, [assets, publicClient, chainId]);
 
   if (loading) {
@@ -478,52 +518,65 @@ export default function AssetsPage() {
                 </div>
 
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div className="space-y-1">
-                    <dt className="text-slate-500 text-xs">单份价格</dt>
-                    <dd className="font-bold text-sky-400">{asset.pricePerShare} MNT</dd>
-                  </div>
-                  <div className="space-y-1">
-                    <dt className="text-slate-500 text-xs">总份数</dt>
-                    <dd className="font-semibold">{asset.totalSupply}</dd>
-                  </div>
-                  <div className="space-y-1 col-span-2">
-                    <dt className="text-slate-500 text-xs">剩余可购</dt>
-                    <dd className="font-semibold text-emerald-400">
-                      {(() => {
-                        const remaining = asset.tokenAddress &&
-                          onchainRemaining[asset.tokenAddress] !== undefined
-                          ? onchainRemaining[asset.tokenAddress]
-                          : asset.remainingSupply;
-                        const remainingNum = parseFloat(remaining ?? "0");
-                        if (!remaining || isNaN(remainingNum) || remainingNum <= 0) {
-                          return "暂不可购";
-                        }
-                        return `${remaining} 份`;
-                      })()}
-                    </dd>
-                  </div>
-                  {asset.totalYield && parseFloat(asset.totalYield) > 0 && (
-                    <div className="space-y-1 col-span-2">
-                      <dt className="text-slate-500 text-xs">累计收益</dt>
+                  {/* 左列 */}
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <dt className="text-slate-500 text-xs">单份价格</dt>
+                      <dd className="font-bold text-sky-400">{asset.pricePerShare} MNT</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-slate-500 text-xs">剩余可购</dt>
                       <dd className="font-semibold text-emerald-400">
-                        {parseFloat(asset.totalYield).toFixed(4)} MNT
+                        {(() => {
+                          const remaining = asset.tokenAddress &&
+                            onchainRemaining[asset.tokenAddress] !== undefined
+                            ? onchainRemaining[asset.tokenAddress]
+                            : asset.remainingSupply;
+                          const remainingNum = parseFloat(remaining ?? "0");
+                          if (!remaining || isNaN(remainingNum) || remainingNum <= 0) {
+                            return "暂不可购";
+                          }
+                          return `${remaining} 份`;
+                        })()}
                       </dd>
                     </div>
-                  )}
-                  {(() => {
-                    const expectedYield = calculateExpectedYield(asset);
-                    if (expectedYield > 0) {
-                      return (
-                        <div className="space-y-1 col-span-2">
-                          <dt className="text-slate-500 text-xs">预期收益率</dt>
-                          <dd className="font-semibold text-amber-400">
-                            {expectedYield.toFixed(2)}%
-                          </dd>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
+                    {asset.totalYield && parseFloat(asset.totalYield) > 0 && (
+                      <div className="space-y-1">
+                        <dt className="text-slate-500 text-xs">累计收益</dt>
+                        <dd className="font-semibold text-emerald-400">
+                          {parseFloat(asset.totalYield).toFixed(4)} MNT
+                        </dd>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* 右列 */}
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <dt className="text-slate-500 text-xs">总份数</dt>
+                      <dd className="font-semibold">{asset.totalSupply}</dd>
+                    </div>
+                    {asset.tokenAddress && tokenInfos[asset.tokenAddress] && (
+                      <div className="space-y-1">
+                        <dt className="text-slate-500 text-xs">代币符号</dt>
+                        <dd className="font-semibold text-sky-400">{tokenInfos[asset.tokenAddress].symbol}</dd>
+                      </div>
+                    )}
+                    {(() => {
+                      const expectedYield = calculateExpectedYield(asset);
+                      if (expectedYield > 0) {
+                        return (
+                          <div className="space-y-1">
+                            <dt className="text-slate-500 text-xs">预期收益率</dt>
+                            <dd className="font-semibold text-amber-400">
+                              {expectedYield.toFixed(2)}%
+                            </dd>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
                 </dl>
               </div>
             </Link>

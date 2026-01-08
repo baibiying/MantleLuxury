@@ -119,6 +119,8 @@ export default function AssetDetailPage() {
   const [imageLoading, setImageLoading] = useState<{ [key: number]: boolean }>({}); // 图片加载状态
   const [imageErrors, setImageErrors] = useState<{ [key: number]: boolean }>({}); // 图片加载错误状态
   const [modalImageLoading, setModalImageLoading] = useState(false); // 模态框图片加载状态
+  const [tokenName, setTokenName] = useState<string | null>(null); // 代币名称
+  const [tokenSymbol, setTokenSymbol] = useState<string | null>(null); // 代币符号
   const imageLoadingRef = useRef<{ [key: number]: boolean }>({}); // 用于 useEffect 的 ref
   const imageErrorsRef = useRef<{ [key: number]: boolean }>({}); // 用于 useEffect 的 ref
   const imageIndicesRef = useRef<number[]>([]); // 用于存储上一次的 imageIndices
@@ -219,6 +221,34 @@ export default function AssetDetailPage() {
       }
     };
     loadOnchainAvailable();
+  }, [asset?.tokenAddress, publicClient]);
+
+  // 从链上读取代币名称和符号
+  useEffect(() => {
+    const loadTokenInfo = async () => {
+      if (!asset?.tokenAddress || !publicClient) return;
+      try {
+        const [name, symbol] = await Promise.all([
+          publicClient.readContract({
+            address: asset.tokenAddress as `0x${string}`,
+            abi: luxuryTokenAbi,
+            functionName: "name",
+          }) as Promise<string>,
+          publicClient.readContract({
+            address: asset.tokenAddress as `0x${string}`,
+            abi: luxuryTokenAbi,
+            functionName: "symbol",
+          }) as Promise<string>,
+        ]);
+        setTokenName(name);
+        setTokenSymbol(symbol);
+      } catch (e) {
+        // 读取失败时不阻塞，但清空值
+        setTokenName(null);
+        setTokenSymbol(null);
+      }
+    };
+    loadTokenInfo();
   }, [asset?.tokenAddress, publicClient]);
 
   const ensureMantleNetwork = async () => {
@@ -804,6 +834,12 @@ export default function AssetDetailPage() {
                     <dt className="text-slate-500">总份数</dt>
                     <dd>{asset.totalSupply}</dd>
                   </div>
+                  {tokenSymbol && (
+                    <div>
+                      <dt className="text-slate-500">代币符号</dt>
+                      <dd className="font-semibold text-sky-400">{tokenSymbol}</dd>
+                    </div>
+                  )}
                   <div>
                     <dt className="text-slate-500">剩余可购</dt>
                     <dd>{displayRemaining}</dd>

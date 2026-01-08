@@ -116,7 +116,10 @@ public class AssetService {
         // 先部署代币合约（如果失败会抛出异常，事务回滚，不会保存资产）
         logger.info("Deploying token contract before saving asset...");
         String tokenName = String.format("%s %s Token", request.brand(), request.model());
-        String tokenSymbol = generateTokenSymbol(request.brand(), request.model());
+        // 如果用户提供了 tokenSymbol，使用用户提供的；否则自动生成
+        String tokenSymbol = (request.tokenSymbol() != null && !request.tokenSymbol().trim().isEmpty())
+                ? request.tokenSymbol().trim().toUpperCase()
+                : generateTokenSymbol(request.brand(), request.model());
         BigInteger totalSupply = request.totalSupply() != null 
                 ? request.totalSupply().toBigInteger() 
                 : BigInteger.ZERO;

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient, useChainId } from "wagmi";
+import { formatEther } from "viem";
+import { mantleSepoliaTestnet } from "@/lib/web3/config";
+import { luxuryTokenAbi } from "@/lib/web3/contracts";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
@@ -42,6 +45,8 @@ type Holding = {
 
 export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
+  const chainId = useChainId();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -49,6 +54,7 @@ export default function PortfolioPage() {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [totalYield, setTotalYield] = useState<string>("0");
   const [yieldHistory, setYieldHistory] = useState<Array<{ date: string; cumulativeYield: number }>>([]);
+  const [tokenInfos, setTokenInfos] = useState<Record<string, { name: string; symbol: string }>>({});
   
   // 计算资产分布数据
   const calculateDistribution = () => {
@@ -196,6 +202,48 @@ export default function PortfolioPage() {
 
     loadHoldings();
   }, [mounted, address, isConnected]);
+
+  // 从链上读取代币名称和符号
+  useEffect(() => {
+    const loadTokenInfos = async () => {
+      if (!publicClient || chainId !== mantleSepoliaTestnet.id || holdings.length === 0) return;
+      
+      const uniqueTokenAddresses = Array.from(new Set(holdings.map(h => h.tokenAddress).filter(Boolean)));
+      if (uniqueTokenAddresses.length === 0) return;
+
+      const tokenInfoEntries = await Promise.all(
+        uniqueTokenAddresses.map(async (tokenAddress) => {
+          try {
+            const [name, symbol] = await Promise.all([
+              publicClient.readContract({
+                address: tokenAddress as `0x${string}`,
+                abi: luxuryTokenAbi,
+                functionName: "name",
+              }) as Promise<string>,
+              publicClient.readContract({
+                address: tokenAddress as `0x${string}`,
+                abi: luxuryTokenAbi,
+                functionName: "symbol",
+              }) as Promise<string>,
+            ]);
+            return [tokenAddress, { name, symbol }] as const;
+          } catch (e) {
+            return null;
+          }
+        })
+      );
+
+      const nextTokenInfos: Record<string, { name: string; symbol: string }> = {};
+      for (const e of tokenInfoEntries) {
+        if (e) {
+          nextTokenInfos[e[0]] = e[1];
+        }
+      }
+      setTokenInfos(nextTokenInfos);
+    };
+
+    loadTokenInfos();
+  }, [holdings, publicClient, chainId]);
 
   if (!mounted) {
     return null;
@@ -420,6 +468,7 @@ export default function PortfolioPage() {
               <thead>
                 <tr className="text-slate-400 border-b border-slate-700/60">
                   <th className="py-3 text-left font-normal">资产</th>
+                  <th className="py-3 text-right font-normal">代币符号</th>
                   <th className="py-3 text-right font-normal">持有份额</th>
                   <th className="py-3 text-right font-normal">单份价格 (MNT)</th>
                   <th className="py-3 text-right font-normal">持仓成本 (MNT)</th>
@@ -446,6 +495,15 @@ export default function PortfolioPage() {
                           {h.year ?? "年份未知"}
                         </span>
                       </div>
+                    </td>
+                    <td className="py-3 text-right">
+                      {h.tokenAddress && tokenInfos[h.tokenAddress] ? (
+                        <span className="text-sm text-sky-400 font-medium">
+                          {tokenInfos[h.tokenAddress].symbol}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-slate-500">-</span>
+                      )}
                     </td>
                     <td className="py-3 text-right">{h.balance}</td>
                     <td className="py-3 text-right">{h.pricePerShare}</td>

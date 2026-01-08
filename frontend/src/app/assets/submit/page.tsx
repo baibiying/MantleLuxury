@@ -21,6 +21,7 @@ type FormData = {
   serialNumber: string;
   totalSupply: string;
   pricePerShare: string; // USD
+  tokenSymbol: string; // 代币符号（可选）
   submittedBy: string;
   imageUrls: string[];
   model3dUrl: string | null;
@@ -53,6 +54,7 @@ export default function AssetSubmitPage() {
     serialNumber: "",
     totalSupply: "",
     pricePerShare: "",
+    tokenSymbol: "",
     submittedBy: "",
     imageUrls: [],
     model3dUrl: null,
@@ -159,6 +161,7 @@ export default function AssetSubmitPage() {
           serialNumber: formData.serialNumber || null,
           totalSupply: formData.totalSupply ? parseFloat(formData.totalSupply) : null,
           pricePerShare: formData.pricePerShare ? parseFloat(formData.pricePerShare) : null,
+          tokenSymbol: formData.tokenSymbol && formData.tokenSymbol.trim() ? formData.tokenSymbol.trim() : null,
           submittedBy: formData.submittedBy || "anonymous",
           imageUrls: JSON.stringify(imageBackendUrls.length > 0 ? imageBackendUrls : (formData.imageUrls ?? [])),
           model3dUrl: formData.model3dUrl || null,
@@ -704,6 +707,24 @@ export default function AssetSubmitPage() {
                       (约 {(parseFloat(formData.totalSupply) * parseFloat(formData.pricePerShare) * USD_TO_MNT_RATE).toFixed(2)} MNT)
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    代币符号 (Symbol) <span className="text-slate-500 text-xs">(可选)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="tokenSymbol"
+                    value={formData.tokenSymbol}
+                    onChange={handleChange}
+                    maxLength={10}
+                    placeholder="例如：ROLEX (留空则自动生成)"
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    代币在钱包中显示的名称，建议使用 3-6 个大写字母。留空将根据品牌和型号自动生成。
+                  </p>
                 </div>
 
                 <div>
