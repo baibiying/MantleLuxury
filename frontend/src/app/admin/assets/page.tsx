@@ -1267,36 +1267,39 @@ export default function AdminAssetsPage() {
                                       ? "已拒绝"
                                       : "待审核"}
                                   </span>
-                                  <div className="flex flex-col gap-1">
-                                    <button
-                                      onClick={() =>
-                                        handleReviewAuthentication(
-                                          auth.id,
-                                          "verified"
-                                        )
-                                      }
-                                      disabled={
-                                        auth.authenticationStatus === "verified"
-                                      }
-                                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-300 rounded text-white text-sm font-medium transition-colors"
-                                    >
-                                      标记为通过
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleReviewAuthentication(
-                                          auth.id,
-                                          "rejected"
-                                        )
-                                      }
-                                      disabled={
-                                        auth.authenticationStatus === "rejected"
-                                      }
-                                      className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-300 rounded text-white text-sm font-medium transition-colors"
-                                    >
-                                      标记为拒绝
-                                    </button>
-                                  </div>
+                                  {auth.authenticationStatus !== "verified" && (
+                                    <div className="flex flex-col gap-1">
+                                      <button
+                                        onClick={() =>
+                                          handleReviewAuthentication(
+                                            auth.id,
+                                            "verified"
+                                          )
+                                        }
+                                        disabled={
+                                          auth.authenticationStatus === "verified"
+                                        }
+                                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-300 rounded text-white text-sm font-medium transition-colors"
+                                      >
+                                        标记为通过
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleReviewAuthentication(
+                                            auth.id,
+                                            "rejected"
+                                          )
+                                        }
+                                        disabled={
+                                          auth.authenticationStatus === "rejected" ||
+                                          auth.authenticationStatus === "verified"
+                                        }
+                                        className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-300 rounded text-white text-sm font-medium transition-colors"
+                                      >
+                                        标记为拒绝
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1362,14 +1365,6 @@ export default function AdminAssetsPage() {
                                     })}{" "}
                                     {valuation.valuationCurrency || "MNT"}
                                   </div>
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteValuation(valuation.id)
-                                    }
-                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-white text-sm font-medium transition-colors"
-                                  >
-                                    删除
-                                  </button>
                                 </div>
                               </div>
                             </div>
