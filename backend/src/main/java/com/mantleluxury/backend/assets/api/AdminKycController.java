@@ -239,20 +239,31 @@ public class AdminKycController {
             }
         } catch (Exception e) {
             logger.error("❌ Failed to sync KYC status to blockchain for {}: {}", walletAddress, e.getMessage(), e);
+            String errorMessage = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             syncStatus = "failed";
-            syncMessage = "Blockchain sync failed: " + e.getMessage();
+            syncMessage = "Blockchain sync failed: " + errorMessage;
             
-            // 检查是否是权限问题，如果是，再次尝试授予权限
-            if (e.getMessage() != null && e.getMessage().contains("COMPLIANCE_ROLE")) {
-                logger.info("🔄 Detected permission issue. Retrying to grant COMPLIANCE_ROLE...");
+            // 检查是否是权限问题（检查错误信息中是否包含权限相关关键词）
+            boolean isPermissionError = errorMessage.contains("COMPLIANCE_ROLE") || 
+                                       errorMessage.contains("Status: 0x0") ||
+                                       errorMessage.contains("Transaction failed on-chain");
+            
+            if (isPermissionError) {
+                logger.info("🔄 Detected potential permission issue. Retrying to grant COMPLIANCE_ROLE...");
                 try {
-                    String grantTxHash = kycRegistryService.grantComplianceRole(
-                            kycRegistryService.getCredentialsAddress()
-                    );
-                    logger.info("✅ Granted COMPLIANCE_ROLE. Transaction hash: {}. Retrying sync...", grantTxHash);
-                    
-                    // 等待一下让交易确认
-                    Thread.sleep(3000);
+                    // 先检查是否已有权限
+                    boolean hasRole = kycRegistryService.hasComplianceRole();
+                    if (!hasRole) {
+                        String grantTxHash = kycRegistryService.grantComplianceRole(
+                                kycRegistryService.getCredentialsAddress()
+                        );
+                        logger.info("✅ Granted COMPLIANCE_ROLE. Transaction hash: {}. Retrying sync...", grantTxHash);
+                        
+                        // 等待一下让交易确认
+                        Thread.sleep(5000); // 增加到 5 秒，确保交易确认
+                    } else {
+                        logger.info("✅ Backend already has COMPLIANCE_ROLE. Retrying sync...");
+                    }
                     
                     // 重试同步
                     transactionHash = kycRegistryService.setKYCStatus(walletAddress, status);
@@ -274,11 +285,15 @@ public class AdminKycController {
             // 如果重试后仍然失败，回滚数据库状态
             if (!syncStatus.equals("success")) {
                 logger.warn("Rolling back database state for user {} due to blockchain sync failure", walletAddress);
-                user.setKycStatus(originalStatus);
-                user.setKycApprovedAt(originalApprovedAt);
-                user.setKycRejectedAt(originalRejectedAt);
-                user.setKycRejectionReason(originalRejectionReason);
-                userRepository.save(user);
+                try {
+                    user.setKycStatus(originalStatus);
+                    user.setKycApprovedAt(originalApprovedAt);
+                    user.setKycRejectedAt(originalRejectedAt);
+                    user.setKycRejectionReason(originalRejectionReason);
+                    userRepository.save(user);
+                } catch (Exception rollbackException) {
+                    logger.error("❌ Failed to rollback database state: {}", rollbackException.getMessage(), rollbackException);
+                }
                 
                 // 返回错误响应
                 Map<String, Object> errorResponse = new HashMap<>();
