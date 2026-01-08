@@ -66,7 +66,7 @@ public class AssetAuthenticationService {
 
     /**
      * 审核认证（通过或拒绝）
-     * 当认证通过时，如果资产状态为 registered，且至少有一个已通过的认证，则自动将资产状态更新为 fundraising
+     * 注意：不再自动更新资产状态，资产状态必须通过管理员审核页面手动更改
      */
     @Transactional
     public AssetAuthentication reviewAuthentication(
@@ -89,34 +89,19 @@ public class AssetAuthenticationService {
         AssetAuthentication saved = authenticationRepository.save(authentication);
         logger.info("Reviewed authentication {}: status = {}", authenticationId, status);
         
-        // 如果认证通过，检查资产是否可以进入募集中状态
-        if ("verified".equals(status)) {
-            updateAssetStatusIfAuthenticated(authentication.getAssetId());
-        }
+        // 注意：不再自动更新资产状态
+        // 资产状态应该通过管理员审核页面手动更改，以确保所有必需条件（认证、估值、托管、保险、审核记录）都已满足
         
         return saved;
     }
     
-    /**
-     * 检查资产是否有已通过的认证，如果有且资产状态为 registered，则更新为 fundraising
-     */
-    @Transactional
-    private void updateAssetStatusIfAuthenticated(String assetId) {
-        // 检查是否有至少一个已通过的认证
-        long verifiedCount = authenticationRepository.countByAssetIdAndAuthenticationStatus(assetId, "verified");
-        
-        if (verifiedCount > 0) {
-            // 获取资产并检查状态
-            Asset asset = assetRepository.findById(assetId)
-                    .orElse(null);
-            
-            if (asset != null && "registered".equals(asset.getStatus())) {
-                asset.setStatus("fundraising");
-                assetRepository.save(asset);
-                logger.info("Asset {} status updated to fundraising after authentication verification", assetId);
-            }
-        }
-    }
+    // 注意：已移除自动更新资产状态的逻辑
+    // 资产状态必须通过管理员审核页面手动更改，以确保所有必需条件都已满足：
+    // 1. 至少一条平台审核记录状态为"已通过"
+    // 2. 至少一条真伪认证记录状态为"已认证"
+    // 3. 至少一条估值报告记录
+    // 4. 已填写托管信息
+    // 5. 已填写保险信息且保险状态为有效
 
     /**
      * 获取资产的所有认证记录

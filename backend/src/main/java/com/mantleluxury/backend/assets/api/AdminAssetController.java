@@ -5,6 +5,10 @@ import com.mantleluxury.backend.assets.domain.AssetReview;
 import com.mantleluxury.backend.assets.repository.AssetRepository;
 import com.mantleluxury.backend.assets.service.AssetReviewService;
 import com.mantleluxury.backend.assets.service.AssetService;
+import com.mantleluxury.backend.assets.service.AssetAuthenticationService;
+import com.mantleluxury.backend.assets.service.ValuationService;
+import com.mantleluxury.backend.assets.service.CustodyService;
+import com.mantleluxury.backend.assets.service.InsuranceService;
 import com.mantleluxury.backend.config.AdminConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,17 +34,29 @@ public class AdminAssetController {
     private final AssetRepository assetRepository;
     private final AssetService assetService;
     private final AssetReviewService reviewService;
+    private final AssetAuthenticationService authenticationService;
+    private final ValuationService valuationService;
+    private final CustodyService custodyService;
+    private final InsuranceService insuranceService;
     private final AdminConfig adminConfig;
 
     public AdminAssetController(
             AssetRepository assetRepository,
             AssetService assetService,
             AssetReviewService reviewService,
+            AssetAuthenticationService authenticationService,
+            ValuationService valuationService,
+            CustodyService custodyService,
+            InsuranceService insuranceService,
             AdminConfig adminConfig
     ) {
         this.assetRepository = assetRepository;
         this.assetService = assetService;
         this.reviewService = reviewService;
+        this.authenticationService = authenticationService;
+        this.valuationService = valuationService;
+        this.custodyService = custodyService;
+        this.insuranceService = insuranceService;
         this.adminConfig = adminConfig;
     }
 
@@ -229,6 +245,55 @@ public class AdminAssetController {
         }
 
         String oldStatus = asset.getStatus();
+        
+        // 如果要更改状态为 fundraising，需要验证所有必需条件
+        if ("fundraising".equals(newStatus) && !"fundraising".equals(oldStatus)) {
+            // 检查是否有至少一条平台审核记录状态为"已通过"
+            List<AssetReview> reviews = reviewService.getReviewsByAssetId(assetId);
+            boolean hasApprovedReview = reviews.stream()
+                    .anyMatch(r -> "approved".equals(r.getReviewStatus()));
+            
+            // 检查是否有至少一条真伪认证记录状态为"已认证"
+            boolean hasVerifiedAuth = authenticationService.getAssetAuthentications(assetId).stream()
+                    .anyMatch(a -> "verified".equals(a.getAuthenticationStatus()));
+            
+            // 检查是否有至少一条估值报告记录
+            boolean hasValuation = !valuationService.getValuationsByAssetId(assetId).isEmpty();
+            
+            // 检查是否有托管信息
+            boolean hasCustody = custodyService.getCustodyByAssetId(assetId).isPresent();
+            
+            // 检查是否有保险信息且保险状态为有效
+            boolean hasInsurance = insuranceService.getActiveInsuranceByAssetId(assetId).isPresent();
+            
+            // 如果任何条件不满足，返回错误
+            if (!hasApprovedReview) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "无法将资产状态改为募集中：需要至少一条平台审核记录状态为'已通过'"
+                ));
+            }
+            if (!hasVerifiedAuth) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "无法将资产状态改为募集中：需要至少一条真伪认证记录状态为'已认证'"
+                ));
+            }
+            if (!hasValuation) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "无法将资产状态改为募集中：需要至少一条估值报告记录"
+                ));
+            }
+            if (!hasCustody) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "无法将资产状态改为募集中：需要填写托管信息"
+                ));
+            }
+            if (!hasInsurance) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "无法将资产状态改为募集中：需要填写保险信息且保险状态为有效"
+                ));
+            }
+        }
+        
         asset.setStatus(newStatus);
         asset = assetRepository.save(asset);
 
