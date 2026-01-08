@@ -1,5 +1,6 @@
 package com.mantleluxury.backend.assets.domain;
 
+import com.mantleluxury.backend.assets.listener.UserKycSyncListener;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -7,6 +8,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users")
+@EntityListeners(UserKycSyncListener.class)
 public class User {
 
     @Id
