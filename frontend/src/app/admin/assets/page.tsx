@@ -297,19 +297,23 @@ export default function AdminAssetsPage() {
     try {
       const res = await fetch(`${API_BASE}/api/asset-authentications/asset/${assetId}`);
       if (!res.ok) {
+        console.error("Failed to load authentications:", res.status, res.statusText);
         return;
       }
       const data: AssetAuthentication[] = await res.json();
-      setSelectedAsset((prev) =>
-        prev
-          ? {
-              ...prev,
-              authentications: data,
-            }
-          : prev
-      );
-    } catch {
-      // ignore
+      console.log("Loaded authentications:", data);
+      setSelectedAsset((prev) => {
+        if (!prev || prev.asset.id !== assetId) {
+          console.warn("Selected asset mismatch or null, skipping update");
+          return prev;
+        }
+        return {
+          ...prev,
+          authentications: data,
+        };
+      });
+    } catch (error) {
+      console.error("Error loading authentications:", error);
     }
   };
 
@@ -447,6 +451,7 @@ export default function AdminAssetsPage() {
         const text = await res.text();
         throw new Error(text || "创建认证记录失败");
       }
+      const newAuth = await res.json();
       setSuccess("✅ 认证记录已创建（状态：待审核）");
       setTimeout(() => setSuccess(null), 3000);
       setShowAuthModal(false);
@@ -456,7 +461,20 @@ export default function AdminAssetsPage() {
       setAuthReportHash("");
       setAuthSignature("");
       setAuthNotes("");
-      await loadAuthentications(selectedAsset.asset.id);
+      // 立即更新本地状态，添加新创建的认证记录（如果 API 返回了对象）
+      if (newAuth && newAuth.id) {
+        setSelectedAsset((prev) => {
+          if (!prev) return prev;
+          const existingAuths = prev.authentications || [];
+          return {
+            ...prev,
+            authentications: [...existingAuths, newAuth],
+          };
+        });
+      }
+      // 然后从服务器重新加载以确保数据同步
+      const assetId = selectedAsset.asset.id;
+      await loadAuthentications(assetId);
     } catch (e: any) {
       setError(e.message ?? "创建认证记录失败");
     }
@@ -990,57 +1008,100 @@ export default function AdminAssetsPage() {
                         <div>
                           <span className="text-slate-300">状态：</span>
                           <span className="ml-2">{getStatusBadge(selectedAsset.asset.status)}</span>
-                          <select
-                            value={selectedAsset.asset.status}
-                            onChange={async (e) => {
-                              if (!address || !selectedAsset) return;
-                              const newStatus = e.target.value;
-                              // 禁止从募集中切回待认证
-                              if (
-                                selectedAsset.asset.status === "fundraising" &&
-                                newStatus === "registered"
-                              ) {
-                                setError("募集中资产不允许切换回待认证状态");
-                                return;
-                              }
-                              if (!confirm(`确定要将资产状态从 "${selectedAsset.asset.status}" 更改为 "${newStatus}" 吗？`)) {
-                                return;
-                              }
-                              try {
-                                const res = await fetch(
-                                  `${API_BASE}/api/admin/assets/${selectedAsset.asset.id}/status`,
-                                  {
-                                    method: "PUT",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                      "X-Wallet-Address": address,
-                                    },
-                                    body: JSON.stringify({ status: newStatus }),
+                          {(() => {
+                            // 检查所有必需记录是否存在
+                            const hasApprovedReview =
+                              selectedAsset.reviews?.some(
+                                (r) => r.reviewStatus === "approved"
+                              ) ?? false;
+                            const hasVerifiedAuth =
+                              (selectedAsset.authentications ?? []).some(
+                                (a) => a.authenticationStatus === "verified"
+                              );
+                            const hasValuation =
+                              (selectedAsset.valuations ?? []).length > 0;
+                            const hasCustody = !!selectedAsset.custody;
+                            const hasInsurance = !!selectedAsset.insurance && selectedAsset.insurance.isActive;
+
+                            const canChangeToFundraising =
+                              hasApprovedReview &&
+                              hasVerifiedAuth &&
+                              hasValuation &&
+                              hasCustody &&
+                              hasInsurance;
+
+                            // 如果当前状态是"待认证"，禁用下拉选择框，只能通过按钮更改
+                            if (selectedAsset.asset.status === "registered") {
+                              return (
+                                <span className="ml-3 text-sm text-slate-400 italic">
+                                  （请使用下方"审核通过并上线"按钮更改状态）
+                                </span>
+                              );
+                            }
+
+                            // 其他状态可以通过下拉框更改
+                            return (
+                              <select
+                                value={selectedAsset.asset.status}
+                                onChange={async (e) => {
+                                  if (!address || !selectedAsset) return;
+                                  const newStatus = e.target.value;
+                                  // 禁止从募集中切回待认证
+                                  if (
+                                    selectedAsset.asset.status === "fundraising" &&
+                                    newStatus === "registered"
+                                  ) {
+                                    setError("募集中资产不允许切换回待认证状态");
+                                    return;
                                   }
-                                );
-                                if (!res.ok) {
-                                  const text = await res.text();
-                                  throw new Error(text || "更新资产状态失败");
-                                }
-                                setSuccess(`✅ 资产状态已更新为 "${newStatus}"`);
-                                setTimeout(() => setSuccess(null), 3000);
-                                await loadAssetDetail(selectedAsset.asset.id);
-                                await loadCustody(selectedAsset.asset.id);
-                                await loadInsurance(selectedAsset.asset.id);
-                                loadData();
-                              } catch (e: any) {
-                                setError(e.message ?? "更新资产状态失败");
-                              }
-                            }}
-                            className="ml-3 px-3 py-1 bg-slate-700 border border-slate-600 rounded text-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                          >
-                            <option value="registered" disabled={selectedAsset.asset.status !== "registered"}>
-                              待认证
-                            </option>
-                            <option value="fundraising">募集中</option>
-                            <option value="funded">已满额</option>
-                            <option value="sold">已售出</option>
-                          </select>
+                                  // 禁止从待认证直接切换到募集中（必须通过按钮）
+                                  if (
+                                    selectedAsset.asset.status === "registered" &&
+                                    newStatus === "fundraising"
+                                  ) {
+                                    setError("请使用下方'审核通过并上线'按钮来更改状态");
+                                    return;
+                                  }
+                                  if (!confirm(`确定要将资产状态从 "${selectedAsset.asset.status}" 更改为 "${newStatus}" 吗？`)) {
+                                    return;
+                                  }
+                                  try {
+                                    const res = await fetch(
+                                      `${API_BASE}/api/admin/assets/${selectedAsset.asset.id}/status`,
+                                      {
+                                        method: "PUT",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                          "X-Wallet-Address": address,
+                                        },
+                                        body: JSON.stringify({ status: newStatus }),
+                                      }
+                                    );
+                                    if (!res.ok) {
+                                      const text = await res.text();
+                                      throw new Error(text || "更新资产状态失败");
+                                    }
+                                    setSuccess(`✅ 资产状态已更新为 "${newStatus}"`);
+                                    setTimeout(() => setSuccess(null), 3000);
+                                    await loadAssetDetail(selectedAsset.asset.id);
+                                    await loadCustody(selectedAsset.asset.id);
+                                    await loadInsurance(selectedAsset.asset.id);
+                                    loadData();
+                                  } catch (e: any) {
+                                    setError(e.message ?? "更新资产状态失败");
+                                  }
+                                }}
+                                className="ml-3 px-3 py-1 bg-slate-700 border border-slate-600 rounded text-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                              >
+                                <option value="registered" disabled>
+                                  待认证
+                                </option>
+                                <option value="fundraising">募集中</option>
+                                <option value="funded">已满额</option>
+                                <option value="sold">已售出</option>
+                              </select>
+                            );
+                          })()}
                         </div>
                         <div>
                           <span className="text-slate-300">合约地址：</span>
@@ -1494,7 +1555,7 @@ export default function AdminAssetsPage() {
                       const hasValuation =
                         (selectedAsset.valuations ?? []).length > 0;
                       const hasCustody = !!selectedAsset.custody;
-                      const hasInsurance = !!selectedAsset.insurance;
+                      const hasInsurance = !!selectedAsset.insurance && selectedAsset.insurance.isActive;
 
                       const canApprove =
                         hasApprovedReview &&
