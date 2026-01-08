@@ -958,7 +958,7 @@ export default function AssetDetailPage() {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                               })}{" "}
-                              {valuation.valuationCurrency || "USD"}
+                              {valuation.valuationCurrency || "MNT"}
                             </div>
                           </div>
                         </div>

@@ -143,7 +143,7 @@ export default function AdminAssetsPage() {
   // 估值报告表单
   const [showValuationModal, setShowValuationModal] = useState(false);
   const [valuationAmount, setValuationAmount] = useState("");
-  const [valuationCurrency, setValuationCurrency] = useState("USD");
+  const [valuationCurrency, setValuationCurrency] = useState("MNT");
   const [valuationDate, setValuationDate] = useState("");
   const [valuationAgency, setValuationAgency] = useState("");
   const [valuationReportUrl, setValuationReportUrl] = useState("");
@@ -550,7 +550,7 @@ export default function AdminAssetsPage() {
       setTimeout(() => setSuccess(null), 3000);
       setShowValuationModal(false);
       setValuationAmount("");
-      setValuationCurrency("USD");
+      setValuationCurrency("MNT");
       setValuationDate("");
       setValuationAgency("");
       setValuationReportUrl("");
@@ -1360,7 +1360,7 @@ export default function AdminAssetsPage() {
                                       minimumFractionDigits: 2,
                                       maximumFractionDigits: 2,
                                     })}{" "}
-                                    {valuation.valuationCurrency || "USD"}
+                                    {valuation.valuationCurrency || "MNT"}
                                   </div>
                                   <button
                                     onClick={() =>
