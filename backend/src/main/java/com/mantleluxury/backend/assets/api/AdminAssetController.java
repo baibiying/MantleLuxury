@@ -574,6 +574,29 @@ public class AdminAssetController {
                 }
             }
             
+            // 如果资产状态是"募集中"，确保禁用合约中的托管检查
+            if ("fundraising".equals(asset.getStatus()) && asset.getTokenAddress() != null && !asset.getTokenAddress().isEmpty()) {
+                try {
+                    logger.info("Disabling custody check in LuxuryToken contract for asset {} (token: {})...", 
+                            assetId, asset.getTokenAddress());
+                    String disableTxHash = luxuryTokenService.setCustodyCheckEnabled(asset.getTokenAddress(), false);
+                    if (disableTxHash != null) {
+                        result.put("custodyCheckDisabled", true);
+                        result.put("custodyCheckTxHash", disableTxHash);
+                        logger.info("✅ Successfully disabled custody check in LuxuryToken contract. TxHash: {}", disableTxHash);
+                    } else {
+                        result.put("custodyCheckDisabled", false);
+                        result.put("custodyCheckError", "Transaction hash is null");
+                        logger.warn("Failed to disable custody check in LuxuryToken contract (txHash is null)");
+                    }
+                } catch (Exception e) {
+                    result.put("custodyCheckDisabled", false);
+                    result.put("custodyCheckError", e.getMessage());
+                    logger.error("Failed to disable custody check in LuxuryToken contract for asset {}: {}", 
+                            assetId, e.getMessage(), e);
+                }
+            }
+            
             return ResponseEntity.ok(result);
             
         } catch (Exception e) {
