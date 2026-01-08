@@ -164,47 +164,48 @@ public class AdminKycController {
             @RequestBody Map<String, String> request,
             @RequestHeader(value = "X-Wallet-Address", required = false) String adminAddress
     ) {
-        ResponseEntity<?> permissionCheck = checkAdminPermission(adminAddress);
-        if (permissionCheck != null) {
-            return permissionCheck;
-        }
-        String status = request.get("status"); // "approved" or "rejected"
-        if (status == null || (!status.equals("approved") && !status.equals("rejected"))) {
-            return ResponseEntity.badRequest().body("Invalid status. Must be 'approved' or 'rejected'");
-        }
-
-        User user = userRepository.findByWalletAddress(walletAddress.toLowerCase()).orElse(null);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found"));
-        }
-
-        // 保存原始状态，以便在链上同步失败时回滚
-        String originalStatus = user.getKycStatus();
-        LocalDateTime originalApprovedAt = user.getKycApprovedAt();
-        LocalDateTime originalRejectedAt = user.getKycRejectedAt();
-        String originalRejectionReason = user.getKycRejectionReason();
-
-        // 更新数据库状态
-        user.setKycStatus(status);
-        if (status.equals("approved")) {
-            user.setKycApprovedAt(LocalDateTime.now());
-            user.setKycRejectedAt(null);
-            user.setKycRejectionReason(null);
-        } else if (status.equals("rejected")) {
-            user.setKycRejectedAt(LocalDateTime.now());
-            String rejectionReason = request.get("rejectionReason");
-            user.setKycRejectionReason(rejectionReason);
-        }
-        userRepository.save(user);
-
-        // 同步 KYC 状态到链上 KYCRegistry 合约
-        // 注意：只有在链上同步成功后才返回成功
-        // 如果链上同步失败，回滚数据库状态
-        String transactionHash = null;
-        String syncStatus = "success";
-        String syncMessage = "KYC status synced to blockchain";
         try {
-            // 在批准 KYC 时，检查并自动授予 COMPLIANCE_ROLE 权限（如果需要）
+            ResponseEntity<?> permissionCheck = checkAdminPermission(adminAddress);
+            if (permissionCheck != null) {
+                return permissionCheck;
+            }
+            String status = request.get("status"); // "approved" or "rejected"
+            if (status == null || (!status.equals("approved") && !status.equals("rejected"))) {
+                return ResponseEntity.badRequest().body("Invalid status. Must be 'approved' or 'rejected'");
+            }
+
+            User user = userRepository.findByWalletAddress(walletAddress.toLowerCase()).orElse(null);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found"));
+            }
+
+            // 保存原始状态，以便在链上同步失败时回滚
+            String originalStatus = user.getKycStatus();
+            LocalDateTime originalApprovedAt = user.getKycApprovedAt();
+            LocalDateTime originalRejectedAt = user.getKycRejectedAt();
+            String originalRejectionReason = user.getKycRejectionReason();
+
+            // 更新数据库状态
+            user.setKycStatus(status);
+            if (status.equals("approved")) {
+                user.setKycApprovedAt(LocalDateTime.now());
+                user.setKycRejectedAt(null);
+                user.setKycRejectionReason(null);
+            } else if (status.equals("rejected")) {
+                user.setKycRejectedAt(LocalDateTime.now());
+                String rejectionReason = request.get("rejectionReason");
+                user.setKycRejectionReason(rejectionReason);
+            }
+            userRepository.save(user);
+
+            // 同步 KYC 状态到链上 KYCRegistry 合约
+            // 注意：只有在链上同步成功后才返回成功
+            // 如果链上同步失败，回滚数据库状态
+            String transactionHash = null;
+            String syncStatus = "success";
+            String syncMessage = "KYC status synced to blockchain";
+            try {
+                // 在批准 KYC 时，检查并自动授予 COMPLIANCE_ROLE 权限（如果需要）
             if (status.equals("approved")) {
                 try {
                     boolean hasRole = kycRegistryService.hasComplianceRole();
@@ -310,12 +311,12 @@ public class AdminKycController {
                 ));
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
             }
-        }
+            }
 
-        // 发送邮件通知（已禁用）
-        String emailStatus = "disabled";
-        String emailMessage = "邮件发送功能已禁用";
-        logger.info("Email sending is disabled. Skipping email notification for user: {}", walletAddress);
+            // 发送邮件通知（已禁用）
+            String emailStatus = "disabled";
+            String emailMessage = "邮件发送功能已禁用";
+            logger.info("Email sending is disabled. Skipping email notification for user: {}", walletAddress);
         
         // 邮件发送功能已禁用，以下代码暂时不执行
         /*
@@ -353,19 +354,32 @@ public class AdminKycController {
         }
         */
 
-        logger.info("KYC reviewed for {}: {} (email: {}, blockchain sync: {})", walletAddress, status, emailStatus, syncStatus);
-        Map<String, Object> response = new HashMap<>();
-        response.put("walletAddress", walletAddress);
-        response.put("status", status);
-        response.put("message", "KYC status updated successfully");
-        response.put("blockchainSync", Map.of(
-                "status", syncStatus,
-                "message", syncMessage,
-                "transactionHash", transactionHash != null ? transactionHash : "N/A"
-        ));
-        response.put("emailStatus", emailStatus);
-        response.put("emailMessage", emailMessage);
-        return ResponseEntity.ok(response);
+            logger.info("KYC reviewed for {}: {} (email: {}, blockchain sync: {})", walletAddress, status, emailStatus, syncStatus);
+            Map<String, Object> response = new HashMap<>();
+            response.put("walletAddress", walletAddress);
+            response.put("status", status);
+            response.put("message", "KYC status updated successfully");
+            response.put("blockchainSync", Map.of(
+                    "status", syncStatus,
+                    "message", syncMessage,
+                    "transactionHash", transactionHash != null ? transactionHash : "N/A"
+            ));
+            response.put("emailStatus", emailStatus);
+            response.put("emailMessage", emailMessage);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            // 捕获所有未处理的异常，避免返回 500 错误
+            logger.error("❌ Unexpected error in reviewKyc for {}: {}", walletAddress, e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Internal server error");
+            errorResponse.put("message", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+            errorResponse.put("walletAddress", walletAddress);
+            errorResponse.put("details", "An unexpected error occurred. Please check the server logs for more details.");
+            if (e.getCause() != null) {
+                errorResponse.put("cause", e.getCause().getMessage());
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     /**

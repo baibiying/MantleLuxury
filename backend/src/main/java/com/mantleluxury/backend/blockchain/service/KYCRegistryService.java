@@ -123,7 +123,8 @@ public class KYCRegistryService {
         if (enabled && (contractAddress == null || contractAddress.isEmpty())) {
             logger.warn("KYCRegistry contract address is not configured. KYC status will not be synced to blockchain.");
         } else if (enabled) {
-            logger.info("KYCRegistryService initialized with contract address: {}, chainId: {}", contractAddress, chainId);
+            logger.info("KYCRegistryService initialized with contract address: {}, chainId: {}, gasLimit: {}", 
+                    contractAddress, chainId, this.gasLimit != null ? this.gasLimit : "not configured (will use default)");
         }
     }
 
@@ -180,7 +181,12 @@ public class KYCRegistryService {
             org.web3j.tx.gas.ContractGasProvider gasProvider = new DefaultGasProvider();
             BigInteger gasPrice = gasProvider.getGasPrice();
             // 使用配置的 gasLimit，如果未配置则使用默认值
-            BigInteger txGasLimit = this.gasLimit != null ? this.gasLimit : gasProvider.getGasLimit();
+            // 对于 setKYCStatus，确保使用足够的 Gas Limit（至少 100,000,000）
+            BigInteger minGasLimit = BigInteger.valueOf(100_000_000);
+            BigInteger txGasLimit = this.gasLimit != null && this.gasLimit.compareTo(minGasLimit) >= 0
+                    ? this.gasLimit 
+                    : (this.gasLimit != null ? this.gasLimit : minGasLimit);
+            logger.info("Using gas limit for setKYCStatus: {} (configured: {})", txGasLimit, this.gasLimit);
 
             // 重试机制：如果 nonce 错误，重新获取 nonce 并重试（最多重试 3 次）
             int maxRetries = 3;
