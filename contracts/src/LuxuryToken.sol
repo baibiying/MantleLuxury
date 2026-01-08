@@ -76,7 +76,7 @@ contract LuxuryToken is ERC20, Ownable {
         kycCheckEnabled = true;  // 默认启用 KYC 检查
         if (custodyManager_ != address(0)) {
             custodyManager = CustodyManager(custodyManager_);
-            custodyCheckEnabled = true;  // 如果提供了 CustodyManager，默认启用托管检查
+            custodyCheckEnabled = false;  // 默认不启用托管检查，因为资产在"募集中"状态时已经通过了所有审核（包括托管）
         }
         fundsReleased = false;
         totalEscrowedFunds = 0;
@@ -195,7 +195,7 @@ contract LuxuryToken is ERC20, Ownable {
         address oldManager = address(custodyManager);
         if (custodyManager_ != address(0)) {
             custodyManager = CustodyManager(custodyManager_);
-            custodyCheckEnabled = true;  // 设置地址时自动启用检查
+            custodyCheckEnabled = false;  // 默认不启用托管检查，因为资产在"募集中"状态时已经通过了所有审核（包括托管）
         } else {
             custodyCheckEnabled = false;
         }

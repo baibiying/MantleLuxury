@@ -10,6 +10,7 @@ import com.mantleluxury.backend.assets.service.ValuationService;
 import com.mantleluxury.backend.assets.service.CustodyService;
 import com.mantleluxury.backend.assets.service.InsuranceService;
 import com.mantleluxury.backend.blockchain.service.CustodyManagerService;
+import com.mantleluxury.backend.blockchain.service.LuxuryTokenService;
 import com.mantleluxury.backend.config.AdminConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ public class AdminAssetController {
     private final CustodyService custodyService;
     private final InsuranceService insuranceService;
     private final CustodyManagerService custodyManagerService;
+    private final LuxuryTokenService luxuryTokenService;
     private final AdminConfig adminConfig;
 
     public AdminAssetController(
@@ -51,6 +53,7 @@ public class AdminAssetController {
             CustodyService custodyService,
             InsuranceService insuranceService,
             CustodyManagerService custodyManagerService,
+            LuxuryTokenService luxuryTokenService,
             AdminConfig adminConfig
     ) {
         this.assetRepository = assetRepository;
@@ -61,6 +64,7 @@ public class AdminAssetController {
         this.custodyService = custodyService;
         this.insuranceService = insuranceService;
         this.custodyManagerService = custodyManagerService;
+        this.luxuryTokenService = luxuryTokenService;
         this.adminConfig = adminConfig;
     }
 
@@ -297,44 +301,21 @@ public class AdminAssetController {
                 ));
             }
             
-            // 当状态改为 "fundraising" 时，确保 CustodyManager 中的资产状态为 InCustody
-            // 这样用户才能购买代币（LuxuryToken.buyTokens 要求资产处于 InCustody 状态）
-            if (asset.getTokenAddress() != null && !asset.getTokenAddress().isEmpty() 
-                    && asset.getAssetIdBytes32() != null && !asset.getAssetIdBytes32().isEmpty()) {
+            // 当状态改为 "fundraising" 时，禁用合约中的托管检查
+            // 因为资产已经通过了所有审核（包括托管），投资者购买时不需要再检查 CustodyManager 中的状态
+            if (asset.getTokenAddress() != null && !asset.getTokenAddress().isEmpty()) {
                 try {
-                    // 检查资产是否已在 CustodyManager 中注册
-                    boolean isRegistered = custodyManagerService.isAssetRegistered(asset.getAssetIdBytes32());
-                    if (isRegistered) {
-                        // 获取当前状态（返回字符串，如 "InCustody", "Registered" 等）
-                        String currentStatusStr = custodyManagerService.getAssetStatus(asset.getAssetIdBytes32());
-                        if (!"InCustody".equals(currentStatusStr)) {
-                            // 更新状态为 InCustody
-                            logger.info("Updating asset {} status to InCustody in CustodyManager (current: {}) before setting status to fundraising...", 
-                                    assetId, currentStatusStr);
-                            String updateTxHash = custodyManagerService.updateStatus(
-                                    asset.getAssetIdBytes32(),
-                                    CustodyManagerService.AssetStatus.InCustody
-                            );
-                            if (updateTxHash != null) {
-                                logger.info("Successfully updated asset {} status to InCustody in CustodyManager. TxHash: {}", assetId, updateTxHash);
-                            } else {
-                                logger.warn("Failed to update asset {} status to InCustody in CustodyManager (txHash is null)", assetId);
-                            }
-                        } else {
-                            logger.info("Asset {} is already InCustody in CustodyManager", assetId);
-                        }
+                    logger.info("Disabling custody check in LuxuryToken contract for asset {} (token: {}) since asset is in fundraising status with all required records...", 
+                            assetId, asset.getTokenAddress());
+                    String disableTxHash = luxuryTokenService.setCustodyCheckEnabled(asset.getTokenAddress(), false);
+                    if (disableTxHash != null) {
+                        logger.info("✅ Successfully disabled custody check in LuxuryToken contract. TxHash: {}", disableTxHash);
                     } else {
-                        logger.warn("Asset {} is not registered in CustodyManager yet. It should be registered when custody and insurance are created.", assetId);
-                        // 尝试自动注册（如果托管和保险都存在）
-                        try {
-                            // 这里可以调用 CustodyManagerIntegrationService，但为了避免循环依赖，我们只记录警告
-                            logger.warn("Asset {} needs to be registered in CustodyManager. Please ensure custody and insurance records are created first.", assetId);
-                        } catch (Exception e) {
-                            logger.error("Failed to auto-register asset {} to CustodyManager: {}", assetId, e.getMessage());
-                        }
+                        logger.warn("Failed to disable custody check in LuxuryToken contract (txHash is null)");
                     }
                 } catch (Exception e) {
-                    logger.error("Failed to update asset {} status in CustodyManager: {}", assetId, e.getMessage(), e);
+                    logger.error("Failed to disable custody check in LuxuryToken contract for asset {}: {}", 
+                            assetId, e.getMessage(), e);
                     // 不阻止状态更新，但记录错误
                 }
             }
@@ -433,6 +414,173 @@ public class AdminAssetController {
                 "deletedCount", deletedCount,
                 "message", "Deleted " + deletedCount + " assets with status: " + status
         ));
+    }
+    
+    /**
+     * 检查资产的 CustodyManager 状态（只读）
+     */
+    @GetMapping("/{assetId}/custody-status")
+    public ResponseEntity<?> checkCustodyStatus(
+            @PathVariable String assetId,
+            @RequestHeader(value = "X-Wallet-Address", required = false) String walletAddress
+    ) {
+        ResponseEntity<?> permissionCheck = checkAdminPermission(walletAddress);
+        if (permissionCheck != null) {
+            return permissionCheck;
+        }
+        
+        Asset asset = assetRepository.findById(assetId).orElse(null);
+        if (asset == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Asset not found"));
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("assetId", assetId);
+        result.put("tokenAddress", asset.getTokenAddress());
+        result.put("assetIdBytes32", asset.getAssetIdBytes32());
+        result.put("status", asset.getStatus());
+        
+        if (asset.getAssetIdBytes32() == null || asset.getAssetIdBytes32().isEmpty()) {
+            result.put("error", "Asset has no assetIdBytes32");
+            return ResponseEntity.badRequest().body(result);
+        }
+        
+        try {
+            // 检查资产是否已在 CustodyManager 中注册
+            boolean isRegistered = custodyManagerService.isAssetRegistered(asset.getAssetIdBytes32());
+            result.put("isRegistered", isRegistered);
+            
+            if (isRegistered) {
+                // 获取当前状态
+                String currentStatusStr = custodyManagerService.getAssetStatus(asset.getAssetIdBytes32());
+                result.put("currentStatus", currentStatusStr);
+                result.put("isInCustody", "InCustody".equals(currentStatusStr));
+            } else {
+                result.put("currentStatus", "NotRegistered");
+                result.put("isInCustody", false);
+                
+                // 检查是否有托管和保险记录
+                boolean hasCustody = custodyService.getCustodyByAssetId(assetId).isPresent();
+                boolean hasInsurance = insuranceService.getActiveInsuranceByAssetId(assetId).isPresent();
+                result.put("hasCustody", hasCustody);
+                result.put("hasInsurance", hasInsurance);
+            }
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            logger.error("Failed to check custody status for asset {}: {}", assetId, e.getMessage(), e);
+            result.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
+    }
+    
+    /**
+     * 修复资产的 CustodyManager 状态
+     * 如果资产已注册但状态不是 InCustody，自动更新为 InCustody
+     * 如果资产未注册，尝试注册（需要托管和保险记录）
+     */
+    @PostMapping("/{assetId}/fix-custody-status")
+    public ResponseEntity<?> fixCustodyStatus(
+            @PathVariable String assetId,
+            @RequestHeader(value = "X-Wallet-Address", required = false) String walletAddress
+    ) {
+        ResponseEntity<?> permissionCheck = checkAdminPermission(walletAddress);
+        if (permissionCheck != null) {
+            return permissionCheck;
+        }
+        
+        Asset asset = assetRepository.findById(assetId).orElse(null);
+        if (asset == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Asset not found"));
+        }
+        
+        if (asset.getTokenAddress() == null || asset.getTokenAddress().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Asset has no token address"));
+        }
+        
+        if (asset.getAssetIdBytes32() == null || asset.getAssetIdBytes32().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Asset has no assetIdBytes32"));
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("assetId", assetId);
+        result.put("tokenAddress", asset.getTokenAddress());
+        result.put("assetIdBytes32", asset.getAssetIdBytes32());
+        
+        try {
+            // 检查资产是否已在 CustodyManager 中注册
+            boolean isRegistered = custodyManagerService.isAssetRegistered(asset.getAssetIdBytes32());
+            result.put("isRegistered", isRegistered);
+            
+            if (isRegistered) {
+                // 获取当前状态
+                String currentStatusStr = custodyManagerService.getAssetStatus(asset.getAssetIdBytes32());
+                result.put("currentStatus", currentStatusStr);
+                
+                if (!"InCustody".equals(currentStatusStr)) {
+                    // 更新状态为 InCustody
+                    logger.info("Updating asset {} status from {} to InCustody in CustodyManager...", 
+                            assetId, currentStatusStr);
+                    String updateTxHash = custodyManagerService.updateStatus(
+                            asset.getAssetIdBytes32(),
+                            CustodyManagerService.AssetStatus.InCustody
+                    );
+                    if (updateTxHash != null) {
+                        result.put("action", "updated");
+                        result.put("transactionHash", updateTxHash);
+                        result.put("newStatus", "InCustody");
+                        logger.info("Successfully updated asset {} status to InCustody. TxHash: {}", 
+                                assetId, updateTxHash);
+                    } else {
+                        result.put("action", "update_failed");
+                        result.put("error", "Update transaction hash is null");
+                    }
+                } else {
+                    result.put("action", "no_change");
+                    result.put("message", "Asset is already InCustody");
+                }
+            } else {
+                // 资产未注册，尝试注册（需要托管和保险记录）
+                logger.warn("Asset {} is not registered in CustodyManager. Attempting to register...", assetId);
+                
+                // 检查是否有托管和保险记录
+                boolean hasCustody = custodyService.getCustodyByAssetId(assetId).isPresent();
+                boolean hasInsurance = insuranceService.getActiveInsuranceByAssetId(assetId).isPresent();
+                
+                result.put("hasCustody", hasCustody);
+                result.put("hasInsurance", hasInsurance);
+                
+                if (hasCustody && hasInsurance) {
+                    // 尝试自动注册（通过 CustodyManagerIntegrationService）
+                    // 注意：这里需要注入 CustodyManagerIntegrationService
+                    result.put("action", "registration_attempted");
+                    result.put("message", "Asset has custody and insurance records. Registration should be triggered automatically when these records are created.");
+                    result.put("hint", "If registration failed, check backend logs for details.");
+                } else {
+                    result.put("action", "registration_failed");
+                    result.put("error", "Asset must have both custody and insurance records before registration");
+                    if (!hasCustody) {
+                        result.put("missing", "custody");
+                    }
+                    if (!hasInsurance) {
+                        result.put("missing", result.containsKey("missing") ? 
+                                result.get("missing") + ", insurance" : "insurance");
+                    }
+                }
+            }
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            logger.error("Failed to fix custody status for asset {}: {}", assetId, e.getMessage(), e);
+            result.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
     }
 }
 
