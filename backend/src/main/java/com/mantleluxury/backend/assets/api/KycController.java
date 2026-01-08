@@ -3,6 +3,9 @@ package com.mantleluxury.backend.assets.api;
 import com.mantleluxury.backend.assets.domain.User;
 import com.mantleluxury.backend.assets.repository.UserRepository;
 import com.mantleluxury.backend.assets.service.AmlService;
+import com.mantleluxury.backend.blockchain.service.KYCRegistryService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,12 +18,20 @@ import java.util.Map;
 @RequestMapping("/api/kyc")
 public class KycController {
 
+    private static final Logger logger = LoggerFactory.getLogger(KycController.class);
+
     private final UserRepository userRepository;
     private final AmlService amlService;
+    private final KYCRegistryService kycRegistryService;
 
-    public KycController(UserRepository userRepository, AmlService amlService) {
+    public KycController(
+            UserRepository userRepository, 
+            AmlService amlService,
+            KYCRegistryService kycRegistryService
+    ) {
         this.userRepository = userRepository;
         this.amlService = amlService;
+        this.kycRegistryService = kycRegistryService;
     }
 
     @GetMapping("/{walletAddress}")
@@ -122,16 +133,52 @@ public class KycController {
     }
 
     // 简单的审批接口：实际中应有鉴权；这里用于 Demo
+    // 注意：此接口会同步 KYC 状态到链上
     @PostMapping("/approve/{walletAddress}")
     public ResponseEntity<?> approve(@PathVariable String walletAddress) {
-        User user = userRepository.findByWalletAddress(walletAddress).orElse(null);
+        User user = userRepository.findByWalletAddress(walletAddress.toLowerCase()).orElse(null);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }
+        
+        // 保存 KYC 状态到数据库
         user.setKycStatus("approved");
         user.setKycApprovedAt(LocalDateTime.now());
+        user.setKycRejectedAt(null);
+        user.setKycRejectionReason(null);
         userRepository.save(user);
-        return ResponseEntity.ok(Map.of("walletAddress", walletAddress, "status", "approved"));
+        
+        // 同步 KYC 状态到链上 KYCRegistry 合约
+        String transactionHash = null;
+        String syncStatus = "success";
+        String syncMessage = "KYC status synced to blockchain";
+        try {
+            transactionHash = kycRegistryService.setKYCStatus(walletAddress, "approved");
+            if (transactionHash != null) {
+                logger.info("KYC status synced to blockchain. Transaction hash: {}", transactionHash);
+            } else {
+                logger.warn("KYC status sync to blockchain returned null. Blockchain may be disabled.");
+                syncStatus = "skipped";
+                syncMessage = "Blockchain sync skipped (blockchain may be disabled)";
+            }
+        } catch (Exception e) {
+            logger.error("Failed to sync KYC status to blockchain for {}: {}", walletAddress, e.getMessage(), e);
+            syncStatus = "failed";
+            syncMessage = "Blockchain sync failed: " + e.getMessage();
+            // 即使链上同步失败，也返回成功，但记录错误日志
+            // 实际生产环境可能需要重试机制或告警
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("walletAddress", walletAddress);
+        response.put("status", "approved");
+        response.put("blockchainSync", Map.of(
+                "status", syncStatus,
+                "message", syncMessage,
+                "transactionHash", transactionHash != null ? transactionHash : "N/A"
+        ));
+        
+        return ResponseEntity.ok(response);
     }
 }
 

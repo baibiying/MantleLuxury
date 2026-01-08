@@ -191,14 +191,24 @@ public class AdminKycController {
         userRepository.save(user);
 
         // 同步 KYC 状态到链上 KYCRegistry 合约
+        String transactionHash = null;
+        String syncStatus = "success";
+        String syncMessage = "KYC status synced to blockchain";
         try {
-            String transactionHash = kycRegistryService.setKYCStatus(walletAddress, status);
+            transactionHash = kycRegistryService.setKYCStatus(walletAddress, status);
             if (transactionHash != null) {
                 logger.info("KYC status synced to blockchain. Transaction hash: {}", transactionHash);
+            } else {
+                logger.warn("KYC status sync to blockchain returned null. Blockchain may be disabled.");
+                syncStatus = "skipped";
+                syncMessage = "Blockchain sync skipped (blockchain may be disabled)";
             }
         } catch (Exception e) {
             logger.error("Failed to sync KYC status to blockchain for {}: {}", walletAddress, e.getMessage(), e);
+            syncStatus = "failed";
+            syncMessage = "Blockchain sync failed: " + e.getMessage();
             // 不抛出异常，允许链下状态更新成功，但记录错误
+            // 实际生产环境可能需要重试机制或告警
         }
 
         // 发送邮件通知（已禁用）
@@ -242,11 +252,16 @@ public class AdminKycController {
         }
         */
 
-        logger.info("KYC reviewed for {}: {} (email: {})", walletAddress, status, emailStatus);
+        logger.info("KYC reviewed for {}: {} (email: {}, blockchain sync: {})", walletAddress, status, emailStatus, syncStatus);
         Map<String, Object> response = new HashMap<>();
         response.put("walletAddress", walletAddress);
         response.put("status", status);
         response.put("message", "KYC status updated successfully");
+        response.put("blockchainSync", Map.of(
+                "status", syncStatus,
+                "message", syncMessage,
+                "transactionHash", transactionHash != null ? transactionHash : "N/A"
+        ));
         response.put("emailStatus", emailStatus);
         response.put("emailMessage", emailMessage);
         return ResponseEntity.ok(response);
