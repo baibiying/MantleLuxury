@@ -124,17 +124,36 @@ public class CustodyManagerIntegrationService {
 
             // 注册到链上 CustodyManager
             logger.info("Registering asset {} to CustodyManager on-chain...", assetId);
-            String txHash = custodyManagerService.registerAsset(
+            String registerTxHash = custodyManagerService.registerAsset(
                     asset.getAssetIdBytes32(),
                     asset.getTokenAddress(),
                     custodyInfoHash,
                     insuranceInfoHash
             );
 
-            if (txHash != null) {
-                logger.info("Successfully registered asset {} to CustodyManager. TxHash: {}", assetId, txHash);
-                // 更新资产状态（可选：可以更新为 in_custody 或保持 registered）
-                // asset.setStatus("in_custody");
+            if (registerTxHash != null) {
+                logger.info("Successfully registered asset {} to CustodyManager. Register TxHash: {}", assetId, registerTxHash);
+                
+                // 注册后，立即将状态更新为 InCustody，以便用户可以购买代币
+                try {
+                    logger.info("Updating asset {} status to InCustody in CustodyManager...", assetId);
+                    CustodyManagerService.AssetStatus inCustodyStatus = CustodyManagerService.AssetStatus.InCustody;
+                    String updateTxHash = custodyManagerService.updateStatus(
+                            asset.getAssetIdBytes32(),
+                            inCustodyStatus
+                    );
+                    
+                    if (updateTxHash != null) {
+                        logger.info("Successfully updated asset {} status to InCustody. Update TxHash: {}", assetId, updateTxHash);
+                    } else {
+                        logger.warn("CustodyManager status update returned null txHash for asset {}", assetId);
+                    }
+                } catch (Exception e) {
+                    logger.error("Failed to update asset {} status to InCustody in CustodyManager: {}", 
+                            assetId, e.getMessage(), e);
+                    // 不抛出异常，因为注册已经成功，状态更新可以稍后手动完成
+                }
+                
                 assetRepository.save(asset);
             } else {
                 logger.warn("CustodyManager registration returned null txHash for asset {}", assetId);

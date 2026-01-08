@@ -9,6 +9,7 @@ import com.mantleluxury.backend.assets.service.AssetAuthenticationService;
 import com.mantleluxury.backend.assets.service.ValuationService;
 import com.mantleluxury.backend.assets.service.CustodyService;
 import com.mantleluxury.backend.assets.service.InsuranceService;
+import com.mantleluxury.backend.blockchain.service.CustodyManagerService;
 import com.mantleluxury.backend.config.AdminConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ public class AdminAssetController {
     private final ValuationService valuationService;
     private final CustodyService custodyService;
     private final InsuranceService insuranceService;
+    private final CustodyManagerService custodyManagerService;
     private final AdminConfig adminConfig;
 
     public AdminAssetController(
@@ -48,6 +50,7 @@ public class AdminAssetController {
             ValuationService valuationService,
             CustodyService custodyService,
             InsuranceService insuranceService,
+            CustodyManagerService custodyManagerService,
             AdminConfig adminConfig
     ) {
         this.assetRepository = assetRepository;
@@ -57,6 +60,7 @@ public class AdminAssetController {
         this.valuationService = valuationService;
         this.custodyService = custodyService;
         this.insuranceService = insuranceService;
+        this.custodyManagerService = custodyManagerService;
         this.adminConfig = adminConfig;
     }
 
@@ -291,6 +295,48 @@ public class AdminAssetController {
                 return ResponseEntity.badRequest().body(Map.of(
                         "error", "无法将资产状态改为募集中：需要填写保险信息且保险状态为有效"
                 ));
+            }
+            
+            // 当状态改为 "fundraising" 时，确保 CustodyManager 中的资产状态为 InCustody
+            // 这样用户才能购买代币（LuxuryToken.buyTokens 要求资产处于 InCustody 状态）
+            if (asset.getTokenAddress() != null && !asset.getTokenAddress().isEmpty() 
+                    && asset.getAssetIdBytes32() != null && !asset.getAssetIdBytes32().isEmpty()) {
+                try {
+                    // 检查资产是否已在 CustodyManager 中注册
+                    boolean isRegistered = custodyManagerService.isAssetRegistered(asset.getAssetIdBytes32());
+                    if (isRegistered) {
+                        // 获取当前状态（返回字符串，如 "InCustody", "Registered" 等）
+                        String currentStatusStr = custodyManagerService.getAssetStatus(asset.getAssetIdBytes32());
+                        if (!"InCustody".equals(currentStatusStr)) {
+                            // 更新状态为 InCustody
+                            logger.info("Updating asset {} status to InCustody in CustodyManager (current: {}) before setting status to fundraising...", 
+                                    assetId, currentStatusStr);
+                            String updateTxHash = custodyManagerService.updateStatus(
+                                    asset.getAssetIdBytes32(),
+                                    CustodyManagerService.AssetStatus.InCustody
+                            );
+                            if (updateTxHash != null) {
+                                logger.info("Successfully updated asset {} status to InCustody in CustodyManager. TxHash: {}", assetId, updateTxHash);
+                            } else {
+                                logger.warn("Failed to update asset {} status to InCustody in CustodyManager (txHash is null)", assetId);
+                            }
+                        } else {
+                            logger.info("Asset {} is already InCustody in CustodyManager", assetId);
+                        }
+                    } else {
+                        logger.warn("Asset {} is not registered in CustodyManager yet. It should be registered when custody and insurance are created.", assetId);
+                        // 尝试自动注册（如果托管和保险都存在）
+                        try {
+                            // 这里可以调用 CustodyManagerIntegrationService，但为了避免循环依赖，我们只记录警告
+                            logger.warn("Asset {} needs to be registered in CustodyManager. Please ensure custody and insurance records are created first.", assetId);
+                        } catch (Exception e) {
+                            logger.error("Failed to auto-register asset {} to CustodyManager: {}", assetId, e.getMessage());
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("Failed to update asset {} status in CustodyManager: {}", assetId, e.getMessage(), e);
+                    // 不阻止状态更新，但记录错误
+                }
             }
         }
         
