@@ -336,9 +336,23 @@ public class MantleTokenDeploymentService {
             logger.warn("Hardhat not found. Installing dependencies in contracts directory...");
             logger.info("Contracts directory: {}", contractsDir.getAbsolutePath());
             
-            ProcessBuilder installProcess = new ProcessBuilder("npm", "install");
+            // 优先使用 npm ci（更可靠，基于 package-lock.json），如果失败则回退到 npm install
+            ProcessBuilder installProcess;
+            java.io.File packageLockJson = new java.io.File(contractsDir, "package-lock.json");
+            if (packageLockJson.exists()) {
+                logger.info("Found package-lock.json, using 'npm ci' for faster, reliable installs");
+                installProcess = new ProcessBuilder("npm", "ci");
+            } else {
+                logger.warn("No package-lock.json found, using 'npm install'");
+                installProcess = new ProcessBuilder("npm", "install");
+            }
+            
             installProcess.directory(contractsDir);
             installProcess.redirectErrorStream(true);
+            
+            // 设置环境变量，确保 npm 使用正确的路径
+            installProcess.environment().put("PATH", System.getenv("PATH"));
+            installProcess.environment().put("NODE_ENV", "production");
             
             Process installProc = installProcess.start();
             StringBuilder installOutput = new StringBuilder();
@@ -354,15 +368,74 @@ public class MantleTokenDeploymentService {
             int installExitCode = installProc.waitFor();
             if (installExitCode != 0) {
                 logger.error("npm install failed. Output: {}", installOutput.toString());
-                throw new RuntimeException("Failed to install Hardhat dependencies. Exit code: " + installExitCode);
+                
+                // 如果 npm ci 失败，尝试 npm install
+                if (packageLockJson.exists() && installProcess.command().contains("npm") && installProcess.command().contains("ci")) {
+                    logger.warn("npm ci failed, trying npm install as fallback...");
+                    ProcessBuilder fallbackProcess = new ProcessBuilder("npm", "install");
+                    fallbackProcess.directory(contractsDir);
+                    fallbackProcess.redirectErrorStream(true);
+                    fallbackProcess.environment().put("PATH", System.getenv("PATH"));
+                    
+                    Process fallbackProc = fallbackProcess.start();
+                    StringBuilder fallbackOutput = new StringBuilder();
+                    try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                            new java.io.InputStreamReader(fallbackProc.getInputStream(), StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            fallbackOutput.append(line).append("\n");
+                            logger.info("npm install (fallback): {}", line);
+                        }
+                    }
+                    
+                    int fallbackExitCode = fallbackProc.waitFor();
+                    if (fallbackExitCode != 0) {
+                        logger.error("npm install (fallback) also failed. Output: {}", fallbackOutput.toString());
+                        throw new RuntimeException("Failed to install Hardhat dependencies. npm ci exit code: " + installExitCode + ", npm install exit code: " + fallbackExitCode);
+                    }
+                } else {
+                    throw new RuntimeException("Failed to install Hardhat dependencies. Exit code: " + installExitCode);
+                }
             }
+            
+            // 等待一小段时间，确保文件系统同步
+            Thread.sleep(1000);
             
             // 再次检查 Hardhat 是否安装成功
             if (!hardhatBin.exists()) {
-                throw new RuntimeException("Hardhat installation completed but binary not found at: " + hardhatBin.getAbsolutePath());
+                // 检查 node_modules 是否存在
+                if (!nodeModules.exists()) {
+                    throw new RuntimeException("node_modules directory was not created after npm install. Contracts directory: " + contractsDir.getAbsolutePath());
+                }
+                // 检查 hardhat 目录是否存在
+                java.io.File hardhatDir = new java.io.File(nodeModules, "hardhat");
+                if (!hardhatDir.exists()) {
+                    throw new RuntimeException("Hardhat package was not installed. Expected at: " + hardhatDir.getAbsolutePath());
+                }
+                throw new RuntimeException("Hardhat installation completed but binary not found at: " + hardhatBin.getAbsolutePath() + ". Hardhat package exists: " + hardhatDir.exists());
             }
             
-            logger.info("✅ Hardhat installed successfully");
+            // 验证 Hardhat 是否可以执行（检查 fs-extra 等依赖）
+            logger.info("Verifying Hardhat installation...");
+            ProcessBuilder verifyProcess = new ProcessBuilder(hardhatBin.getAbsolutePath(), "--version");
+            verifyProcess.directory(contractsDir);
+            verifyProcess.redirectErrorStream(true);
+            Process verifyProc = verifyProcess.start();
+            StringBuilder verifyOutput = new StringBuilder();
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(verifyProc.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    verifyOutput.append(line).append("\n");
+                }
+            }
+            int verifyExitCode = verifyProc.waitFor();
+            if (verifyExitCode != 0) {
+                logger.error("Hardhat verification failed. Output: {}", verifyOutput.toString());
+                throw new RuntimeException("Hardhat binary exists but cannot execute. This may indicate missing dependencies (e.g., fs-extra). Output: " + verifyOutput.toString());
+            }
+            
+            logger.info("✅ Hardhat installed and verified successfully. Version: {}", verifyOutput.toString().trim());
         } else if (!packageJson.exists()) {
             throw new RuntimeException("package.json not found in contracts directory: " + contractsDir.getAbsolutePath());
         }
