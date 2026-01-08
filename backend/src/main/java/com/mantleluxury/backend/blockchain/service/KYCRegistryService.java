@@ -19,10 +19,13 @@ import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
+import org.web3j.protocol.core.methods.response.EthGetTransactionReceipt;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Numeric;
+import org.web3j.tx.response.PollingTransactionReceiptProcessor;
+import org.web3j.tx.response.TransactionReceiptProcessor;
 
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -199,26 +202,27 @@ public class KYCRegistryService {
                     String transactionHash = ethSendTransaction.getTransactionHash();
                     logger.info("✅ KYC status transaction sent. Transaction hash: {} (attempt {}). Waiting for confirmation...", transactionHash, attempt + 1);
                     
-                    // 等待交易确认（最多等待 60 秒）
-                    try {
-                        TransactionReceipt receipt = transactionManager.waitForTransactionReceipt(transactionHash);
-                        if (receipt != null && receipt.isStatusOK()) {
-                            logger.info("✅ KYC status updated on-chain. Transaction confirmed. Hash: {}, Block: {}", 
-                                    transactionHash, receipt.getBlockNumber());
-                            return transactionHash;
-                        } else if (receipt != null && !receipt.isStatusOK()) {
-                            // 交易失败
-                            logger.error("❌ KYC status transaction failed. Hash: {}, Status: {}", 
-                                    transactionHash, receipt.getStatus());
-                            throw new RuntimeException("Transaction failed on-chain. Status: " + receipt.getStatus());
-                        } else {
-                            // 交易收据为 null（不应该发生）
-                            logger.error("❌ KYC status transaction receipt is null. Hash: {}", transactionHash);
-                            throw new RuntimeException("Transaction receipt is null");
-                        }
-                    } catch (org.web3j.protocol.exceptions.TransactionException e) {
-                        logger.error("❌ KYC status transaction failed: {}", e.getMessage(), e);
-                        throw new RuntimeException("Transaction failed: " + e.getMessage(), e);
+                    // 等待交易确认（最多等待 60 秒，每 1 秒轮询一次）
+                    TransactionReceiptProcessor receiptProcessor = new PollingTransactionReceiptProcessor(
+                            web3j, 
+                            1000,  // 轮询间隔：1 秒
+                            60     // 最多等待：60 秒
+                    );
+                    TransactionReceipt receipt = receiptProcessor.waitForTransactionReceipt(transactionHash);
+                    
+                    if (receipt != null && receipt.isStatusOK()) {
+                        logger.info("✅ KYC status updated on-chain. Transaction confirmed. Hash: {}, Block: {}", 
+                                transactionHash, receipt.getBlockNumber());
+                        return transactionHash;
+                    } else if (receipt != null && !receipt.isStatusOK()) {
+                        // 交易失败
+                        logger.error("❌ KYC status transaction failed. Hash: {}, Status: {}", 
+                                transactionHash, receipt.getStatus());
+                        throw new RuntimeException("Transaction failed on-chain. Status: " + receipt.getStatus());
+                    } else {
+                        // 交易收据为 null（不应该发生）
+                        logger.error("❌ KYC status transaction receipt is null. Hash: {}", transactionHash);
+                        throw new RuntimeException("Transaction receipt is null");
                     }
                     
                 } catch (InterruptedException e) {
