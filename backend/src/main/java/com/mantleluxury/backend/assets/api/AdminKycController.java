@@ -204,6 +204,29 @@ public class AdminKycController {
         String syncStatus = "success";
         String syncMessage = "KYC status synced to blockchain";
         try {
+            // 在批准 KYC 时，检查并自动授予 COMPLIANCE_ROLE 权限（如果需要）
+            if (status.equals("approved")) {
+                try {
+                    boolean hasRole = kycRegistryService.hasComplianceRole();
+                    if (!hasRole) {
+                        logger.info("⚠️ Backend wallet does not have COMPLIANCE_ROLE. Attempting to auto-grant...");
+                        try {
+                            String grantTxHash = kycRegistryService.grantComplianceRole(
+                                    kycRegistryService.getCredentialsAddress()
+                            );
+                            logger.info("✅ Auto-granted COMPLIANCE_ROLE. Transaction hash: {}", grantTxHash);
+                        } catch (Exception grantException) {
+                            logger.warn("⚠️ Failed to auto-grant COMPLIANCE_ROLE: {}. " +
+                                    "This may be because the caller does not have DEFAULT_ADMIN_ROLE. " +
+                                    "The sync may still fail due to missing permissions.", grantException.getMessage());
+                        }
+                    }
+                } catch (Exception checkException) {
+                    logger.warn("⚠️ Failed to check COMPLIANCE_ROLE: {}. Proceeding with sync anyway.", 
+                            checkException.getMessage());
+                }
+            }
+            
             transactionHash = kycRegistryService.setKYCStatus(walletAddress, status);
             if (transactionHash != null) {
                 logger.info("✅ KYC status synced to blockchain. Transaction hash: {}", transactionHash);
@@ -219,25 +242,59 @@ public class AdminKycController {
             syncStatus = "failed";
             syncMessage = "Blockchain sync failed: " + e.getMessage();
             
-            // 回滚数据库状态
-            logger.warn("Rolling back database state for user {} due to blockchain sync failure", walletAddress);
-            user.setKycStatus(originalStatus);
-            user.setKycApprovedAt(originalApprovedAt);
-            user.setKycRejectedAt(originalRejectedAt);
-            user.setKycRejectionReason(originalRejectionReason);
-            userRepository.save(user);
+            // 检查是否是权限问题，如果是，再次尝试授予权限
+            if (e.getMessage() != null && e.getMessage().contains("COMPLIANCE_ROLE")) {
+                logger.info("🔄 Detected permission issue. Retrying to grant COMPLIANCE_ROLE...");
+                try {
+                    String grantTxHash = kycRegistryService.grantComplianceRole(
+                            kycRegistryService.getCredentialsAddress()
+                    );
+                    logger.info("✅ Granted COMPLIANCE_ROLE. Transaction hash: {}. Retrying sync...", grantTxHash);
+                    
+                    // 等待一下让交易确认
+                    Thread.sleep(3000);
+                    
+                    // 重试同步
+                    transactionHash = kycRegistryService.setKYCStatus(walletAddress, status);
+                    if (transactionHash != null) {
+                        logger.info("✅ KYC status synced to blockchain after granting role. Transaction hash: {}", 
+                                transactionHash);
+                        syncStatus = "success";
+                        syncMessage = "KYC status synced to blockchain (after auto-granting COMPLIANCE_ROLE)";
+                    } else {
+                        throw new RuntimeException("Sync still failed after granting role");
+                    }
+                } catch (Exception retryException) {
+                    logger.error("❌ Failed to grant COMPLIANCE_ROLE or retry sync: {}", 
+                            retryException.getMessage(), retryException);
+                    // 继续到回滚逻辑
+                }
+            }
             
-            // 返回错误响应
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to sync KYC status to blockchain");
-            errorResponse.put("message", syncMessage);
-            errorResponse.put("walletAddress", walletAddress);
-            errorResponse.put("blockchainSync", Map.of(
-                    "status", syncStatus,
-                    "message", syncMessage,
-                    "transactionHash", "N/A"
-            ));
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            // 如果重试后仍然失败，回滚数据库状态
+            if (!syncStatus.equals("success")) {
+                logger.warn("Rolling back database state for user {} due to blockchain sync failure", walletAddress);
+                user.setKycStatus(originalStatus);
+                user.setKycApprovedAt(originalApprovedAt);
+                user.setKycRejectedAt(originalRejectedAt);
+                user.setKycRejectionReason(originalRejectionReason);
+                userRepository.save(user);
+                
+                // 返回错误响应
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Failed to sync KYC status to blockchain");
+                errorResponse.put("message", syncMessage);
+                errorResponse.put("walletAddress", walletAddress);
+                errorResponse.put("blockchainSync", Map.of(
+                        "status", syncStatus,
+                        "message", syncMessage,
+                        "transactionHash", transactionHash != null ? transactionHash : "N/A",
+                        "hint", "If this is a permission error, make sure the backend wallet has DEFAULT_ADMIN_ROLE " +
+                                "in KYCRegistry contract, or manually grant COMPLIANCE_ROLE to: " + 
+                                kycRegistryService.getCredentialsAddress()
+                ));
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            }
         }
 
         // 发送邮件通知（已禁用）
@@ -569,6 +626,89 @@ public class AdminKycController {
         result.put("providedAddress", normalizedAddress);
         result.put("configuredAdmins", adminConfig.getAdminAddresses());
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 授予 COMPLIANCE_ROLE 权限给后端钱包地址
+     * 注意：调用此端点的地址必须是 KYCRegistry 合约的 DEFAULT_ADMIN_ROLE
+     */
+    @PostMapping("/grant-compliance-role")
+    public ResponseEntity<?> grantComplianceRole(
+            @RequestHeader(value = "X-Wallet-Address", required = false) String adminAddress
+    ) {
+        ResponseEntity<?> permissionCheck = checkAdminPermission(adminAddress);
+        if (permissionCheck != null) {
+            return permissionCheck;
+        }
+
+        try {
+            // 获取后端钱包地址（需要授予权限的地址）
+            String backendAddress = kycRegistryService.getCredentialsAddress();
+            
+            // 检查是否已有权限
+            boolean hasRole = kycRegistryService.hasComplianceRole();
+            if (hasRole) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("message", "Backend address already has COMPLIANCE_ROLE");
+                response.put("backendAddress", backendAddress);
+                response.put("hasRole", true);
+                return ResponseEntity.ok(response);
+            }
+
+            // 授予权限
+            String transactionHash = kycRegistryService.grantComplianceRole(backendAddress);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "COMPLIANCE_ROLE granted successfully");
+            response.put("backendAddress", backendAddress);
+            response.put("transactionHash", transactionHash);
+            response.put("hasRole", true);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Failed to grant COMPLIANCE_ROLE: {}", e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to grant COMPLIANCE_ROLE");
+            errorResponse.put("message", e.getMessage());
+            errorResponse.put("hint", "Make sure the caller address has DEFAULT_ADMIN_ROLE in KYCRegistry contract");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * 检查后端钱包地址是否有 COMPLIANCE_ROLE 权限
+     */
+    @GetMapping("/check-compliance-role")
+    public ResponseEntity<?> checkComplianceRole(
+            @RequestHeader(value = "X-Wallet-Address", required = false) String walletAddress
+    ) {
+        ResponseEntity<?> permissionCheck = checkAdminPermission(walletAddress);
+        if (permissionCheck != null) {
+            return permissionCheck;
+        }
+
+        try {
+            String backendAddress = kycRegistryService.getCredentialsAddress();
+            boolean hasRole = kycRegistryService.hasComplianceRole();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("backendAddress", backendAddress);
+            response.put("hasComplianceRole", hasRole);
+            response.put("message", hasRole ? "Backend has COMPLIANCE_ROLE" : "Backend does not have COMPLIANCE_ROLE");
+            
+            if (!hasRole) {
+                response.put("hint", "Call POST /api/admin/kyc/grant-compliance-role to grant permission");
+            }
+            
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Failed to check COMPLIANCE_ROLE: {}", e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to check COMPLIANCE_ROLE");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 }
 

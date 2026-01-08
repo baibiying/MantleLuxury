@@ -26,8 +26,11 @@ import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Numeric;
 import org.web3j.tx.response.PollingTransactionReceiptProcessor;
 import org.web3j.tx.response.TransactionReceiptProcessor;
+import org.web3j.crypto.Hash;
+import org.web3j.abi.datatypes.generated.Bytes32;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -44,6 +47,10 @@ public class KYCRegistryService {
     // KYCRegistry 合约 ABI（简化版，只包含需要的方法）
     private static final String SET_KYC_STATUS_FUNCTION = "setKYCStatus(address,uint8)";
     private static final String IS_KYC_APPROVED_FUNCTION = "isKYCApproved(address)";
+    private static final String GRANT_ROLE_FUNCTION = "grantRole(bytes32,address)";
+    private static final String HAS_ROLE_FUNCTION = "hasRole(bytes32,address)";
+    private static final String COMPLIANCE_ROLE_FUNCTION = "COMPLIANCE_ROLE()";
+    
     
     // KYC 状态枚举值（对应合约中的 Status enum）
     public enum KYCStatus {
@@ -121,6 +128,14 @@ public class KYCRegistryService {
     }
 
     /**
+     * 获取后端钱包地址（用于授予权限）
+     * @return 后端钱包地址
+     */
+    public String getCredentialsAddress() {
+        return credentials.getAddress();
+    }
+
+    /**
      * 设置用户的 KYC 状态（同步到链上）
      * @param userAddress 用户钱包地址
      * @param status KYC 状态（"approved", "rejected", "pending", "blacklisted"）
@@ -130,6 +145,19 @@ public class KYCRegistryService {
         if (!enabled || contractAddress == null || contractAddress.isEmpty()) {
             logger.debug("Blockchain sync is disabled or contract address not configured. Skipping on-chain sync.");
             return null;
+        }
+
+        // 检查权限（可选，如果检查失败不影响执行，让链上验证）
+        try {
+            if (!hasComplianceRole()) {
+                logger.warn("⚠️  Backend wallet address {} does not have COMPLIANCE_ROLE. " +
+                        "Transaction may fail. Please grant COMPLIANCE_ROLE to this address.", 
+                        credentials.getAddress());
+                logger.warn("   To grant permission, call KYCRegistry.grantRole(COMPLIANCE_ROLE(), {})", 
+                        credentials.getAddress());
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to check COMPLIANCE_ROLE, proceeding anyway: {}", e.getMessage());
         }
 
         try {
@@ -215,10 +243,17 @@ public class KYCRegistryService {
                                 transactionHash, receipt.getBlockNumber());
                         return transactionHash;
                     } else if (receipt != null && !receipt.isStatusOK()) {
-                        // 交易失败
+                        // 交易失败 - 可能是权限问题
                         logger.error("❌ KYC status transaction failed. Hash: {}, Status: {}", 
                                 transactionHash, receipt.getStatus());
-                        throw new RuntimeException("Transaction failed on-chain. Status: " + receipt.getStatus());
+                        
+                        // 检查是否是权限问题（通常权限问题会导致交易回滚）
+                        String errorMessage = "Transaction failed on-chain. Status: " + receipt.getStatus();
+                        errorMessage += "\n可能的原因：";
+                        errorMessage += "\n1. 后端钱包地址 (" + credentials.getAddress() + ") 没有 COMPLIANCE_ROLE 权限";
+                        errorMessage += "\n2. 请在 KYCRegistry 合约中调用 grantRole(COMPLIANCE_ROLE, " + credentials.getAddress() + ")";
+                        errorMessage += "\n3. 或者使用合约管理员地址来授予权限";
+                        throw new RuntimeException(errorMessage);
                     } else {
                         // 交易收据为 null（不应该发生）
                         logger.error("❌ KYC status transaction receipt is null. Hash: {}", transactionHash);
@@ -296,6 +331,191 @@ public class KYCRegistryService {
         } catch (Exception e) {
             logger.error("Failed to check KYC status on-chain for {}: {}", userAddress, e.getMessage(), e);
             return false;
+        }
+    }
+    
+    /**
+     * 获取 COMPLIANCE_ROLE 的哈希值（从合约读取）
+     * @return COMPLIANCE_ROLE 的 bytes32 哈希值
+     */
+    private String getComplianceRoleHash() {
+        try {
+            // 构建函数调用 - COMPLIANCE_ROLE() 是一个 public constant
+            Function function = new Function(
+                    "COMPLIANCE_ROLE",
+                    Collections.emptyList(),
+                    Arrays.asList(new TypeReference<Bytes32>() {})
+            );
+
+            String encodedFunction = FunctionEncoder.encode(function);
+
+            // 调用合约
+            EthCall response = web3j.ethCall(
+                    Transaction.createEthCallTransaction(null, contractAddress, encodedFunction),
+                    DefaultBlockParameterName.LATEST
+            ).send();
+
+            if (response.hasError()) {
+                logger.error("Failed to get COMPLIANCE_ROLE hash: {}", response.getError().getMessage());
+                // 如果失败，尝试计算（OpenZeppelin AccessControl 使用 keccak256(roleName)）
+                byte[] roleBytes = "COMPLIANCE_ROLE".getBytes(StandardCharsets.UTF_8);
+                byte[] hash = Hash.sha3(roleBytes);
+                return Numeric.toHexString(hash);
+            }
+
+            String value = response.getValue();
+            List<Type> decoded = FunctionReturnDecoder.decode(value, function.getOutputParameters());
+            if (decoded.isEmpty()) {
+                // 如果解码失败，尝试计算
+                byte[] roleBytes = "COMPLIANCE_ROLE".getBytes(StandardCharsets.UTF_8);
+                byte[] hash = Hash.sha3(roleBytes);
+                return Numeric.toHexString(hash);
+            }
+
+            Bytes32 roleHash = (Bytes32) decoded.get(0);
+            return Numeric.toHexString(roleHash.getValue());
+        } catch (Exception e) {
+            logger.warn("Failed to get COMPLIANCE_ROLE from contract, using calculated value: {}", e.getMessage());
+            // 计算 fallback 值
+            byte[] roleBytes = "COMPLIANCE_ROLE".getBytes(StandardCharsets.UTF_8);
+            byte[] hash = Hash.sha3(roleBytes);
+            return Numeric.toHexString(hash);
+        }
+    }
+    
+    /**
+     * 检查后端钱包地址是否有 COMPLIANCE_ROLE 权限
+     * @return true 如果有权限
+     */
+    public boolean hasComplianceRole() {
+        if (!enabled || contractAddress == null || contractAddress.isEmpty()) {
+            return false;
+        }
+        
+        try {
+            String roleHash = getComplianceRoleHash();
+            String backendAddress = credentials.getAddress();
+            
+            // 构建函数调用
+            Function function = new Function(
+                    "hasRole",
+                    Arrays.asList(
+                            new Bytes32(Numeric.hexStringToByteArray(roleHash)),
+                            new org.web3j.abi.datatypes.Address(backendAddress)
+                    ),
+                    Arrays.asList(new TypeReference<org.web3j.abi.datatypes.Bool>() {})
+            );
+
+            String encodedFunction = FunctionEncoder.encode(function);
+
+            // 调用合约
+            EthCall response = web3j.ethCall(
+                    Transaction.createEthCallTransaction(null, contractAddress, encodedFunction),
+                    DefaultBlockParameterName.LATEST
+            ).send();
+
+            if (response.hasError()) {
+                logger.error("Failed to check COMPLIANCE_ROLE: {}", response.getError().getMessage());
+                return false;
+            }
+
+            String value = response.getValue();
+            List<Type> decoded = FunctionReturnDecoder.decode(value, function.getOutputParameters());
+            if (decoded.isEmpty()) {
+                return false;
+            }
+
+            return (Boolean) decoded.get(0).getValue();
+        } catch (Exception e) {
+            logger.error("Failed to check COMPLIANCE_ROLE for {}: {}", credentials.getAddress(), e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    /**
+     * 授予 COMPLIANCE_ROLE 权限给指定地址
+     * 注意：调用此方法的地址必须是 KYCRegistry 合约的 DEFAULT_ADMIN_ROLE
+     * @param address 要授予权限的地址
+     * @return 交易哈希
+     */
+    public String grantComplianceRole(String address) {
+        if (!enabled || contractAddress == null || contractAddress.isEmpty()) {
+            logger.debug("Blockchain sync is disabled or contract address not configured. Skipping on-chain operation.");
+            return null;
+        }
+
+        try {
+            String roleHash = getComplianceRoleHash();
+            logger.info("Granting COMPLIANCE_ROLE to: {} (role hash: {})", address, roleHash);
+
+            // 构建函数调用
+            Function function = new Function(
+                    "grantRole",
+                    Arrays.asList(
+                            new Bytes32(Numeric.hexStringToByteArray(roleHash)),
+                            new org.web3j.abi.datatypes.Address(address)
+                    ),
+                    Collections.emptyList()
+            );
+
+            String encodedFunction = FunctionEncoder.encode(function);
+
+            // 构建交易参数
+            org.web3j.tx.gas.ContractGasProvider gasProvider = new DefaultGasProvider();
+            BigInteger gasPrice = gasProvider.getGasPrice();
+            BigInteger txGasLimit = this.gasLimit != null ? this.gasLimit : gasProvider.getGasLimit();
+
+            // 获取 nonce
+            EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(
+                    credentials.getAddress(), DefaultBlockParameterName.LATEST).send();
+            BigInteger nonce = ethGetTransactionCount.getTransactionCount();
+
+            org.web3j.crypto.RawTransaction rawTransaction = org.web3j.crypto.RawTransaction.createTransaction(
+                    nonce,
+                    gasPrice,
+                    txGasLimit,
+                    contractAddress,
+                    encodedFunction
+            );
+
+            // 签名并发送交易
+            byte[] signedMessage = org.web3j.crypto.TransactionEncoder.signMessage(rawTransaction, chainId, credentials);
+            String hexValue = Numeric.toHexString(signedMessage);
+
+            EthSendTransaction ethSendTransaction = web3j.ethSendRawTransaction(hexValue).send();
+            if (ethSendTransaction.hasError()) {
+                String errorMessage = ethSendTransaction.getError().getMessage();
+                logger.error("Failed to send grantRole transaction: {}", errorMessage);
+                throw new RuntimeException("Failed to grant COMPLIANCE_ROLE: " + errorMessage);
+            }
+
+            String transactionHash = ethSendTransaction.getTransactionHash();
+            logger.info("✅ grantRole transaction sent. Transaction hash: {}. Waiting for confirmation...", transactionHash);
+            
+            // 等待交易确认
+            TransactionReceiptProcessor receiptProcessor = new PollingTransactionReceiptProcessor(
+                    web3j, 
+                    1000,  // 轮询间隔：1 秒
+                    60     // 最多等待：60 秒
+            );
+            TransactionReceipt receipt = receiptProcessor.waitForTransactionReceipt(transactionHash);
+            
+            if (receipt != null && receipt.isStatusOK()) {
+                logger.info("✅ COMPLIANCE_ROLE granted successfully. Hash: {}, Block: {}", 
+                        transactionHash, receipt.getBlockNumber());
+                return transactionHash;
+            } else if (receipt != null && !receipt.isStatusOK()) {
+                logger.error("❌ grantRole transaction failed. Hash: {}, Status: {}", 
+                        transactionHash, receipt.getStatus());
+                throw new RuntimeException("Transaction failed on-chain. Status: " + receipt.getStatus());
+            } else {
+                logger.error("❌ grantRole transaction receipt is null. Hash: {}", transactionHash);
+                throw new RuntimeException("Transaction receipt is null");
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to grant COMPLIANCE_ROLE to {}: {}", address, e.getMessage(), e);
+            throw new RuntimeException("Failed to grant COMPLIANCE_ROLE: " + e.getMessage(), e);
         }
     }
 }
