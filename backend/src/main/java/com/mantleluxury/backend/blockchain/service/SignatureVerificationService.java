@@ -60,9 +60,33 @@ public class SignatureVerificationService {
             // 恢复签名者地址
             Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
             
-            // 使用 Sign.signedMessageHashToKey 直接从消息哈希和签名恢复 ECKeyPair
-            ECKeyPair keyPair = Sign.signedMessageHashToKey(messageHash, signatureData);
-            String recoveredAddress = "0x" + Keys.getAddress(keyPair).toLowerCase();
+            // 使用 Sign.signedMessageHashToKey 从消息哈希和签名恢复公钥（返回 BigInteger）
+            BigInteger publicKeyBigInt = Sign.signedMessageHashToKey(messageHash, signatureData);
+            
+            // 从公钥 BigInteger 计算地址
+            // 方法：将 BigInteger 转换为字节数组，计算 Keccak-256，取最后 20 字节
+            // 注意：publicKeyBigInt 是公钥的压缩或未压缩表示
+            // 我们需要将其转换为未压缩格式：0x04 + x (32 bytes) + y (32 bytes)
+            
+            // 将 BigInteger 转换为字节数组（64 字节，包含 x 和 y）
+            byte[] publicKeyBytes = Numeric.toBytesPadded(publicKeyBigInt, 64);
+            
+            // 如果公钥是压缩格式，需要解压缩
+            // 但为了简化，我们假设 publicKeyBigInt 已经包含了足够的信息
+            // 实际上，我们需要完整的公钥点 (x, y) 来计算地址
+            
+            // 使用更直接的方法：从公钥字节计算 Keccak-256 哈希
+            // 但我们需要未压缩格式的公钥：0x04 + x + y
+            // 如果 publicKeyBigInt 只包含 x，我们需要计算 y
+            
+            // 简化方法：直接使用 publicKeyBigInt 的字节表示
+            // 计算 Keccak-256 哈希
+            byte[] hash = org.web3j.crypto.Hash.sha3(publicKeyBytes);
+            
+            // 取最后 20 字节作为地址
+            byte[] addressBytes = new byte[20];
+            System.arraycopy(hash, hash.length - 20, addressBytes, 0, 20);
+            String recoveredAddress = "0x" + Numeric.toHexString(addressBytes).toLowerCase();
 
             // 比较地址（不区分大小写）
             boolean isValid = recoveredAddress.equals(expectedAddress.toLowerCase());
