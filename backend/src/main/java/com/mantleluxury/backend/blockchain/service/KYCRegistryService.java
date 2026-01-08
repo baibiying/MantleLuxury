@@ -463,7 +463,15 @@ public class KYCRegistryService {
             // 构建交易参数
             org.web3j.tx.gas.ContractGasProvider gasProvider = new DefaultGasProvider();
             BigInteger gasPrice = gasProvider.getGasPrice();
-            BigInteger txGasLimit = this.gasLimit != null ? this.gasLimit : gasProvider.getGasLimit();
+            
+            // 为 grantRole 操作使用更高的 Gas Limit（因为可能涉及存储写入和事件发射）
+            // 默认使用配置的 gasLimit，如果没有配置则使用 100,000,000（比默认的 80,000,000 更高）
+            BigInteger defaultGrantRoleGasLimit = BigInteger.valueOf(100_000_000);
+            BigInteger txGasLimit = this.gasLimit != null && this.gasLimit.compareTo(defaultGrantRoleGasLimit) > 0 
+                    ? this.gasLimit 
+                    : defaultGrantRoleGasLimit;
+            
+            logger.info("Using gas limit for grantRole: {}", txGasLimit);
 
             // 获取 nonce
             EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(
