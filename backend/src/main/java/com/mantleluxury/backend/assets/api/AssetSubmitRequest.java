@@ -19,6 +19,8 @@ public record AssetSubmitRequest(
         BigDecimal pricePerShare,  // 每份价格
         String tokenSymbol,        // 代币符号（可选，如果不提供则自动生成）
         String submittedBy,        // 提交者钱包地址或用户ID
+        String signature,         // 钱包签名（用于验证地址所有权）
+        String message,           // 签名的原始消息
         String imageUrls,          // 图片 JSON 字符串
         String model3dUrl          // 3D模型文件URL（可选）
 ) {

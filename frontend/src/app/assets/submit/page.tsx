@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
+import { useAccount, useSignMessage } from "wagmi";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
 import TechButton from "@/components/TechButton";
@@ -33,6 +33,7 @@ const USD_TO_MNT_RATE = 1;
 export default function AssetSubmitPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -145,6 +146,23 @@ export default function AssetSubmitPage() {
     setSuccess(false);
 
     try {
+      // 生成签名消息
+      const message = `MantleLuxury Asset Submission\n\nWallet: ${address}\nTimestamp: ${Date.now()}\n\nBy signing this message, you confirm that you are the owner of this wallet address and authorize the submission of this asset.`;
+      
+      // 请求用户签名
+      let signature: string;
+      try {
+        signature = await signMessageAsync({ message });
+      } catch (signError: any) {
+        if (signError.code === 4001) {
+          setError("签名被取消，请重新提交");
+        } else {
+          setError("签名失败：" + (signError.message || "未知错误"));
+        }
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(`${API_BASE}/api/assets/submit`, {
         method: "POST",
         headers: {
@@ -163,6 +181,8 @@ export default function AssetSubmitPage() {
           pricePerShare: formData.pricePerShare ? parseFloat(formData.pricePerShare) : null,
           tokenSymbol: formData.tokenSymbol && formData.tokenSymbol.trim() ? formData.tokenSymbol.trim() : null,
           submittedBy: formData.submittedBy || "anonymous",
+          signature: signature, // 添加签名
+          message: message, // 添加原始消息
           imageUrls: JSON.stringify(imageBackendUrls.length > 0 ? imageBackendUrls : (formData.imageUrls ?? [])),
           model3dUrl: formData.model3dUrl || null,
         }),

@@ -2,6 +2,7 @@ package com.mantleluxury.backend.assets.api;
 
 import com.mantleluxury.backend.assets.service.AssetService;
 import com.mantleluxury.backend.assets.service.AmlService;
+import com.mantleluxury.backend.blockchain.service.SignatureVerificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -23,10 +24,12 @@ public class AssetController {
 
     private final AssetService assetService;
     private final AmlService amlService;
+    private final SignatureVerificationService signatureVerificationService;
 
-    public AssetController(AssetService assetService, AmlService amlService) {
+    public AssetController(AssetService assetService, AmlService amlService, SignatureVerificationService signatureVerificationService) {
         this.assetService = assetService;
         this.amlService = amlService;
+        this.signatureVerificationService = signatureVerificationService;
     }
 
     @GetMapping
@@ -58,6 +61,26 @@ public class AssetController {
             // AML 基础校验：提交者地址
             if (request.submittedBy() != null) {
                 amlService.checkAddress(request.submittedBy());
+            }
+
+            // 验证钱包签名（如果提供了签名）
+            if (request.signature() != null && request.message() != null && request.submittedBy() != null) {
+                boolean isValid = signatureVerificationService.verifySignature(
+                        request.message(),
+                        request.signature(),
+                        request.submittedBy()
+                );
+                if (!isValid) {
+                    logger.warn("Invalid signature for address: {}", request.submittedBy());
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body("Invalid signature: Signature does not match the wallet address");
+                }
+                logger.info("Signature verified successfully for address: {}", request.submittedBy());
+            } else {
+                logger.warn("Asset submission without signature verification. Address: {}", request.submittedBy());
+                // 可以选择要求必须签名，或者允许无签名（向后兼容）
+                // return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                //         .body("Signature is required for asset submission");
             }
 
             logger.info("Received asset submission request: assetType={}, brand={}, model={}, submittedBy={}", 
