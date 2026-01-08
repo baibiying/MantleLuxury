@@ -4,7 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.web3j.crypto.Sign;
-import org.web3j.utils.Keys;
+import org.web3j.crypto.ECKeyPair;
+import org.web3j.crypto.Keys;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
@@ -58,16 +59,10 @@ public class SignatureVerificationService {
 
             // 恢复签名者地址
             Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);
-            org.web3j.crypto.ECDSASignature ecdsaSignature = new org.web3j.crypto.ECDSASignature(
-                    new BigInteger(1, r),
-                    new BigInteger(1, s)
-            );
-            BigInteger publicKey = Sign.recoverFromSignature(
-                    (byte) (v - 27),
-                    ecdsaSignature,
-                    messageHash
-            );
-            String recoveredAddress = "0x" + org.web3j.utils.Keys.getAddress(publicKey).toLowerCase();
+            
+            // 使用 Sign.signedMessageHashToKey 直接从消息哈希和签名恢复 ECKeyPair
+            ECKeyPair keyPair = Sign.signedMessageHashToKey(messageHash, signatureData);
+            String recoveredAddress = "0x" + Keys.getAddress(keyPair).toLowerCase();
 
             // 比较地址（不区分大小写）
             boolean isValid = recoveredAddress.equals(expectedAddress.toLowerCase());

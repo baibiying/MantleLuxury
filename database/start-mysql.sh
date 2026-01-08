@@ -609,7 +609,7 @@ ensure_schema() {
     local create_asset_images_table_sql="
         CREATE TABLE IF NOT EXISTS asset_images (
             id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-            asset_id CHAR(36) NULL COMMENT '关联的资产ID（允许为null，用于临时存储）',
+            asset_id VARCHAR(36) NULL COMMENT '关联的资产ID（允许为null，用于临时存储）',
             image_index INT NOT NULL DEFAULT 0 COMMENT '图片索引（同一资产的多张图片）',
             image_data LONGBLOB NOT NULL COMMENT '图片二进制数据',
             content_type VARCHAR(100) NOT NULL DEFAULT 'image/jpeg' COMMENT '图片MIME类型（image/jpeg, image/png等）',
@@ -630,43 +630,69 @@ ensure_schema() {
     
     # 如果 asset_images 表已存在，检查并修改 asset_id 列允许为 null
     print_info "检查并修改 asset_images 表的 asset_id 列..."
-    local modify_asset_id_sql="
-        SET @dbname = DATABASE();
-        SET @tablename = 'asset_images';
-        SET @columnname = 'asset_id';
-        
-        -- 检查 asset_id 列是否允许 null
-        SET @is_nullable = (
-            SELECT IS_NULLABLE 
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = @dbname
-            AND TABLE_NAME = @tablename
-            AND COLUMN_NAME = @columnname
-        );
-        
-        -- 如果列存在，检查类型和是否允许 null，并修改为 VARCHAR(36) NULL
-        SET @column_type = (
-            SELECT DATA_TYPE 
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = @dbname
-            AND TABLE_NAME = @tablename
-            AND COLUMN_NAME = @columnname
-        );
-        
-        -- 如果类型不是 VARCHAR 或不允许 null，则修改
-        SET @preparedStatement = (SELECT IF(
-            @is_nullable = 'NO' OR @column_type != 'varchar',
-            CONCAT('ALTER TABLE ', @tablename, ' MODIFY COLUMN ', @columnname, ' VARCHAR(36) NULL COMMENT ''关联的资产ID（允许为null，用于临时存储）'''),
-            'SELECT 1'
-        ));
-        PREPARE alterIfNotNull FROM @preparedStatement;
-        EXECUTE alterIfNotNull;
-        DEALLOCATE PREPARE alterIfNotNull;
+    
+    # 首先检查表是否存在，以及 asset_id 列是否允许 null
+    local check_nullable_sql="
+        SELECT IS_NULLABLE 
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'asset_images'
+        AND COLUMN_NAME = 'asset_id';
     "
-    if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$modify_asset_id_sql" > /dev/null 2>&1; then
-        print_info "asset_images 表的 asset_id 列检查完成（如不允许null已自动修改）"
+    
+    local is_nullable=$(docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -sN -e "$check_nullable_sql" 2>/dev/null)
+    
+    if [ "$is_nullable" = "NO" ] || [ -z "$is_nullable" ]; then
+        # 如果列不允许 null 或表不存在，需要修改
+        print_info "修改 asset_images 表的 asset_id 列为允许 null..."
+        
+        # 查找并删除外键约束（如果存在）
+        local find_fk_sql="
+            SELECT CONSTRAINT_NAME 
+            FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'asset_images'
+            AND COLUMN_NAME = 'asset_id'
+            AND REFERENCED_TABLE_NAME IS NOT NULL
+            LIMIT 1;
+        "
+        
+        local fk_name=$(docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -sN -e "$find_fk_sql" 2>/dev/null)
+        
+        if [ -n "$fk_name" ]; then
+            # 删除外键约束
+            local drop_fk_sql="ALTER TABLE asset_images DROP FOREIGN KEY \`$fk_name\`;"
+            docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$drop_fk_sql" > /dev/null 2>&1
+            print_info "已删除外键约束: $fk_name"
+        fi
+        
+        # 修改列允许 null
+        local modify_column_sql="
+            ALTER TABLE asset_images 
+            MODIFY COLUMN asset_id VARCHAR(36) NULL COMMENT '关联的资产ID（允许为null，用于临时存储）';
+        "
+        
+        if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$modify_column_sql" > /dev/null 2>&1; then
+            print_info "asset_id 列已修改为允许 null"
+            
+            # 重新创建外键约束（如果之前存在）
+            if [ -n "$fk_name" ]; then
+                local add_fk_sql="
+                    ALTER TABLE asset_images 
+                    ADD CONSTRAINT fk_asset_images_asset_id 
+                    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE;
+                "
+                if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$add_fk_sql" > /dev/null 2>&1; then
+                    print_info "已重新创建外键约束"
+                else
+                    print_warn "重新创建外键约束失败，但不影响功能"
+                fi
+            fi
+        else
+            print_warn "修改 asset_id 列失败，请手动检查数据库"
+        fi
     else
-        print_warn "asset_images 表的 asset_id 列修改失败，请手动检查数据库"
+        print_info "asset_images 表的 asset_id 列已允许 null，无需修改"
     fi
 }
 
