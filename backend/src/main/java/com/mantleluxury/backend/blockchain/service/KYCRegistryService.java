@@ -20,6 +20,7 @@ import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.protocol.core.methods.response.EthGetTransactionReceipt;
+import org.web3j.protocol.core.methods.response.EthEstimateGas;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.DefaultGasProvider;
@@ -181,16 +182,57 @@ public class KYCRegistryService {
             org.web3j.tx.gas.ContractGasProvider gasProvider = new DefaultGasProvider();
             BigInteger gasPrice = gasProvider.getGasPrice();
             // 使用配置的 gasLimit，如果未配置或小于最小值，则使用最小值
-            // 对于 setKYCStatus，确保使用足够的 Gas Limit（至少 100,000,000）
-            BigInteger minGasLimit = BigInteger.valueOf(100_000_000);
-            BigInteger txGasLimit;
+            // 对于 setKYCStatus，确保使用足够的 Gas Limit（至少 150,000,000）
+            // 注意：Mantle 测试网的 Gas Limit 需要设置得更高
+            BigInteger minGasLimit = BigInteger.valueOf(150_000_000);
+            BigInteger baseGasLimit;
             if (this.gasLimit != null && this.gasLimit.compareTo(minGasLimit) >= 0) {
                 // 配置值 >= 最小值，使用配置值
-                txGasLimit = this.gasLimit;
+                baseGasLimit = this.gasLimit;
             } else {
                 // 配置值 < 最小值 或 未配置，使用最小值
-                txGasLimit = minGasLimit;
+                baseGasLimit = minGasLimit;
+                if (this.gasLimit != null) {
+                    logger.warn("⚠️ Configured gasLimit ({}) is less than minimum ({}), using minimum", 
+                            this.gasLimit, minGasLimit);
+                }
             }
+            
+            // 尝试动态估算 Gas（如果失败，使用 baseGasLimit）
+            BigInteger txGasLimit = baseGasLimit;
+            try {
+                // 构建估算用的交易
+                org.web3j.crypto.RawTransaction estimateTx = org.web3j.crypto.RawTransaction.createTransaction(
+                        BigInteger.ZERO, // nonce 0 for estimation
+                        gasPrice,
+                        baseGasLimit,
+                        contractAddress,
+                        encodedFunction
+                );
+                
+                // 估算 Gas
+                EthEstimateGas ethEstimateGas = web3j.ethEstimateGas(
+                        org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction(
+                                credentials.getAddress(), contractAddress, encodedFunction
+                        )
+                ).send();
+                
+                if (!ethEstimateGas.hasError()) {
+                    BigInteger estimatedGas = ethEstimateGas.getAmountUsed();
+                    // 使用估算值的 150% 作为安全边界，但至少使用 baseGasLimit
+                    BigInteger estimatedWithBuffer = estimatedGas.multiply(BigInteger.valueOf(150)).divide(BigInteger.valueOf(100));
+                    txGasLimit = estimatedWithBuffer.compareTo(baseGasLimit) > 0 ? estimatedWithBuffer : baseGasLimit;
+                    logger.info("Gas estimation successful: estimated={}, with buffer={}, using={}", 
+                            estimatedGas, estimatedWithBuffer, txGasLimit);
+                } else {
+                    logger.warn("Gas estimation failed: {}, using base gas limit: {}", 
+                            ethEstimateGas.getError().getMessage(), baseGasLimit);
+                }
+            } catch (Exception e) {
+                logger.warn("Gas estimation exception: {}, using base gas limit: {}", 
+                        e.getMessage(), baseGasLimit);
+            }
+            
             logger.info("Using gas limit for setKYCStatus: {} (configured: {}, min: {})", 
                     txGasLimit, this.gasLimit != null ? this.gasLimit : "not set", minGasLimit);
 
@@ -210,6 +252,14 @@ public class KYCRegistryService {
                         // 重试时稍微等待一下，避免立即重试
                         Thread.sleep(500 * attempt); // 递增等待时间：0ms, 500ms, 1000ms
                     }
+
+                    // 记录交易详情（发送前）
+                    logger.info("📤 Sending setKYCStatus transaction - Gas Limit: {}, Gas Price: {} Gwei, Nonce: {}, To: {}, From: {}", 
+                            txGasLimit, 
+                            gasPrice.divide(BigInteger.valueOf(1_000_000_000)), // 转换为 Gwei
+                            nonce,
+                            contractAddress,
+                            credentials.getAddress());
 
                     org.web3j.crypto.RawTransaction rawTransaction = org.web3j.crypto.RawTransaction.createTransaction(
                             nonce,
@@ -234,8 +284,15 @@ public class KYCRegistryService {
                             continue; // 继续重试
                         }
                         
-                        // 其他错误或已达到最大重试次数，抛出异常
-                        logger.error("Failed to send transaction: {}", errorMessage);
+                        // 其他错误或已达到最大重试次数，记录详细错误信息
+                        logger.error("❌ Failed to send setKYCStatus transaction:");
+                        logger.error("   Error: {}", errorMessage);
+                        logger.error("   Gas Limit used: {}", txGasLimit);
+                        logger.error("   Gas Price: {} Gwei", gasPrice.divide(BigInteger.valueOf(1_000_000_000)));
+                        logger.error("   Contract: {}", contractAddress);
+                        logger.error("   From: {}", credentials.getAddress());
+                        logger.error("   User: {}", userAddress);
+                        logger.error("   Status: {}", status);
                         throw new RuntimeException("Failed to set KYC status on-chain: " + errorMessage);
                     }
 
@@ -251,24 +308,72 @@ public class KYCRegistryService {
                     TransactionReceipt receipt = receiptProcessor.waitForTransactionReceipt(transactionHash);
                     
                     if (receipt != null && receipt.isStatusOK()) {
-                        logger.info("✅ KYC status updated on-chain. Transaction confirmed. Hash: {}, Block: {}", 
-                                transactionHash, receipt.getBlockNumber());
+                        // 交易成功，记录详细信息
+                        BigInteger gasUsed = receipt.getGasUsed();
+                        logger.info("✅ KYC status updated on-chain. Transaction confirmed.");
+                        logger.info("   Transaction Hash: {}", transactionHash);
+                        logger.info("   Block Number: {}", receipt.getBlockNumber());
+                        logger.info("   Gas Used: {} / {} ({}%)", 
+                                gasUsed, 
+                                txGasLimit,
+                                gasUsed.multiply(BigInteger.valueOf(100)).divide(txGasLimit));
+                        logger.info("   User: {}", userAddress);
+                        logger.info("   Status: {}", status);
                         return transactionHash;
                     } else if (receipt != null && !receipt.isStatusOK()) {
-                        // 交易失败 - 可能是权限问题
-                        logger.error("❌ KYC status transaction failed. Hash: {}, Status: {}", 
-                                transactionHash, receipt.getStatus());
+                        // 交易失败，记录详细信息
+                        BigInteger gasUsed = receipt.getGasUsed();
+                        String receiptStatus = receipt.getStatus();
                         
-                        // 检查是否是权限问题（通常权限问题会导致交易回滚）
-                        String errorMessage = "Transaction failed on-chain. Status: " + receipt.getStatus();
-                        errorMessage += "\n可能的原因：";
-                        errorMessage += "\n1. 后端钱包地址 (" + credentials.getAddress() + ") 没有 COMPLIANCE_ROLE 权限";
-                        errorMessage += "\n2. 请在 KYCRegistry 合约中调用 grantRole(COMPLIANCE_ROLE, " + credentials.getAddress() + ")";
-                        errorMessage += "\n3. 或者使用合约管理员地址来授予权限";
+                        logger.error("❌ KYC status transaction failed on-chain!");
+                        logger.error("   Transaction Hash: {}", transactionHash);
+                        logger.error("   Block Number: {}", receipt.getBlockNumber());
+                        logger.error("   Receipt Status: {}", receiptStatus);
+                        logger.error("   Gas Limit: {}", txGasLimit);
+                        logger.error("   Gas Used: {}", gasUsed != null ? gasUsed : "N/A");
+                        if (gasUsed != null) {
+                            logger.error("   Gas Used / Limit: {}%", 
+                                    gasUsed.multiply(BigInteger.valueOf(100)).divide(txGasLimit));
+                        }
+                        logger.error("   Gas Price: {} Gwei", gasPrice.divide(BigInteger.valueOf(1_000_000_000)));
+                        logger.error("   Contract: {}", contractAddress);
+                        logger.error("   From: {}", credentials.getAddress());
+                        logger.error("   User: {}", userAddress);
+                        logger.error("   Status: {}", status);
+                        logger.error("   Configured Gas Limit: {}", this.gasLimit != null ? this.gasLimit : "not set");
+                        
+                        // 检查是否是 out of gas
+                        if (gasUsed != null && gasUsed.compareTo(txGasLimit) >= 0) {
+                            logger.error("   ⚠️ OUT OF GAS DETECTED!");
+                            logger.error("   Gas Used ({}) >= Gas Limit ({})", gasUsed, txGasLimit);
+                            logger.error("   This means the transaction consumed all available gas and failed.");
+                            logger.error("   Solution: Increase BLOCKCHAIN_GAS_LIMIT environment variable");
+                            logger.error("   Current configured value: {}", this.gasLimit != null ? this.gasLimit : "not set");
+                            logger.error("   Recommended value: 200000000 or higher");
+                        }
+                        
+                        // 检查是否是权限问题（通常权限问题会导致交易回滚，但 Gas Used < Gas Limit）
+                        String errorMessage = "Transaction failed on-chain. Status: " + receiptStatus;
+                        if (gasUsed != null && gasUsed.compareTo(txGasLimit) >= 0) {
+                            errorMessage += "\n原因：OUT OF GAS";
+                            errorMessage += "\nGas Used: " + gasUsed + " / Gas Limit: " + txGasLimit;
+                            errorMessage += "\nGas Used 百分比: " + gasUsed.multiply(BigInteger.valueOf(100)).divide(txGasLimit) + "%";
+                            errorMessage += "\n解决方案：增加 BLOCKCHAIN_GAS_LIMIT 环境变量";
+                            errorMessage += "\n当前配置值: " + (this.gasLimit != null ? this.gasLimit : "未设置");
+                            errorMessage += "\n推荐值: 200000000 或更高";
+                        } else {
+                            errorMessage += "\n可能的原因：";
+                            errorMessage += "\n1. 后端钱包地址 (" + credentials.getAddress() + ") 没有 COMPLIANCE_ROLE 权限";
+                            errorMessage += "\n2. 请在 KYCRegistry 合约中调用 grantRole(COMPLIANCE_ROLE, " + credentials.getAddress() + ")";
+                            errorMessage += "\n3. 或者使用合约管理员地址来授予权限";
+                        }
                         throw new RuntimeException(errorMessage);
                     } else {
                         // 交易收据为 null（不应该发生）
                         logger.error("❌ KYC status transaction receipt is null. Hash: {}", transactionHash);
+                        logger.error("   Gas Limit: {}", txGasLimit);
+                        logger.error("   Contract: {}", contractAddress);
+                        logger.error("   From: {}", credentials.getAddress());
                         throw new RuntimeException("Transaction receipt is null");
                     }
                     
@@ -477,13 +582,47 @@ public class KYCRegistryService {
             BigInteger gasPrice = gasProvider.getGasPrice();
             
             // 为 grantRole 操作使用更高的 Gas Limit（因为可能涉及存储写入和事件发射）
-            // 默认使用配置的 gasLimit，如果没有配置则使用 100,000,000（比默认的 80,000,000 更高）
-            BigInteger defaultGrantRoleGasLimit = BigInteger.valueOf(100_000_000);
-            BigInteger txGasLimit = this.gasLimit != null && this.gasLimit.compareTo(defaultGrantRoleGasLimit) > 0 
-                    ? this.gasLimit 
-                    : defaultGrantRoleGasLimit;
+            // 默认使用配置的 gasLimit，如果没有配置或小于最小值，则使用 150,000,000
+            BigInteger minGrantRoleGasLimit = BigInteger.valueOf(150_000_000);
+            BigInteger baseGasLimit;
+            if (this.gasLimit != null && this.gasLimit.compareTo(minGrantRoleGasLimit) >= 0) {
+                baseGasLimit = this.gasLimit;
+            } else {
+                baseGasLimit = minGrantRoleGasLimit;
+                if (this.gasLimit != null) {
+                    logger.warn("⚠️ Configured gasLimit ({}) is less than minimum for grantRole ({}), using minimum", 
+                            this.gasLimit, minGrantRoleGasLimit);
+                }
+            }
             
-            logger.info("Using gas limit for grantRole: {}", txGasLimit);
+            // 尝试动态估算 Gas（如果失败，使用 baseGasLimit）
+            BigInteger txGasLimit = baseGasLimit;
+            try {
+                // 估算 Gas
+                EthEstimateGas ethEstimateGas = web3j.ethEstimateGas(
+                        org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction(
+                                credentials.getAddress(), contractAddress, encodedFunction
+                        )
+                ).send();
+                
+                if (!ethEstimateGas.hasError()) {
+                    BigInteger estimatedGas = ethEstimateGas.getAmountUsed();
+                    // 使用估算值的 150% 作为安全边界，但至少使用 baseGasLimit
+                    BigInteger estimatedWithBuffer = estimatedGas.multiply(BigInteger.valueOf(150)).divide(BigInteger.valueOf(100));
+                    txGasLimit = estimatedWithBuffer.compareTo(baseGasLimit) > 0 ? estimatedWithBuffer : baseGasLimit;
+                    logger.info("Gas estimation for grantRole successful: estimated={}, with buffer={}, using={}", 
+                            estimatedGas, estimatedWithBuffer, txGasLimit);
+                } else {
+                    logger.warn("Gas estimation for grantRole failed: {}, using base gas limit: {}", 
+                            ethEstimateGas.getError().getMessage(), baseGasLimit);
+                }
+            } catch (Exception e) {
+                logger.warn("Gas estimation for grantRole exception: {}, using base gas limit: {}", 
+                        e.getMessage(), baseGasLimit);
+            }
+            
+            logger.info("Using gas limit for grantRole: {} (configured: {}, min: {})", 
+                    txGasLimit, this.gasLimit != null ? this.gasLimit : "not set", minGrantRoleGasLimit);
 
             // 获取 nonce
             EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(
@@ -521,15 +660,62 @@ public class KYCRegistryService {
             TransactionReceipt receipt = receiptProcessor.waitForTransactionReceipt(transactionHash);
             
             if (receipt != null && receipt.isStatusOK()) {
-                logger.info("✅ COMPLIANCE_ROLE granted successfully. Hash: {}, Block: {}", 
-                        transactionHash, receipt.getBlockNumber());
+                // 交易成功，记录详细信息
+                BigInteger gasUsed = receipt.getGasUsed();
+                logger.info("✅ COMPLIANCE_ROLE granted successfully.");
+                logger.info("   Transaction Hash: {}", transactionHash);
+                logger.info("   Block Number: {}", receipt.getBlockNumber());
+                logger.info("   Gas Used: {} / {} ({}%)", 
+                        gasUsed, 
+                        txGasLimit,
+                        gasUsed.multiply(BigInteger.valueOf(100)).divide(txGasLimit));
+                logger.info("   Address granted: {}", address);
                 return transactionHash;
             } else if (receipt != null && !receipt.isStatusOK()) {
-                logger.error("❌ grantRole transaction failed. Hash: {}, Status: {}", 
-                        transactionHash, receipt.getStatus());
-                throw new RuntimeException("Transaction failed on-chain. Status: " + receipt.getStatus());
+                // 交易失败，记录详细信息
+                BigInteger gasUsed = receipt.getGasUsed();
+                String receiptStatus = receipt.getStatus();
+                
+                logger.error("❌ grantRole transaction failed on-chain!");
+                logger.error("   Transaction Hash: {}", transactionHash);
+                logger.error("   Block Number: {}", receipt.getBlockNumber());
+                logger.error("   Receipt Status: {}", receiptStatus);
+                logger.error("   Gas Limit: {}", txGasLimit);
+                logger.error("   Gas Used: {}", gasUsed != null ? gasUsed : "N/A");
+                if (gasUsed != null) {
+                    logger.error("   Gas Used / Limit: {}%", 
+                            gasUsed.multiply(BigInteger.valueOf(100)).divide(txGasLimit));
+                }
+                logger.error("   Contract: {}", contractAddress);
+                logger.error("   From: {}", credentials.getAddress());
+                logger.error("   Address to grant: {}", address);
+                logger.error("   Configured Gas Limit: {}", this.gasLimit != null ? this.gasLimit : "not set");
+                
+                // 检查是否是 out of gas
+                if (gasUsed != null && gasUsed.compareTo(txGasLimit) >= 0) {
+                    logger.error("   ⚠️ OUT OF GAS DETECTED!");
+                    logger.error("   Gas Used ({}) >= Gas Limit ({})", gasUsed, txGasLimit);
+                    logger.error("   This means the transaction consumed all available gas and failed.");
+                    logger.error("   Solution: Increase BLOCKCHAIN_GAS_LIMIT environment variable");
+                    logger.error("   Current configured value: {}", this.gasLimit != null ? this.gasLimit : "not set");
+                    logger.error("   Recommended value: 200000000 or higher");
+                }
+                
+                String errorMessage = "Transaction failed on-chain. Status: " + receiptStatus;
+                if (gasUsed != null && gasUsed.compareTo(txGasLimit) >= 0) {
+                    errorMessage += "\n原因：OUT OF GAS";
+                    errorMessage += "\nGas Used: " + gasUsed + " / Gas Limit: " + txGasLimit;
+                    errorMessage += "\nGas Used 百分比: " + gasUsed.multiply(BigInteger.valueOf(100)).divide(txGasLimit) + "%";
+                    errorMessage += "\n解决方案：增加 BLOCKCHAIN_GAS_LIMIT 环境变量";
+                    errorMessage += "\n当前配置值: " + (this.gasLimit != null ? this.gasLimit : "未设置");
+                    errorMessage += "\n推荐值: 200000000 或更高";
+                }
+                throw new RuntimeException(errorMessage);
             } else {
                 logger.error("❌ grantRole transaction receipt is null. Hash: {}", transactionHash);
+                logger.error("   Gas Limit: {}", txGasLimit);
+                logger.error("   Contract: {}", contractAddress);
+                logger.error("   From: {}", credentials.getAddress());
                 throw new RuntimeException("Transaction receipt is null");
             }
 
