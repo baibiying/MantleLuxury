@@ -1080,14 +1080,14 @@ export default function AssetDetailPage() {
       {/* 投资面板模态框 */}
       {showInvestPanel && (
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 z-[9999]"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 setShowInvestPanel(false);
               }
             }}
           >
-            <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden max-w-md w-full bg-slate-900">
+            <div className="card-hover glass-effect rounded-2xl border border-slate-700/50 px-6 py-5 relative overflow-hidden max-w-md w-full bg-slate-900 max-h-[90vh] overflow-y-auto">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
