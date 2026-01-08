@@ -119,7 +119,6 @@ async function main() {
   console.log("KYC Check Enabled:", await token.kycCheckEnabled());
   console.log("Custody Manager:", await token.custodyManager());
   console.log("Custody Check Enabled:", await token.custodyCheckEnabled());
-  console.log("Release Delay:", (await token.releaseDelay()).toString(), "seconds");
   
   // 输出 JSON 格式，方便后端解析
   console.log("\nJSON Output:");
@@ -134,8 +133,7 @@ async function main() {
     kycRegistry: await token.kycRegistry(),
     kycCheckEnabled: await token.kycCheckEnabled(),
     custodyManager: await token.custodyManager(),
-    custodyCheckEnabled: await token.custodyCheckEnabled(),
-    releaseDelay: (await token.releaseDelay()).toString()
+    custodyCheckEnabled: await token.custodyCheckEnabled()
   }));
 }
 
