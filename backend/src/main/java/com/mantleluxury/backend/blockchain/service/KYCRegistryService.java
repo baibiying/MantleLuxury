@@ -180,13 +180,19 @@ public class KYCRegistryService {
             // 构建交易参数
             org.web3j.tx.gas.ContractGasProvider gasProvider = new DefaultGasProvider();
             BigInteger gasPrice = gasProvider.getGasPrice();
-            // 使用配置的 gasLimit，如果未配置则使用默认值
+            // 使用配置的 gasLimit，如果未配置或小于最小值，则使用最小值
             // 对于 setKYCStatus，确保使用足够的 Gas Limit（至少 100,000,000）
             BigInteger minGasLimit = BigInteger.valueOf(100_000_000);
-            BigInteger txGasLimit = this.gasLimit != null && this.gasLimit.compareTo(minGasLimit) >= 0
-                    ? this.gasLimit 
-                    : (this.gasLimit != null ? this.gasLimit : minGasLimit);
-            logger.info("Using gas limit for setKYCStatus: {} (configured: {})", txGasLimit, this.gasLimit);
+            BigInteger txGasLimit;
+            if (this.gasLimit != null && this.gasLimit.compareTo(minGasLimit) >= 0) {
+                // 配置值 >= 最小值，使用配置值
+                txGasLimit = this.gasLimit;
+            } else {
+                // 配置值 < 最小值 或 未配置，使用最小值
+                txGasLimit = minGasLimit;
+            }
+            logger.info("Using gas limit for setKYCStatus: {} (configured: {}, min: {})", 
+                    txGasLimit, this.gasLimit != null ? this.gasLimit : "not set", minGasLimit);
 
             // 重试机制：如果 nonce 错误，重新获取 nonce 并重试（最多重试 3 次）
             int maxRetries = 3;
