@@ -225,6 +225,24 @@ public class MantleTokenDeploymentService {
         String finalOwnerAddress = (ownerAddress != null && !ownerAddress.trim().isEmpty()) 
                 ? ownerAddress.trim() 
                 : credentials.getAddress();
+        
+        // 规范化地址格式：确保只有一个小写的 0x 前缀，避免 Hardhat 尝试解析为 ENS 名称
+        if (finalOwnerAddress != null) {
+            finalOwnerAddress = finalOwnerAddress.trim().toLowerCase();
+            // 如果地址有双重前缀（如 0x0x...），移除多余的前缀
+            if (finalOwnerAddress.startsWith("0x0x")) {
+                finalOwnerAddress = finalOwnerAddress.substring(2);
+            }
+            // 确保地址格式正确（42 字符，以 0x 开头）
+            if (!finalOwnerAddress.startsWith("0x")) {
+                finalOwnerAddress = "0x" + finalOwnerAddress;
+            }
+            // 验证地址长度（应该是 42 字符：0x + 40 个十六进制字符）
+            if (finalOwnerAddress.length() != 42) {
+                throw new IllegalArgumentException("Invalid owner address format: " + finalOwnerAddress + ". Expected 42 characters (0x + 40 hex chars)");
+            }
+        }
+        
         processBuilder.environment().put("OWNER_ADDRESS", finalOwnerAddress);
         logger.info("Setting contract owner to: {}", finalOwnerAddress);
         

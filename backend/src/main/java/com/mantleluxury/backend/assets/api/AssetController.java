@@ -64,28 +64,68 @@ public class AssetController {
             }
 
             // 验证钱包签名（如果提供了签名）
-            if (request.signature() != null && request.message() != null && request.submittedBy() != null) {
-                boolean isValid = signatureVerificationService.verifySignature(
+            String finalSubmittedBy = request.submittedBy();
+            if (request.signature() != null && request.message() != null) {
+                // 从签名恢复出签名者的地址（当前连接的钱包地址）
+                String signerAddress = signatureVerificationService.recoverAddress(
                         request.message(),
-                        request.signature(),
-                        request.submittedBy()
+                        request.signature()
                 );
-                if (!isValid) {
-                    logger.warn("Invalid signature for address: {}", request.submittedBy());
+                
+                if (signerAddress == null) {
+                    logger.warn("Failed to recover address from signature");
                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                            .body("Invalid signature: Signature does not match the wallet address");
+                            .body("Invalid signature: Failed to recover address from signature");
                 }
-                logger.info("Signature verified successfully for address: {}", request.submittedBy());
+                
+                // 使用从签名恢复的地址作为 submittedBy（当前连接的钱包地址）
+                // 确保地址格式正确（42 个字符：0x + 40 个十六进制字符）
+                finalSubmittedBy = signerAddress.trim().toLowerCase();
+                
+                // 验证地址长度
+                if (finalSubmittedBy.length() != 42) {
+                    logger.error("Invalid recovered address length: {} (expected 42). Address: {}", 
+                            finalSubmittedBy.length(), finalSubmittedBy);
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body("Invalid signature: Recovered address has invalid length");
+                }
+                
+                // 如果前端传来的 submittedBy 与恢复的地址不一致，记录警告
+                if (request.submittedBy() != null && !signerAddress.equalsIgnoreCase(request.submittedBy())) {
+                    logger.warn("SubmittedBy mismatch. Recovered (using): {}, Submitted (ignored): {}", 
+                            signerAddress, request.submittedBy());
+                }
+                
+                logger.info("Signature verified successfully. Using recovered address from signature: {}", finalSubmittedBy);
             } else {
                 logger.warn("Asset submission without signature verification. Address: {}", request.submittedBy());
-                // 可以选择要求必须签名，或者允许无签名（向后兼容）
-                // return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                //         .body("Signature is required for asset submission");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Signature is required for asset submission");
             }
 
+            // 创建修改后的请求，使用从签名恢复的地址
+            AssetSubmitRequest finalRequest = new AssetSubmitRequest(
+                    request.assetType(),
+                    request.brand(),
+                    request.model(),
+                    request.year(),
+                    request.description(),
+                    request.purchasePrice(),
+                    request.purchaseDate(),
+                    request.serialNumber(),
+                    request.totalSupply(),
+                    request.pricePerShare(),
+                    request.tokenSymbol(),
+                    finalSubmittedBy,  // 使用从签名恢复的地址
+                    request.signature(),
+                    request.message(),
+                    request.imageUrls(),
+                    request.model3dUrl()
+            );
+
             logger.info("Received asset submission request: assetType={}, brand={}, model={}, submittedBy={}", 
-                    request.assetType(), request.brand(), request.model(), request.submittedBy());
-            var asset = assetService.submitAsset(request);
+                    finalRequest.assetType(), finalRequest.brand(), finalRequest.model(), finalRequest.submittedBy());
+            var asset = assetService.submitAsset(finalRequest);
             AssetDto dto = assetService.getAssetById(asset.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(dto);
         } catch (RuntimeException e) {

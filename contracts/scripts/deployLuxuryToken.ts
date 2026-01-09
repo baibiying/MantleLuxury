@@ -41,9 +41,38 @@ async function main() {
   const metadataHashHex = process.env.METADATA_HASH || ethers.ZeroHash;
   const initialSupplyStr = process.env.INITIAL_SUPPLY || "1000";
   const pricePerTokenStr = process.env.PRICE_PER_TOKEN || "1000000000000000000"; // 默认 1 MNT (wei)
-  const owner = process.env.OWNER_ADDRESS || deployer.address;
-  const kycRegistry = process.env.KYC_REGISTRY_ADDRESS || ethers.ZeroAddress; // KYCRegistry 合约地址
-  const custodyManager = process.env.CUSTODY_MANAGER_ADDRESS || ethers.ZeroAddress; // CustodyManager 合约地址（可选）
+  // 获取地址参数并验证格式
+  const ownerAddressRaw = process.env.OWNER_ADDRESS || deployer.address;
+  const kycRegistryAddressRaw = process.env.KYC_REGISTRY_ADDRESS || ethers.ZeroAddress;
+  const custodyManagerAddressRaw = process.env.CUSTODY_MANAGER_ADDRESS || ethers.ZeroAddress;
+
+  // 验证和规范化地址格式（确保是有效的以太坊地址，避免 Hardhat 尝试解析为 ENS 名称）
+  let owner: string;
+  let kycRegistry: string;
+  let custodyManager: string;
+
+  try {
+    // 使用 ethers.getAddress 来验证和规范化地址格式
+    // 这会抛出错误如果地址格式不正确
+    owner = ethers.getAddress(ownerAddressRaw);
+  } catch (e) {
+    console.error(`Invalid owner address format: ${ownerAddressRaw}`);
+    throw new Error(`Invalid owner address format: ${ownerAddressRaw}. Must be a valid Ethereum address.`);
+  }
+
+  try {
+    kycRegistry = kycRegistryAddressRaw === ethers.ZeroAddress ? ethers.ZeroAddress : ethers.getAddress(kycRegistryAddressRaw);
+  } catch (e) {
+    console.error(`Invalid KYC Registry address format: ${kycRegistryAddressRaw}`);
+    throw new Error(`Invalid KYC Registry address format: ${kycRegistryAddressRaw}. Must be a valid Ethereum address.`);
+  }
+
+  try {
+    custodyManager = custodyManagerAddressRaw === ethers.ZeroAddress ? ethers.ZeroAddress : ethers.getAddress(custodyManagerAddressRaw);
+  } catch (e) {
+    console.error(`Invalid CustodyManager address format: ${custodyManagerAddressRaw}`);
+    throw new Error(`Invalid CustodyManager address format: ${custodyManagerAddressRaw}. Must be a valid Ethereum address.`);
+  }
 
   // 转换参数
   // assetId 和 metadataHash 应该是 0x 开头的 66 字符（32 字节的 hex）
@@ -70,7 +99,7 @@ async function main() {
 
   console.log("Deployment parameters:");
   console.log("  Name:", name);
-  console.log("  Symbol:", symbol);
+  console.log("  Token Symbol:", symbol);
   console.log("  Asset ID:", assetId);
   console.log("  Metadata Hash:", metadataHash);
   console.log("  Initial Supply:", initialSupply.toString());
@@ -92,6 +121,9 @@ async function main() {
   }
 
   const LuxuryToken = await ethers.getContractFactory("LuxuryToken");
+  
+  // 确保所有地址参数都是有效的以太坊地址格式（不会触发 ENS 解析）
+  // 使用类型转换确保参数是正确的类型
   const token = await LuxuryToken.deploy(
     name,
     symbol,
@@ -99,9 +131,9 @@ async function main() {
     metadataHash,
     initialSupply,
     pricePerToken,
-    owner,
-    kycRegistry,
-    custodyManager  // 传递 CustodyManager 地址（可以是零地址）
+    owner as `0x${string}`,  // 确保是有效的地址类型
+    kycRegistry as `0x${string}`,  // 确保是有效的地址类型
+    custodyManager as `0x${string}`  // 确保是有效的地址类型
   );
 
   await token.waitForDeployment();
