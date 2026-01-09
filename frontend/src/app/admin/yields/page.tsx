@@ -185,7 +185,7 @@ export default function AdminYieldsPage() {
       const groups: AssetYieldGroup[] = uniqueAssetIds.map((assetId, index) => {
         const assetYields = groupedByAsset[assetId];
         const { totalAmount, distributedAmount, completedAmount, pendingAmount } = assetYields.reduce(
-          (acc, y) => {
+          (acc: { totalAmount: number; distributedAmount: number; completedAmount: number; pendingAmount: number }, y: YieldDistribution) => {
             const amount = parseFloat(y.totalAmount || "0");
             const distributed = parseFloat(y.distributedAmount || "0");
             return {
