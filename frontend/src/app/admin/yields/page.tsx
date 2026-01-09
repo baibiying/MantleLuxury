@@ -147,7 +147,7 @@ export default function AdminYieldsPage() {
       setStats(statsData);
 
       // 按 assetId 分组收益分配记录
-      const groupedByAsset = yieldsData.reduce((acc, yieldItem) => {
+      const groupedByAsset = yieldsData.reduce((acc: Record<string, YieldDistribution[]>, yieldItem) => {
         const assetId = yieldItem.assetId;
         if (!acc[assetId]) {
           acc[assetId] = [];
