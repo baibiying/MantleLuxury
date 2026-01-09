@@ -20,8 +20,10 @@ import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
-import org.web3j.tx.RawTransactionManager;
-import org.web3j.tx.TransactionManager;
+import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
+import org.web3j.protocol.core.methods.response.EthSendTransaction;
+import org.web3j.crypto.TransactionEncoder;
+import org.web3j.crypto.RawTransaction;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Convert;
 import org.web3j.utils.Numeric;
@@ -150,24 +152,92 @@ public class YieldService {
 
         String encodedFunction = FunctionEncoder.encode(function);
 
-        // 发送交易并检查错误
-        TransactionManager transactionManager = new RawTransactionManager(web3j, credentials, chainId);
-        org.web3j.protocol.core.methods.response.EthSendTransaction txResponse =
-                transactionManager.sendTransaction(
-                        DefaultGasProvider.GAS_PRICE,
+        // 手动管理 nonce，避免并发冲突
+        // 重试机制：如果 nonce 错误，重新获取 nonce 并重试（最多重试 3 次）
+        int maxRetries = 3;
+        Exception lastException = null;
+        String txHash = null;
+        
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                // 每次重试都重新获取最新的 nonce
+                EthGetTransactionCount ethGetTransactionCount = 
+                        web3j.ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.LATEST).send();
+                BigInteger nonce = ethGetTransactionCount.getTransactionCount();
+                
+                if (attempt > 0) {
+                    logger.info("Retry attempt {}: using nonce {}", attempt + 1, nonce);
+                    // 重试时稍微等待一下，避免立即重试
+                    Thread.sleep(500 * attempt); // 递增等待时间：0ms, 500ms, 1000ms
+                }
+
+                BigInteger gasPrice = DefaultGasProvider.GAS_PRICE;
+                
+                // 记录交易详情（发送前）
+                logger.info("📤 Sending createDistribution transaction - Gas Limit: {}, Gas Price: {} Gwei, Nonce: {}, To: {}, From: {}", 
+                        gasLimit, 
+                        gasPrice.divide(BigInteger.valueOf(1_000_000_000)), // 转换为 Gwei
+                        nonce,
+                        contractAddress,
+                        credentials.getAddress());
+
+                // 创建原始交易
+                RawTransaction rawTransaction = RawTransaction.createTransaction(
+                        nonce,
+                        gasPrice,
                         gasLimit,
                         contractAddress,
-                        encodedFunction,
-                        BigInteger.ZERO
+                        encodedFunction
                 );
 
-        if (txResponse.hasError()) {
-            String message = "Failed to create distribution on chain: " + txResponse.getError().getMessage();
-            logger.error(message);
-            throw new RuntimeException(message);
-        }
+                // 签名并发送交易（包含链 ID 以支持 EIP-155）
+                byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction, chainId, credentials);
+                String hexValue = Numeric.toHexString(signedMessage);
 
-        String txHash = txResponse.getTransactionHash();
+                EthSendTransaction ethSendTransaction = 
+                        web3j.ethSendRawTransaction(hexValue).send();
+                        
+                if (ethSendTransaction.hasError()) {
+                    String errorMessage = ethSendTransaction.getError().getMessage();
+                    
+                    // 如果是 nonce 错误且还有重试机会，则重试
+                    if (errorMessage != null && errorMessage.contains("nonce") && attempt < maxRetries - 1) {
+                        logger.warn("Nonce error on attempt {}: {}. Will retry...", attempt + 1, errorMessage);
+                        lastException = new RuntimeException("Nonce error: " + errorMessage);
+                        continue; // 继续重试
+                    }
+                    
+                    // 其他错误或已达到最大重试次数
+                    String message = "Failed to create distribution on chain: " + errorMessage;
+                    logger.error(message);
+                    throw new RuntimeException(message);
+                }
+
+                txHash = ethSendTransaction.getTransactionHash();
+                logger.info("✅ CreateDistribution transaction sent successfully. TxHash: {}, Nonce: {}", txHash, nonce);
+                break; // 成功，退出重试循环
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Thread interrupted while retrying createDistribution", e);
+            } catch (Exception e) {
+                String errorMessage = e.getMessage();
+                // 如果是 nonce 错误且还有重试机会，则重试
+                if (errorMessage != null && errorMessage.contains("nonce") && attempt < maxRetries - 1) {
+                    logger.warn("Nonce error on attempt {}: {}. Will retry...", attempt + 1, errorMessage);
+                    lastException = e;
+                    continue; // 继续重试
+                }
+                // 其他错误或已达到最大重试次数
+                logger.error("Failed to create distribution on chain (attempt {}): {}", attempt + 1, errorMessage, e);
+                throw new RuntimeException("Failed to create distribution on chain: " + errorMessage, e);
+            }
+        }
+        
+        if (txHash == null) {
+            throw new RuntimeException("Failed to create distribution on chain after " + maxRetries + " attempts. Last error: " + 
+                    (lastException != null ? lastException.getMessage() : "Unknown error"));
+        }
 
         distribution.setTransactionHash(txHash);
         yieldDistributionRepository.save(distribution);
@@ -246,23 +316,92 @@ public class YieldService {
 
         String encodedFunction = FunctionEncoder.encode(function);
 
-        TransactionManager transactionManager = new RawTransactionManager(web3j, credentials, chainId);
-        org.web3j.protocol.core.methods.response.EthSendTransaction txResponse =
-                transactionManager.sendTransaction(
-                        DefaultGasProvider.GAS_PRICE,
+        // 手动管理 nonce，避免并发冲突
+        // 重试机制：如果 nonce 错误，重新获取 nonce 并重试（最多重试 3 次）
+        int maxRetries = 3;
+        Exception lastException = null;
+        String txHash = null;
+        
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                // 每次重试都重新获取最新的 nonce
+                EthGetTransactionCount ethGetTransactionCount = 
+                        web3j.ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.LATEST).send();
+                BigInteger nonce = ethGetTransactionCount.getTransactionCount();
+                
+                if (attempt > 0) {
+                    logger.info("Retry attempt {}: using nonce {}", attempt + 1, nonce);
+                    // 重试时稍微等待一下，避免立即重试
+                    Thread.sleep(500 * attempt); // 递增等待时间：0ms, 500ms, 1000ms
+                }
+
+                BigInteger gasPrice = DefaultGasProvider.GAS_PRICE;
+                
+                // 记录交易详情（发送前）
+                logger.info("📤 Sending distribute transaction - Gas Limit: {}, Gas Price: {} Gwei, Nonce: {}, To: {}, From: {}", 
+                        gasLimit, 
+                        gasPrice.divide(BigInteger.valueOf(1_000_000_000)), // 转换为 Gwei
+                        nonce,
+                        contractAddress,
+                        credentials.getAddress());
+
+                // 创建原始交易
+                org.web3j.crypto.RawTransaction rawTransaction = org.web3j.crypto.RawTransaction.createTransaction(
+                        nonce,
+                        gasPrice,
                         gasLimit,
                         contractAddress,
-                        encodedFunction,
-                        BigInteger.ZERO
+                        encodedFunction
                 );
 
-        if (txResponse.hasError()) {
-            String message = "Failed to execute distribution on chain: " + txResponse.getError().getMessage();
-            logger.error(message);
-            throw new RuntimeException(message);
-        }
+                // 签名并发送交易（包含链 ID 以支持 EIP-155）
+                byte[] signedMessage = org.web3j.crypto.TransactionEncoder.signMessage(rawTransaction, chainId, credentials);
+                String hexValue = org.web3j.utils.Numeric.toHexString(signedMessage);
 
-        String txHash = txResponse.getTransactionHash();
+                org.web3j.protocol.core.methods.response.EthSendTransaction ethSendTransaction = 
+                        web3j.ethSendRawTransaction(hexValue).send();
+                        
+                if (ethSendTransaction.hasError()) {
+                    String errorMessage = ethSendTransaction.getError().getMessage();
+                    
+                    // 如果是 nonce 错误且还有重试机会，则重试
+                    if (errorMessage != null && errorMessage.contains("nonce") && attempt < maxRetries - 1) {
+                        logger.warn("Nonce error on attempt {}: {}. Will retry...", attempt + 1, errorMessage);
+                        lastException = new RuntimeException("Nonce error: " + errorMessage);
+                        continue; // 继续重试
+                    }
+                    
+                    // 其他错误或已达到最大重试次数
+                    String message = "Failed to execute distribution on chain: " + errorMessage;
+                    logger.error(message);
+                    throw new RuntimeException(message);
+                }
+
+                txHash = ethSendTransaction.getTransactionHash();
+                logger.info("✅ Distribution transaction sent successfully. TxHash: {}, Nonce: {}", txHash, nonce);
+                break; // 成功，退出重试循环
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Thread interrupted while retrying distribution", e);
+            } catch (Exception e) {
+                String errorMessage = e.getMessage();
+                // 如果是 nonce 错误且还有重试机会，则重试
+                if (errorMessage != null && errorMessage.contains("nonce") && attempt < maxRetries - 1) {
+                    logger.warn("Nonce error on attempt {}: {}. Will retry...", attempt + 1, errorMessage);
+                    lastException = e;
+                    continue; // 继续重试
+                }
+                // 其他错误或已达到最大重试次数
+                logger.error("Failed to execute distribution on chain (attempt {}): {}", attempt + 1, errorMessage, e);
+                throw new RuntimeException("Failed to execute distribution on chain: " + errorMessage, e);
+            }
+        }
+        
+        if (txHash == null) {
+            throw new RuntimeException("Failed to execute distribution on chain after " + maxRetries + " attempts. Last error: " + 
+                    (lastException != null ? lastException.getMessage() : "Unknown error"));
+        }
 
         // 分发完成后，简单认为链上会按 totalAmount 分配完，更新本地记录
         distribution.setIsCompleted(true);
