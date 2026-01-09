@@ -2,6 +2,7 @@ package com.mantleluxury.backend.assets.api;
 
 import com.mantleluxury.backend.assets.domain.YieldDistribution;
 import com.mantleluxury.backend.assets.service.YieldService;
+import com.mantleluxury.backend.blockchain.service.TokenQueryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -23,9 +25,11 @@ public class YieldController {
     private static final Logger logger = LoggerFactory.getLogger(YieldController.class);
 
     private final YieldService yieldService;
+    private final TokenQueryService tokenQueryService;
 
-    public YieldController(YieldService yieldService) {
+    public YieldController(YieldService yieldService, TokenQueryService tokenQueryService) {
         this.yieldService = yieldService;
+        this.tokenQueryService = tokenQueryService;
     }
 
     /**
@@ -76,7 +80,7 @@ public class YieldController {
         try {
             List<YieldDistribution> yields = yieldService.getUserYields(userAddress);
             List<Map<String, Object>> result = yields.stream()
-                    .map(this::toDto)
+                    .map(yield -> toDto(yield, userAddress))
                     .collect(Collectors.toList());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -146,9 +150,18 @@ public class YieldController {
     }
 
     /**
-     * 转换为 DTO
+     * 转换为 DTO（不包含用户实际应得收益）
      */
     private Map<String, Object> toDto(YieldDistribution distribution) {
+        return toDto(distribution, null);
+    }
+
+    /**
+     * 转换为 DTO（包含用户实际应得收益）
+     * @param distribution 收益分配记录
+     * @param userAddress 用户地址（如果为 null，则不计算用户应得收益）
+     */
+    private Map<String, Object> toDto(YieldDistribution distribution, String userAddress) {
         Map<String, Object> dto = new java.util.HashMap<>();
         dto.put("id", distribution.getId());
         dto.put("distributionIdBytes32", distribution.getDistributionIdBytes32());
@@ -161,6 +174,44 @@ public class YieldController {
         dto.put("transactionHash", distribution.getTransactionHash());
         dto.put("createdAt", distribution.getCreatedAt());
         dto.put("completedAt", distribution.getCompletedAt());
+
+        // 如果提供了用户地址，计算用户实际应得的收益
+        if (userAddress != null && !userAddress.trim().isEmpty() && distribution.getTokenAddress() != null) {
+            try {
+                // 查询用户在代币合约中的余额
+                BigInteger userBalance = tokenQueryService.getUserBalance(
+                        distribution.getTokenAddress(),
+                        userAddress.trim().toLowerCase()
+                );
+
+                // 查询代币总供应量
+                BigInteger totalSupply = tokenQueryService.getTotalSupply(distribution.getTokenAddress());
+
+                if (userBalance != null && totalSupply != null && totalSupply.compareTo(BigInteger.ZERO) > 0) {
+                    // 计算用户应得的收益：userShare = (totalAmount * userBalance) / totalSupply
+                    BigDecimal totalAmount = distribution.getTotalAmount();
+                    BigDecimal userBalanceDecimal = tokenQueryService.weiToTokens(userBalance);
+                    BigDecimal totalSupplyDecimal = tokenQueryService.weiToTokens(totalSupply);
+
+                    if (totalSupplyDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal userShare = totalAmount
+                                .multiply(userBalanceDecimal)
+                                .divide(totalSupplyDecimal, 18, java.math.RoundingMode.HALF_UP);
+                        dto.put("userShare", userShare);
+                    } else {
+                        dto.put("userShare", BigDecimal.ZERO);
+                    }
+                } else {
+                    // 如果查询失败或用户没有持有代币，用户应得收益为 0
+                    dto.put("userShare", BigDecimal.ZERO);
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to calculate user share for distribution {}: {}", 
+                        distribution.getId(), e.getMessage());
+                dto.put("userShare", BigDecimal.ZERO);
+            }
+        }
+
         return dto;
     }
 }

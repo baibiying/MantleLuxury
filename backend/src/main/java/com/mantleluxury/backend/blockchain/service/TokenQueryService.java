@@ -148,6 +148,56 @@ public class TokenQueryService {
     }
 
     /**
+     * 查询用户在指定代币合约中的余额
+     * @param tokenAddress 代币合约地址
+     * @param userAddress 用户地址
+     * @return 用户代币余额（以 wei 为单位），如果读取失败返回 null
+     */
+    public BigInteger getUserBalance(String tokenAddress, String userAddress) {
+        if (!enabled || tokenAddress == null || tokenAddress.isEmpty() || userAddress == null || userAddress.isEmpty()) {
+            return null;
+        }
+
+        try {
+            // 构建 balanceOf(address) 函数调用（ERC20 标准函数）
+            Function function = new Function(
+                    "balanceOf",
+                    Arrays.asList(new org.web3j.abi.datatypes.Address(160, userAddress)),
+                    Arrays.asList(new TypeReference<Uint256>() {})
+            );
+
+            String encodedFunction = FunctionEncoder.encode(function);
+
+            EthCall response = web3j.ethCall(
+                    Transaction.createEthCallTransaction(null, tokenAddress, encodedFunction),
+                    DefaultBlockParameterName.LATEST
+            ).send();
+
+            if (response.hasError()) {
+                logger.warn("Failed to call balanceOf for {}: {}", tokenAddress, response.getError().getMessage());
+                return null;
+            }
+
+            String value = response.getValue();
+            if (value == null || value.isEmpty() || value.equals("0x")) {
+                return BigInteger.ZERO;
+            }
+
+            List<Type> decoded = FunctionReturnDecoder.decode(value, function.getOutputParameters());
+            if (decoded.isEmpty()) {
+                return BigInteger.ZERO;
+            }
+
+            Uint256 result = (Uint256) decoded.get(0);
+            return result.getValue();
+
+        } catch (Exception e) {
+            logger.warn("Error reading user balance from chain for {}: {}", tokenAddress, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * 将 wei 单位的代币数量转换为以"份"为单位的 BigDecimal
      * 假设代币使用 18 位小数（标准 ERC20）
      */
