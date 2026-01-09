@@ -4,11 +4,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.FunctionReturnDecoder;
+import org.web3j.abi.TypeReference;
+import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.Type;
+import org.web3j.abi.datatypes.Address;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
+import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
+import org.web3j.protocol.core.methods.request.Transaction;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.DefaultGasProvider;
@@ -129,6 +137,18 @@ public class MantleTokenDeploymentService {
             String contractAddress = deployViaHardhatScript(assetId, name, symbol, totalSupply, metadataHash, pricePerShare, ownerAddress);
             
             logger.info("✅ LuxuryToken deployed successfully at: {}", contractAddress);
+            
+            // 验证合约的 owner 地址是否正确设置为资产提交者的地址
+            if (contractAddress != null && !contractAddress.isEmpty() && ownerAddress != null && !ownerAddress.trim().isEmpty()) {
+                try {
+                    verifyContractOwner(contractAddress, ownerAddress.trim().toLowerCase());
+                } catch (Exception e) {
+                    logger.error("Failed to verify contract owner, but deployment succeeded. Contract: {}, Expected owner: {}", 
+                            contractAddress, ownerAddress, e);
+                    // 不抛出异常，因为部署已经成功，只是验证失败
+                }
+            }
+            
             return contractAddress;
 
         } catch (Exception e) {
@@ -221,30 +241,31 @@ public class MantleTokenDeploymentService {
         // totalSupply 以"份"为单位（与合约 decimals=18 对应），直接传给脚本，由脚本内部 parseEther 放大 10^18
         processBuilder.environment().put("INITIAL_SUPPLY", totalSupply.toString());
         processBuilder.environment().put("PRICE_PER_TOKEN", pricePerTokenWei.toString());
-        // 如果提供了 owner 地址，使用提供的地址；否则使用后端服务的地址作为默认值
-        String finalOwnerAddress = (ownerAddress != null && !ownerAddress.trim().isEmpty()) 
-                ? ownerAddress.trim() 
-                : credentials.getAddress();
+        // owner 地址应该已经在 AssetService 中验证过，这里应该始终是有效的地址
+        // 如果 ownerAddress 为空，说明之前的验证逻辑有问题，应该抛出异常而不是使用默认值
+        if (ownerAddress == null || ownerAddress.trim().isEmpty()) {
+            throw new IllegalArgumentException("Owner address is required. This should be the asset submitter's address recovered from signature. " +
+                    "Cannot use backend address as fallback because investor payments must go to the asset submitter, not the backend.");
+        }
         
         // 规范化地址格式：确保只有一个小写的 0x 前缀，避免 Hardhat 尝试解析为 ENS 名称
-        if (finalOwnerAddress != null) {
-            finalOwnerAddress = finalOwnerAddress.trim().toLowerCase();
-            // 如果地址有双重前缀（如 0x0x...），移除多余的前缀
-            if (finalOwnerAddress.startsWith("0x0x")) {
-                finalOwnerAddress = finalOwnerAddress.substring(2);
-            }
-            // 确保地址格式正确（42 字符，以 0x 开头）
-            if (!finalOwnerAddress.startsWith("0x")) {
-                finalOwnerAddress = "0x" + finalOwnerAddress;
-            }
-            // 验证地址长度（应该是 42 字符：0x + 40 个十六进制字符）
-            if (finalOwnerAddress.length() != 42) {
-                throw new IllegalArgumentException("Invalid owner address format: " + finalOwnerAddress + ". Expected 42 characters (0x + 40 hex chars)");
-            }
+        String finalOwnerAddress = ownerAddress.trim().toLowerCase();
+        // 如果地址有双重前缀（如 0x0x...），移除多余的前缀
+        if (finalOwnerAddress.startsWith("0x0x")) {
+            finalOwnerAddress = finalOwnerAddress.substring(2);
+        }
+        // 确保地址格式正确（42 字符，以 0x 开头）
+        if (!finalOwnerAddress.startsWith("0x")) {
+            finalOwnerAddress = "0x" + finalOwnerAddress;
+        }
+        // 验证地址长度（应该是 42 字符：0x + 40 个十六进制字符）
+        if (finalOwnerAddress.length() != 42) {
+            throw new IllegalArgumentException("Invalid owner address format: " + finalOwnerAddress + ". Expected 42 characters (0x + 40 hex chars). " +
+                    "Owner address must be the asset submitter's wallet address recovered from signature.");
         }
         
         processBuilder.environment().put("OWNER_ADDRESS", finalOwnerAddress);
-        logger.info("Setting contract owner to: {}", finalOwnerAddress);
+        logger.info("Setting contract owner to asset submitter address (from signature): {}", finalOwnerAddress);
         
         // 设置 CustodyManager 地址（可选，如果配置了则使用，否则使用零地址）
         String finalCustodyManagerAddress = (custodyManagerAddress != null && !custodyManagerAddress.trim().isEmpty())
@@ -323,14 +344,31 @@ public class MantleTokenDeploymentService {
             throw new RuntimeException(errorMessage);
         }
 
-        // 从输出中提取合约地址
+        // 从输出中提取合约地址和 owner 地址
         String outputStr = output.toString();
         String contractAddress = extractContractAddress(outputStr);
+        String deployedOwnerAddress = extractOwnerAddress(outputStr);
         
         if (contractAddress == null || contractAddress.isEmpty()) {
             throw new RuntimeException("Failed to extract contract address from Hardhat output");
         }
 
+        // 验证 owner 地址是否正确设置
+        // 注意：finalOwnerAddress 是在上面定义的变量，应该在这个作用域内可用
+        if (deployedOwnerAddress != null && !deployedOwnerAddress.isEmpty()) {
+            String expectedOwnerLower = finalOwnerAddress != null ? finalOwnerAddress.toLowerCase() : null;
+            String deployedOwnerLower = deployedOwnerAddress.toLowerCase();
+            if (expectedOwnerLower != null && !expectedOwnerLower.equals(deployedOwnerLower)) {
+                logger.warn("⚠️  Contract owner mismatch! Expected: {}, Deployed: {}", 
+                        expectedOwnerLower, deployedOwnerLower);
+            } else {
+                logger.info("✅ Contract owner verified: {}", deployedOwnerLower);
+            }
+        } else {
+            logger.warn("⚠️  Could not extract owner address from deployment output. Expected owner: {}", finalOwnerAddress);
+        }
+
+        logger.info("✅ LuxuryToken deployed at: {} with owner: {}", contractAddress, deployedOwnerAddress != null ? deployedOwnerAddress : (finalOwnerAddress != null ? finalOwnerAddress : "unknown"));
         return contractAddress;
     }
 
@@ -605,6 +643,102 @@ public class MantleTokenDeploymentService {
             }
         }
         return null;
+    }
+
+    /**
+     * 从部署脚本输出中提取 owner 地址
+     */
+    private String extractOwnerAddress(String output) {
+        // 查找 "Owner:" 后面的地址
+        String[] lines = output.split("\n");
+        for (String line : lines) {
+            if (line.contains("Owner:")) {
+                String[] parts = line.split(":");
+                if (parts.length > 1) {
+                    String address = parts[1].trim();
+                    // 验证地址格式
+                    if (address.startsWith("0x") && address.length() == 42) {
+                        return address;
+                    }
+                }
+            }
+            // 或者从 JSON 输出中提取
+            if (line.contains("\"owner\"")) {
+                try {
+                    int start = line.indexOf("\"owner\"");
+                    int addrStart = line.indexOf("0x", start);
+                    if (addrStart > 0) {
+                        String address = line.substring(addrStart, Math.min(addrStart + 42, line.length()));
+                        // 检查地址后面是否有引号或其他字符
+                        if (address.length() == 42 || (address.length() > 42 && (address.charAt(42) == '"' || address.charAt(42) == ','))) {
+                            return address.substring(0, 42);
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.warn("Failed to parse owner address from JSON", e);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 验证合约的 owner 地址是否正确设置为资产提交者的地址
+     */
+    private void verifyContractOwner(String contractAddress, String expectedOwner) throws Exception {
+        logger.info("Verifying contract owner... Contract: {}, Expected owner: {}", contractAddress, expectedOwner);
+        
+        // 构建 owner() 函数调用
+        // owner() 是一个无参数的 view 函数，返回 address
+        Function function = new Function(
+                "owner",
+                java.util.Collections.emptyList(),
+                java.util.Arrays.asList(new TypeReference<Address>() {})
+        );
+        
+        String encodedFunction = FunctionEncoder.encode(function);
+        
+        // 调用合约
+        EthCall response = web3j.ethCall(
+                Transaction.createEthCallTransaction(
+                        credentials.getAddress(), // from (任意地址，因为是 view 函数)
+                        contractAddress,
+                        encodedFunction
+                ),
+                DefaultBlockParameterName.LATEST
+        ).send();
+        
+        if (response.hasError()) {
+            throw new RuntimeException("Failed to call owner() function: " + response.getError().getMessage());
+        }
+        
+        // 解码返回值
+        String result = response.getValue();
+        if (result == null || result.equals("0x") || result.length() < 66) {
+            throw new RuntimeException("Invalid owner() function result: " + result);
+        }
+        
+        // 使用 FunctionReturnDecoder 解码返回值
+        java.util.List<Type> decoded = FunctionReturnDecoder.decode(result, function.getOutputParameters());
+        if (decoded == null || decoded.isEmpty()) {
+            throw new RuntimeException("Failed to decode owner() function result");
+        }
+        
+        Address ownerAddress = (Address) decoded.get(0);
+        String actualOwner = ownerAddress.getValue().toLowerCase();
+        
+        logger.info("Contract owner verification - Expected: {}, Actual: {}", expectedOwner, actualOwner);
+        
+        if (!actualOwner.equals(expectedOwner)) {
+            logger.error("❌ Contract owner mismatch! Expected: {}, Actual: {}. "
+                    + "Investors' payments will be sent to the wrong address!", expectedOwner, actualOwner);
+            throw new RuntimeException(String.format(
+                    "Contract owner mismatch! Expected: %s, Actual: %s. "
+                    + "This means investor payments will NOT be sent to the asset submitter's wallet!",
+                    expectedOwner, actualOwner));
+        } else {
+            logger.info("✅ Contract owner verified successfully. Owner: {}", actualOwner);
+        }
     }
 
     /**

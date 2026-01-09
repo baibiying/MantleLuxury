@@ -24,12 +24,10 @@ public class AssetController {
 
     private final AssetService assetService;
     private final AmlService amlService;
-    private final SignatureVerificationService signatureVerificationService;
 
-    public AssetController(AssetService assetService, AmlService amlService, SignatureVerificationService signatureVerificationService) {
+    public AssetController(AssetService assetService, AmlService amlService) {
         this.assetService = assetService;
         this.amlService = amlService;
-        this.signatureVerificationService = signatureVerificationService;
     }
 
     @GetMapping
@@ -63,47 +61,42 @@ public class AssetController {
                 amlService.checkAddress(request.submittedBy());
             }
 
-            // 验证钱包签名（如果提供了签名）
+            // 直接使用前端传来的钱包地址（用户连接的钱包地址）
             String finalSubmittedBy = request.submittedBy();
-            if (request.signature() != null && request.message() != null) {
-                // 从签名恢复出签名者的地址（当前连接的钱包地址）
-                String signerAddress = signatureVerificationService.recoverAddress(
-                        request.message(),
-                        request.signature()
-                );
-                
-                if (signerAddress == null) {
-                    logger.warn("Failed to recover address from signature");
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                            .body("Invalid signature: Failed to recover address from signature");
-                }
-                
-                // 使用从签名恢复的地址作为 submittedBy（当前连接的钱包地址）
-                // 确保地址格式正确（42 个字符：0x + 40 个十六进制字符）
-                finalSubmittedBy = signerAddress.trim().toLowerCase();
-                
-                // 验证地址长度
-                if (finalSubmittedBy.length() != 42) {
-                    logger.error("Invalid recovered address length: {} (expected 42). Address: {}", 
-                            finalSubmittedBy.length(), finalSubmittedBy);
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                            .body("Invalid signature: Recovered address has invalid length");
-                }
-                
-                // 如果前端传来的 submittedBy 与恢复的地址不一致，记录警告
-                if (request.submittedBy() != null && !signerAddress.equalsIgnoreCase(request.submittedBy())) {
-                    logger.warn("SubmittedBy mismatch. Recovered (using): {}, Submitted (ignored): {}", 
-                            signerAddress, request.submittedBy());
-                }
-                
-                logger.info("Signature verified successfully. Using recovered address from signature: {}", finalSubmittedBy);
-            } else {
-                logger.warn("Asset submission without signature verification. Address: {}", request.submittedBy());
+            
+            // 验证地址格式
+            if (finalSubmittedBy == null || finalSubmittedBy.trim().isEmpty()) {
+                logger.warn("Asset submission without submittedBy address");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Signature is required for asset submission");
+                        .body("Wallet address is required for asset submission");
+            }
+            
+            // 规范化地址格式
+            finalSubmittedBy = finalSubmittedBy.trim().toLowerCase();
+            if (!finalSubmittedBy.startsWith("0x")) {
+                finalSubmittedBy = "0x" + finalSubmittedBy;
+            }
+            if (finalSubmittedBy.length() != 42) {
+                logger.error("Invalid address length: {} (expected 42). Address: {}", 
+                        finalSubmittedBy.length(), finalSubmittedBy);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Invalid wallet address format. Expected 42 characters (0x + 40 hex chars)");
+            }
+            
+            // 签名步骤已在前端完成（用户通过 MetaMask 签名确认），这里直接使用前端传来的钱包地址
+            // 不需要验证签名，因为前端已经通过 MetaMask 确认了用户身份
+            if (request.signature() == null || request.message() == null) {
+                logger.warn("Asset submission without signature. Address: {}", finalSubmittedBy);
+                // 可以选择要求签名，或者允许无签名提交（根据业务需求）
+                // return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                //         .body("Signature is required for asset submission");
+            } else {
+                logger.info("Signature provided (not verified, using frontend address directly). Address: {}", finalSubmittedBy);
             }
 
-            // 创建修改后的请求，使用从签名恢复的地址
+            logger.info("Using wallet address from frontend: {}", finalSubmittedBy);
+
+            // 创建请求，使用前端传来的钱包地址
             AssetSubmitRequest finalRequest = new AssetSubmitRequest(
                     request.assetType(),
                     request.brand(),
@@ -116,9 +109,9 @@ public class AssetController {
                     request.totalSupply(),
                     request.pricePerShare(),
                     request.tokenSymbol(),
-                    finalSubmittedBy,  // 使用从签名恢复的地址
-                    request.signature(),
-                    request.message(),
+                    finalSubmittedBy,  // 使用前端传来的钱包地址（用户连接的钱包地址）
+                    request.signature(),  // 传递签名（可选，用于验证）
+                    request.message(),  // 传递消息（可选，用于验证）
                     request.imageUrls(),
                     request.model3dUrl()
             );

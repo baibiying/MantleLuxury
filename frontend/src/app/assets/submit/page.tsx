@@ -149,7 +149,7 @@ export default function AssetSubmitPage() {
       // 生成签名消息
       const message = `MantleLuxury Asset Submission\n\nWallet: ${address}\nTimestamp: ${Date.now()}\n\nBy signing this message, you confirm that you are the owner of this wallet address and authorize the submission of this asset.`;
       
-      // 请求用户签名
+      // 请求用户签名（弹出 MetaMask 签名窗口）
       let signature: string;
       try {
         signature = await signMessageAsync({ message });
@@ -180,9 +180,9 @@ export default function AssetSubmitPage() {
           totalSupply: formData.totalSupply ? parseFloat(formData.totalSupply) : null,
           pricePerShare: formData.pricePerShare ? parseFloat(formData.pricePerShare) : null,
           tokenSymbol: formData.tokenSymbol && formData.tokenSymbol.trim() ? formData.tokenSymbol.trim() : null,
-          submittedBy: formData.submittedBy || "anonymous",
-          signature: signature, // 添加签名
-          message: message, // 添加原始消息
+          submittedBy: address || formData.submittedBy || "anonymous", // 使用当前连接的钱包地址
+          signature: signature, // 添加签名（用于验证）
+          message: message, // 添加原始消息（用于验证）
           imageUrls: JSON.stringify(imageBackendUrls.length > 0 ? imageBackendUrls : (formData.imageUrls ?? [])),
           model3dUrl: formData.model3dUrl || null,
         }),

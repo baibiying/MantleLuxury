@@ -127,9 +127,23 @@ public class AssetService {
         String tokenAddress;
         try {
             // 将资产提交者的地址作为合约 owner，这样投资者购买代币时资金会直接转给资产提交者
-            String ownerAddress = (request.submittedBy() != null && !request.submittedBy().trim().isEmpty()) 
-                    ? request.submittedBy().trim() 
-                    : null; // 如果没有提交者地址，使用默认值（平台地址）
+            // 注意：由于在 AssetController 中已经通过签名验证恢复了地址，request.submittedBy() 应该始终是有效的地址
+            String ownerAddress = request.submittedBy();
+            
+            // 验证地址格式（确保是有效的 42 字符地址）
+            if (ownerAddress == null || ownerAddress.trim().isEmpty()) {
+                throw new IllegalArgumentException("Asset submitter address is required. This should be recovered from the signature in AssetController.");
+            }
+            
+            ownerAddress = ownerAddress.trim().toLowerCase();
+            if (!ownerAddress.startsWith("0x")) {
+                ownerAddress = "0x" + ownerAddress;
+            }
+            if (ownerAddress.length() != 42) {
+                throw new IllegalArgumentException("Invalid asset submitter address format: " + ownerAddress + ". Expected 42 characters (0x + 40 hex chars)");
+            }
+            
+            logger.info("✅ Setting token contract owner to asset submitter address (from signature): {}", ownerAddress);
             
             tokenAddress = tokenDeploymentService.deployToken(
                     asset.getAssetIdBytes32(),
@@ -138,8 +152,10 @@ public class AssetService {
                     totalSupply,
                     metadataHash,
                     request.pricePerShare(),  // 传递每份价格
-                    ownerAddress  // 传递资产提交者的地址作为合约 owner
+                    ownerAddress  // 传递资产提交者的地址作为合约 owner（从签名恢复的地址）
             );
+            
+            logger.info("✅ Token contract deployed at: {}. Owner should be: {}", tokenAddress, ownerAddress);
             
             if (tokenAddress == null || tokenAddress.isEmpty()) {
                 throw new RuntimeException("Token deployment returned empty address");

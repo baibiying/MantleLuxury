@@ -11,7 +11,9 @@ import com.mantleluxury.backend.assets.service.CustodyService;
 import com.mantleluxury.backend.assets.service.InsuranceService;
 import com.mantleluxury.backend.blockchain.service.CustodyManagerService;
 import com.mantleluxury.backend.blockchain.service.LuxuryTokenService;
+import com.mantleluxury.backend.blockchain.service.ContractOwnerChecker;
 import com.mantleluxury.backend.config.AdminConfig;
+import org.web3j.crypto.Credentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -42,6 +44,8 @@ public class AdminAssetController {
     private final InsuranceService insuranceService;
     private final CustodyManagerService custodyManagerService;
     private final LuxuryTokenService luxuryTokenService;
+    private final ContractOwnerChecker contractOwnerChecker;
+    private final Credentials credentials;
     private final AdminConfig adminConfig;
 
     public AdminAssetController(
@@ -54,6 +58,8 @@ public class AdminAssetController {
             InsuranceService insuranceService,
             CustodyManagerService custodyManagerService,
             LuxuryTokenService luxuryTokenService,
+            ContractOwnerChecker contractOwnerChecker,
+            Credentials credentials,
             AdminConfig adminConfig
     ) {
         this.assetRepository = assetRepository;
@@ -65,6 +71,8 @@ public class AdminAssetController {
         this.insuranceService = insuranceService;
         this.custodyManagerService = custodyManagerService;
         this.luxuryTokenService = luxuryTokenService;
+        this.contractOwnerChecker = contractOwnerChecker;
+        this.credentials = credentials;
         this.adminConfig = adminConfig;
     }
 
@@ -601,6 +609,165 @@ public class AdminAssetController {
             
         } catch (Exception e) {
             logger.error("Failed to fix custody status for asset {}: {}", assetId, e.getMessage(), e);
+            result.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
+    }
+
+    /**
+     * 检查合约的 owner 地址是否与资产的 submitted_by 地址匹配
+     */
+    @GetMapping("/{assetId}/check-owner")
+    public ResponseEntity<?> checkContractOwner(
+            @PathVariable String assetId,
+            @RequestHeader(value = "X-Wallet-Address", required = false) String walletAddress
+    ) {
+        ResponseEntity<?> permissionCheck = checkAdminPermission(walletAddress);
+        if (permissionCheck != null) {
+            return permissionCheck;
+        }
+        
+        Asset asset = assetRepository.findById(assetId).orElse(null);
+        if (asset == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Asset not found"));
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("assetId", assetId);
+        result.put("submittedBy", asset.getSubmittedBy());
+        result.put("tokenAddress", asset.getTokenAddress());
+        
+        if (asset.getTokenAddress() == null || asset.getTokenAddress().isEmpty()) {
+            result.put("error", "Asset has no token address");
+            return ResponseEntity.badRequest().body(result);
+        }
+        
+        if (asset.getSubmittedBy() == null || asset.getSubmittedBy().isEmpty()) {
+            result.put("error", "Asset has no submitted_by address");
+            return ResponseEntity.badRequest().body(result);
+        }
+        
+        try {
+            // 获取合约的实际 owner 地址
+            String contractOwner = contractOwnerChecker.getContractOwner(asset.getTokenAddress());
+            String expectedOwner = asset.getSubmittedBy().toLowerCase();
+            boolean matches = contractOwner.equals(expectedOwner);
+            
+            result.put("expectedOwner", expectedOwner);
+            result.put("contractOwner", contractOwner);
+            result.put("matches", matches);
+            
+            if (matches) {
+                result.put("message", "✅ Contract owner matches asset submitter address. Payments will go to the correct address.");
+            } else {
+                result.put("message", "❌ Contract owner does NOT match asset submitter address! Payments will go to the wrong address.");
+                result.put("warning", "This is a critical issue! Investor payments will be sent to: " + contractOwner + " instead of: " + expectedOwner);
+            }
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            logger.error("Failed to check contract owner for asset {}: {}", assetId, e.getMessage(), e);
+            result.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
+    }
+
+    /**
+     * 修复资产的 submitted_by 和合约 owner 地址
+     * 将资产的 submitted_by 和合约的 owner 都设置为正确的资产提交者地址
+     */
+    @PostMapping("/{assetId}/fix-owner")
+    public ResponseEntity<?> fixAssetOwner(
+            @PathVariable String assetId,
+            @RequestParam String correctOwnerAddress,
+            @RequestHeader(value = "X-Wallet-Address", required = false) String walletAddress
+    ) {
+        ResponseEntity<?> permissionCheck = checkAdminPermission(walletAddress);
+        if (permissionCheck != null) {
+            return permissionCheck;
+        }
+        
+        Asset asset = assetRepository.findById(assetId).orElse(null);
+        if (asset == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Asset not found"));
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("assetId", assetId);
+        result.put("oldSubmittedBy", asset.getSubmittedBy());
+        result.put("tokenAddress", asset.getTokenAddress());
+        result.put("correctOwnerAddress", correctOwnerAddress);
+        
+        if (asset.getTokenAddress() == null || asset.getTokenAddress().isEmpty()) {
+            result.put("error", "Asset has no token address");
+            return ResponseEntity.badRequest().body(result);
+        }
+        
+        try {
+            // 1. 先检查当前合约的 owner
+            String currentContractOwner = contractOwnerChecker.getContractOwner(asset.getTokenAddress());
+            result.put("currentContractOwner", currentContractOwner);
+            
+            // 2. 规范化地址格式
+            String normalizedCorrectOwner = correctOwnerAddress.trim().toLowerCase();
+            if (!normalizedCorrectOwner.startsWith("0x")) {
+                normalizedCorrectOwner = "0x" + normalizedCorrectOwner;
+            }
+            if (normalizedCorrectOwner.length() != 42) {
+                result.put("error", "Invalid owner address format. Expected 42 characters (0x + 40 hex chars)");
+                return ResponseEntity.badRequest().body(result);
+            }
+            
+            // 3. 更新数据库中的 submitted_by
+            String oldSubmittedBy = asset.getSubmittedBy();
+            asset.setSubmittedBy(normalizedCorrectOwner);
+            assetRepository.save(asset);
+            result.put("databaseUpdated", true);
+            result.put("newSubmittedBy", normalizedCorrectOwner);
+            logger.info("Updated asset {} submitted_by from {} to {}", assetId, oldSubmittedBy, normalizedCorrectOwner);
+            
+            // 4. 如果合约的 owner 不正确，尝试转移所有权
+            if (!currentContractOwner.equals(normalizedCorrectOwner)) {
+                logger.info("Contract owner mismatch. Attempting to transfer ownership from {} to {}", 
+                        currentContractOwner, normalizedCorrectOwner);
+                
+                try {
+                    // 检查当前 owner 是否是后端地址（可以代为转移）
+                    String backendAddress = credentials.getAddress().toLowerCase();
+                    if (currentContractOwner.equals(backendAddress)) {
+                        // 如果当前 owner 是后端地址，可以直接转移
+                        String txHash = luxuryTokenService.transferOwnership(asset.getTokenAddress(), normalizedCorrectOwner);
+                        result.put("contractOwnerTransferred", true);
+                        result.put("transactionHash", txHash);
+                        logger.info("✅ Contract ownership transferred successfully. TxHash: {}", txHash);
+                    } else {
+                        // 如果当前 owner 不是后端地址，无法代为转移
+                        result.put("contractOwnerTransferred", false);
+                        result.put("warning", "Current contract owner is not backend address. Cannot transfer ownership automatically. " +
+                                "Current owner: " + currentContractOwner + " must manually transfer ownership to: " + normalizedCorrectOwner);
+                        logger.warn("Cannot transfer ownership. Current owner {} is not backend address {}", 
+                                currentContractOwner, backendAddress);
+                    }
+                } catch (Exception e) {
+                    logger.error("Failed to transfer contract ownership: {}", e.getMessage(), e);
+                    result.put("contractOwnerTransferred", false);
+                    result.put("contractOwnerError", e.getMessage());
+                    result.put("warning", "Database updated but contract owner transfer failed. " +
+                            "Current contract owner: " + currentContractOwner + " must manually transfer ownership to: " + normalizedCorrectOwner);
+                }
+            } else {
+                result.put("contractOwnerTransferred", false);
+                result.put("message", "Contract owner already matches correct address. No transfer needed.");
+            }
+            
+            result.put("success", true);
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            logger.error("Failed to fix asset owner for asset {}: {}", assetId, e.getMessage(), e);
             result.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }

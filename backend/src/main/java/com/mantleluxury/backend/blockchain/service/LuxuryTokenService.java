@@ -8,6 +8,7 @@ import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.abi.datatypes.Bool;
+import org.web3j.abi.datatypes.Address;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -49,6 +50,78 @@ public class LuxuryTokenService {
         this.web3j = web3j;
         this.credentials = credentials;
         this.enabled = enabled;
+    }
+
+    /**
+     * 转移合约所有权到新地址
+     * @param tokenAddress LuxuryToken 合约地址
+     * @param newOwner 新的 owner 地址
+     * @return 交易哈希
+     */
+    public String transferOwnership(String tokenAddress, String newOwner) throws Exception {
+        if (!this.enabled) {
+            logger.warn("Blockchain operations are disabled. Cannot transfer ownership.");
+            return null;
+        }
+
+        if (tokenAddress == null || tokenAddress.isEmpty()) {
+            throw new IllegalArgumentException("Token address is required");
+        }
+
+        if (newOwner == null || newOwner.isEmpty()) {
+            throw new IllegalArgumentException("New owner address is required");
+        }
+
+        logger.info("Transferring ownership of token {} to {}", tokenAddress, newOwner);
+
+        // 构建 transferOwnership 函数调用
+        Function function = new Function(
+                "transferOwnership",
+                Arrays.asList(new Address(newOwner)),
+                Collections.emptyList()
+        );
+
+        String encodedFunction = FunctionEncoder.encode(function);
+
+        // 使用 RawTransactionManager 发送交易
+        TransactionManager transactionManager = new RawTransactionManager(web3j, credentials, chainId);
+        org.web3j.protocol.core.methods.response.EthSendTransaction txResponse =
+                transactionManager.sendTransaction(
+                        DefaultGasProvider.GAS_PRICE,
+                        gasLimit,
+                        tokenAddress,
+                        encodedFunction,
+                        BigInteger.ZERO
+                );
+
+        if (txResponse.hasError()) {
+            String message = "Failed to transfer ownership: " + txResponse.getError().getMessage();
+            logger.error(message);
+            throw new RuntimeException(message);
+        }
+
+        String txHash = txResponse.getTransactionHash();
+        logger.info("Transaction sent. Hash: {}", txHash);
+
+        // 等待交易确认
+        TransactionReceiptProcessor receiptProcessor = new PollingTransactionReceiptProcessor(
+                web3j,
+                1000,  // 轮询间隔：1 秒
+                60     // 最多等待：60 秒
+        );
+        TransactionReceipt receipt = receiptProcessor.waitForTransactionReceipt(txHash);
+
+        if (receipt != null && receipt.isStatusOK()) {
+            logger.info("✅ Ownership transferred successfully. Hash: {}, Block: {}", 
+                    txHash, receipt.getBlockNumber());
+            return txHash;
+        } else if (receipt != null && !receipt.isStatusOK()) {
+            logger.error("❌ Transaction failed. Hash: {}, Status: {}", txHash, receipt.getStatus());
+            throw new RuntimeException("Transaction failed on-chain. Status: " + receipt.getStatus());
+        } else {
+            logger.error("❌ Transaction receipt is null. Hash: {}", txHash);
+            throw new RuntimeException("Transaction receipt is null");
+        }
     }
 
     /**

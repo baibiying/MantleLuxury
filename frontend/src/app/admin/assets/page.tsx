@@ -451,7 +451,6 @@ export default function AdminAssetsPage() {
         const text = await res.text();
         throw new Error(text || "创建认证记录失败");
       }
-      const newAuth = await res.json();
       setSuccess("✅ 认证记录已创建（状态：待审核）");
       setTimeout(() => setSuccess(null), 3000);
       setShowAuthModal(false);
@@ -461,20 +460,10 @@ export default function AdminAssetsPage() {
       setAuthReportHash("");
       setAuthSignature("");
       setAuthNotes("");
-      // 立即更新本地状态，添加新创建的认证记录（如果 API 返回了对象）
-      if (newAuth && newAuth.id) {
-        setSelectedAsset((prev) => {
-          if (!prev) return prev;
-          const existingAuths = prev.authentications || [];
-          return {
-            ...prev,
-            authentications: [...existingAuths, newAuth],
-          };
-        });
+      // 从服务器重新加载认证记录（与其他操作保持一致）
+      if (selectedAsset) {
+        await loadAuthentications(selectedAsset.asset.id);
       }
-      // 然后从服务器重新加载以确保数据同步
-      const assetId = selectedAsset.asset.id;
-      await loadAuthentications(assetId);
     } catch (e: any) {
       setError(e.message ?? "创建认证记录失败");
     }
@@ -507,13 +496,19 @@ export default function AdminAssetsPage() {
       );
       setTimeout(() => setSuccess(null), 3000);
       if (selectedAsset) {
+        // 先刷新认证记录，确保状态更新正确显示
+        await loadAuthentications(selectedAsset.asset.id);
+        // 然后刷新其他数据（并行执行）
         await Promise.all([
-          loadAssetDetail(selectedAsset.asset.id),
-          loadAuthentications(selectedAsset.asset.id),
           loadValuations(selectedAsset.asset.id),
           loadCustody(selectedAsset.asset.id),
           loadInsurance(selectedAsset.asset.id),
         ]);
+        // 最后刷新资产详情（如果它包含认证记录，会覆盖之前的更新，所以需要在最后）
+        // 但为了确保认证记录正确显示，在 loadAssetDetail 之后再次刷新认证记录
+        await loadAssetDetail(selectedAsset.asset.id);
+        // 确保认证记录是最新的（因为 loadAssetDetail 可能会覆盖）
+        await loadAuthentications(selectedAsset.asset.id);
       }
     } catch (e: any) {
       setError(e.message ?? "更新认证状态失败");
@@ -1188,6 +1183,8 @@ export default function AdminAssetsPage() {
                         <h3 className="font-semibold text-white">真伪认证记录</h3>
                         <button
                           onClick={() => {
+                            setError(null);
+                            setSuccess(null);
                             setShowAuthModal(true);
                           }}
                           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors"
@@ -1314,6 +1311,8 @@ export default function AdminAssetsPage() {
                         <h3 className="font-semibold text-white">估值报告记录</h3>
                         <button
                           onClick={() => {
+                            setError(null);
+                            setSuccess(null);
                             setShowValuationModal(true);
                           }}
                           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors"
@@ -1379,6 +1378,8 @@ export default function AdminAssetsPage() {
                         <h3 className="font-semibold text-white">托管信息</h3>
                         <button
                           onClick={() => {
+                            setError(null);
+                            setSuccess(null);
                             setShowCustodyModal(true);
                           }}
                           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors"
@@ -1451,6 +1452,8 @@ export default function AdminAssetsPage() {
                         <h3 className="font-semibold text-white">保险信息</h3>
                         <button
                           onClick={() => {
+                            setError(null);
+                            setSuccess(null);
                             setShowInsuranceModal(true);
                           }}
                           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-base font-medium transition-colors"

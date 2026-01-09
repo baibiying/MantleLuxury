@@ -97,17 +97,18 @@ contract LuxuryToken is ERC20, Ownable {
         uint256 totalCost = amount * pricePerToken;
         require(msg.value >= totalCost, "Insufficient payment");
         
+        // 立即将资金转给 owner（资产提交者） - 优先转账，确保资金立即到账
+        // 由于有托管资产保障，资金可以立即到账
+        address assetOwner = owner();
+        payable(assetOwner).transfer(totalCost);
+        
         // 从 owner 转移代币给购买者（会触发 _update，再次检查 KYC）
-        _transfer(owner(), msg.sender, amount);
+        _transfer(assetOwner, msg.sender, amount);
         
         // 将多余的 MNT 退回给购买者
         if (msg.value > totalCost) {
             payable(msg.sender).transfer(msg.value - totalCost);
         }
-        
-        // 立即将资金转给 owner（资产提交者）
-        // 由于有托管资产保障，资金可以立即到账
-        payable(owner()).transfer(totalCost);
         
         emit TokensPurchased(msg.sender, amount, totalCost);
     }

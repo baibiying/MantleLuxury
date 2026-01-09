@@ -42,7 +42,11 @@ async function main() {
   const initialSupplyStr = process.env.INITIAL_SUPPLY || "1000";
   const pricePerTokenStr = process.env.PRICE_PER_TOKEN || "1000000000000000000"; // 默认 1 MNT (wei)
   // 获取地址参数并验证格式
-  const ownerAddressRaw = process.env.OWNER_ADDRESS || deployer.address;
+  // OWNER_ADDRESS 应该是资产提交者的地址（从签名恢复的地址），不应该使用 deployer.address 作为默认值
+  const ownerAddressRaw = process.env.OWNER_ADDRESS;
+  if (!ownerAddressRaw || ownerAddressRaw.trim() === "") {
+    throw new Error("OWNER_ADDRESS environment variable is required. This should be the asset submitter's wallet address recovered from signature.");
+  }
   const kycRegistryAddressRaw = process.env.KYC_REGISTRY_ADDRESS || ethers.ZeroAddress;
   const custodyManagerAddressRaw = process.env.CUSTODY_MANAGER_ADDRESS || ethers.ZeroAddress;
 
