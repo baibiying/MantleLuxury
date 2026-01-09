@@ -36,6 +36,7 @@ contract LuxuryToken is ERC20, Ownable {
     bool public custodyCheckEnabled;
 
     event TokensPurchased(address indexed buyer, uint256 amount, uint256 totalCost);
+    event PaymentTransferred(address indexed recipient, uint256 amount);
     event PriceUpdated(uint256 newPrice);
     event SalesToggled(bool enabled);
     event KYCRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
@@ -100,14 +101,32 @@ contract LuxuryToken is ERC20, Ownable {
         // 立即将资金转给 owner（资产提交者） - 优先转账，确保资金立即到账
         // 由于有托管资产保障，资金可以立即到账
         address assetOwner = owner();
-        payable(assetOwner).transfer(totalCost);
+        
+        // 使用 call 而不是 transfer，避免 gas 限制问题，并检查返回值
+        // 先发出事件，记录转账意图
+        emit PaymentTransferred(assetOwner, totalCost);
+        
+        // 执行转账，如果失败会 revert
+        (bool success, bytes memory returnData) = payable(assetOwner).call{value: totalCost}("");
+        if (!success) {
+            // 如果转账失败，记录错误信息并 revert
+            if (returnData.length > 0) {
+                assembly {
+                    let returndata_size := mload(returnData)
+                    revert(add(32, returnData), returndata_size)
+                }
+            } else {
+                revert("Failed to transfer MNT to asset owner: transfer reverted");
+            }
+        }
         
         // 从 owner 转移代币给购买者（会触发 _update，再次检查 KYC）
         _transfer(assetOwner, msg.sender, amount);
         
         // 将多余的 MNT 退回给购买者
         if (msg.value > totalCost) {
-            payable(msg.sender).transfer(msg.value - totalCost);
+            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - totalCost}("");
+            require(refundSuccess, "Failed to refund excess MNT");
         }
         
         emit TokensPurchased(msg.sender, amount, totalCost);

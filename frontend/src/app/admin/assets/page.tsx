@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient, useChainId } from "wagmi";
+import { mantleSepoliaTestnet } from "@/lib/web3/config";
+import { luxuryTokenAbi } from "@/lib/web3/contracts";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import TechCard from "@/components/TechCard";
@@ -116,6 +118,8 @@ type Stats = {
 
 export default function AdminAssetsPage() {
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
+  const chainId = useChainId();
   const [mounted, setMounted] = useState(false);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -130,6 +134,8 @@ export default function AdminAssetsPage() {
   const [actionType, setActionType] = useState("initial_review");
   const [nextStep, setNextStep] = useState("");
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [tokenSymbol, setTokenSymbol] = useState<string | null>(null);
+  const [tokenInfos, setTokenInfos] = useState<Record<string, { name: string; symbol: string }>>({});
 
   // 资产真伪认证表单
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -209,6 +215,79 @@ export default function AdminAssetsPage() {
       loadData();
     }
   }, [mounted, statusFilter, isAdmin]);
+
+  // 获取 token symbol
+  useEffect(() => {
+    const fetchTokenSymbol = async () => {
+      if (!selectedAsset?.asset?.tokenAddress || !publicClient || chainId !== mantleSepoliaTestnet.id) {
+        setTokenSymbol(null);
+        return;
+      }
+
+      try {
+        const symbol = await publicClient.readContract({
+          address: selectedAsset.asset.tokenAddress as `0x${string}`,
+          abi: luxuryTokenAbi,
+          functionName: "symbol",
+        }) as string;
+        setTokenSymbol(symbol);
+      } catch (error) {
+        console.error("Failed to fetch token symbol:", error);
+        setTokenSymbol(null);
+      }
+    };
+
+    fetchTokenSymbol();
+  }, [selectedAsset?.asset?.tokenAddress, publicClient, chainId]);
+
+  // 获取所有资产的 token symbol
+  useEffect(() => {
+    const loadTokenInfos = async () => {
+      if (!publicClient || chainId !== mantleSepoliaTestnet.id || assets.length === 0) {
+        setTokenInfos({});
+        return;
+      }
+
+      const withToken = assets.filter((a) => a.tokenAddress);
+      if (withToken.length === 0) {
+        setTokenInfos({});
+        return;
+      }
+
+      // 读取代币名称和符号
+      const tokenInfoEntries = await Promise.all(
+        withToken.map(async (asset) => {
+          try {
+            const [name, symbol] = await Promise.all([
+              publicClient.readContract({
+                address: asset.tokenAddress as `0x${string}`,
+                abi: luxuryTokenAbi,
+                functionName: "name",
+              }) as Promise<string>,
+              publicClient.readContract({
+                address: asset.tokenAddress as `0x${string}`,
+                abi: luxuryTokenAbi,
+                functionName: "symbol",
+              }) as Promise<string>,
+            ]);
+            return [asset.tokenAddress as string, { name, symbol }] as const;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const nextTokenInfos: Record<string, { name: string; symbol: string }> = {};
+      for (const e of tokenInfoEntries) {
+        if (e) {
+          nextTokenInfos[e[0]] = e[1];
+        }
+      }
+      setTokenInfos(nextTokenInfos);
+    };
+
+    loadTokenInfos();
+  }, [assets, publicClient, chainId]);
 
   const checkAdminStatus = async () => {
     if (!address) {
@@ -773,7 +852,7 @@ export default function AdminAssetsPage() {
     <PageContainer
       title="资产审核后台"
       subtitle="管理资产提交和审核流程（仅管理员）"
-      maxWidth="5xl"
+      maxWidth="7xl"
     >
       {/* 错误和成功提示 */}
       {error && (
@@ -843,22 +922,23 @@ export default function AdminAssetsPage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-lg">
+              <div className="overflow-x-auto -mx-6 px-6">
+                <table className="w-full text-base" style={{ minWidth: '1400px' }}>
                   <thead>
                     <tr className="text-slate-300 border-b border-slate-700/60">
-                      <th className="py-3 text-left font-normal min-w-[280px]">资产信息</th>
-                      <th className="py-3 text-left font-normal min-w-[100px]">状态</th>
-                      <th className="py-3 text-left font-normal min-w-[200px]">提交者</th>
-                      <th className="py-3 text-left font-normal min-w-[200px]">合约地址</th>
-                      <th className="py-3 text-left font-normal min-w-[180px]">提交时间</th>
-                      <th className="py-3 text-right font-normal min-w-[120px]">操作</th>
+                      <th className="py-3 text-left font-normal w-[250px]">资产信息</th>
+                      <th className="py-3 text-left font-normal w-[100px]">状态</th>
+                      <th className="py-3 text-left font-normal w-[180px]">提交者</th>
+                      <th className="py-3 text-left font-normal w-[200px]">合约地址</th>
+                      <th className="py-3 text-left font-normal w-[100px]">代币符号</th>
+                      <th className="py-3 text-left font-normal w-[160px]">提交时间</th>
+                      <th className="py-3 text-right font-normal w-[120px]">操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     {assets.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-slate-300">
+                        <td colSpan={7} className="py-8 text-center text-slate-300">
                           暂无资产数据
                         </td>
                       </tr>
@@ -875,22 +955,22 @@ export default function AdminAssetsPage() {
                                 await loadInsurance(asset.id);
                               }}
                         >
-                          <td className="py-3 min-w-[280px]">
+                          <td className="py-3 w-[250px]">
                             <div className="flex flex-col">
                               <span className="font-medium break-words">
                                 {asset.brand} {asset.model}
                               </span>
-                              <span className="text-base text-slate-300 mt-1">
+                              <span className="text-sm text-slate-300 mt-1">
                                 {asset.assetType === "watch" ? "名表" : "珠宝"} ·{" "}
                                 {asset.year ?? "年份未知"}
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 min-w-[100px]">{getStatusBadge(asset.status)}</td>
-                          <td className="py-3 font-mono text-base min-w-[200px] break-all">
+                          <td className="py-3 w-[100px]">{getStatusBadge(asset.status)}</td>
+                          <td className="py-3 font-mono text-sm w-[180px] break-all">
                             {asset.submittedBy || "-"}
                           </td>
-                          <td className="py-3 font-mono text-base min-w-[200px] break-all">
+                          <td className="py-3 font-mono text-sm w-[200px] break-all">
                             {asset.tokenAddress ? (
                               <a
                                 href={`https://explorer.sepolia.mantle.xyz/address/${asset.tokenAddress}`}
@@ -905,10 +985,17 @@ export default function AdminAssetsPage() {
                               "-"
                             )}
                           </td>
-                          <td className="py-3 text-slate-300 text-base min-w-[180px] whitespace-nowrap">
+                          <td className="py-3 text-sm w-[100px]">
+                            {asset.tokenAddress && tokenInfos[asset.tokenAddress]?.symbol ? (
+                              <span className="text-white font-medium">{tokenInfos[asset.tokenAddress].symbol}</span>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 text-slate-300 text-sm w-[160px] whitespace-nowrap">
                             {new Date(asset.createdAt).toLocaleString("zh-CN")}
                           </td>
-                          <td className="py-3 text-right min-w-[120px]">
+                          <td className="py-3 text-right w-[120px]">
                             <button
                               onClick={async (e) => {
                                 e.stopPropagation();
@@ -1114,6 +1201,12 @@ export default function AdminAssetsPage() {
                             </a>
                           )}
                         </div>
+                        {tokenSymbol && (
+                          <div>
+                            <span className="text-slate-300">代币符号：</span>
+                            <span className="ml-2 text-white font-medium">{tokenSymbol}</span>
+                          </div>
+                        )}
                       </div>
                       {selectedAsset.asset.description && (
                         <div className="mt-4">
