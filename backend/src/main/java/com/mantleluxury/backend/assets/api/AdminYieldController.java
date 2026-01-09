@@ -90,10 +90,20 @@ public class AdminYieldController {
         long total = all.size();
         long completed = all.stream().filter(YieldDistribution::getIsCompleted).count();
         long pending = total - completed;
-        BigDecimal totalAmount = all.stream()
+        
+        // 分别计算已完成和进行中的金额
+        BigDecimal completedAmount = all.stream()
+                .filter(YieldDistribution::getIsCompleted)
                 .map(YieldDistribution::getTotalAmount)
                 .filter(a -> a != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal pendingAmount = all.stream()
+                .filter(y -> !Boolean.TRUE.equals(y.getIsCompleted()))
+                .map(YieldDistribution::getTotalAmount)
+                .filter(a -> a != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalAmount = completedAmount.add(pendingAmount);
         BigDecimal distributedAmount = all.stream()
                 .map(YieldDistribution::getDistributedAmount)
                 .filter(a -> a != null)
@@ -104,6 +114,8 @@ public class AdminYieldController {
         stats.put("completed", completed);
         stats.put("pending", pending);
         stats.put("totalAmount", totalAmount);
+        stats.put("completedAmount", completedAmount);
+        stats.put("pendingAmount", pendingAmount);
         stats.put("distributedAmount", distributedAmount);
 
         return ResponseEntity.ok(stats);

@@ -28,6 +28,8 @@ type Stats = {
   completed: number;
   pending: number;
   totalAmount: string;
+  completedAmount: string;
+  pendingAmount: string;
   distributedAmount: string;
 };
 
@@ -394,7 +396,7 @@ export default function AdminYieldsPage() {
         <div className="space-y-6">
             {/* 统计信息 */}
             {stats && (
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-5">
                 <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">总分配次数</div>
                   <div className="text-2xl font-bold">{stats.total}</div>
@@ -413,16 +415,18 @@ export default function AdminYieldsPage() {
                 </TechCard>
                 <TechCard className="px-4 py-4">
                   <div className="text-xs text-slate-400 mb-1">
-                    累计分配金额 / 已分配
+                    已完成金额
                   </div>
-                  <div className="text-sm font-medium">
-                    <span className="text-emerald-400">
-                      {formatAmount(stats.totalAmount)} MNT
-                    </span>
-                    <span className="text-slate-500 mx-1">/</span>
-                    <span className="text-sky-400">
-                      {formatAmount(stats.distributedAmount)} MNT
-                    </span>
+                  <div className="text-2xl font-bold text-emerald-400">
+                    {formatAmount(stats.completedAmount || "0")} MNT
+                  </div>
+                </TechCard>
+                <TechCard className="px-4 py-4">
+                  <div className="text-xs text-slate-400 mb-1">
+                    进行中金额
+                  </div>
+                  <div className="text-2xl font-bold text-amber-400">
+                    {formatAmount(stats.pendingAmount || "0")} MNT
                   </div>
                 </TechCard>
               </div>
