@@ -23,6 +23,24 @@ type YieldDistribution = {
   completedAt: string | null;
 };
 
+type AssetInfo = {
+  id: string;
+  brand: string;
+  model: string;
+  assetType: string;
+  year: number | null;
+};
+
+type AssetYieldGroup = {
+  assetId: string;
+  assetInfo: AssetInfo | null;
+  yields: YieldDistribution[];
+  totalAmount: number;
+  distributedAmount: number;
+  completedAmount: number;
+  pendingAmount: number;
+};
+
 type Stats = {
   total: number;
   completed: number;
@@ -38,6 +56,7 @@ export default function AdminYieldsPage() {
   const [mounted, setMounted] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [yields, setYields] = useState<YieldDistribution[]>([]);
+  const [assetGroups, setAssetGroups] = useState<AssetYieldGroup[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +145,71 @@ export default function AdminYieldsPage() {
 
       setYields(yieldsData);
       setStats(statsData);
+
+      // 按 assetId 分组收益分配记录
+      const groupedByAsset = yieldsData.reduce((acc, yieldItem) => {
+        const assetId = yieldItem.assetId;
+        if (!acc[assetId]) {
+          acc[assetId] = [];
+        }
+        acc[assetId].push(yieldItem);
+        return acc;
+      }, {} as Record<string, YieldDistribution[]>);
+
+      // 获取所有唯一的 assetId
+      const uniqueAssetIds = Object.keys(groupedByAsset);
+
+      // 获取每个资产的详细信息
+      const assetInfoPromises = uniqueAssetIds.map(async (assetId) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/assets/${assetId}`);
+          if (res.ok) {
+            const asset = await res.json();
+            return {
+              id: asset.id,
+              brand: asset.brand,
+              model: asset.model,
+              assetType: asset.assetType,
+              year: asset.year,
+            } as AssetInfo;
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch asset info for ${assetId}:`, err);
+        }
+        return null;
+      });
+
+      const assetInfos = await Promise.all(assetInfoPromises);
+
+      // 创建资产分组数据
+      const groups: AssetYieldGroup[] = uniqueAssetIds.map((assetId, index) => {
+        const assetYields = groupedByAsset[assetId];
+        const { totalAmount, distributedAmount, completedAmount, pendingAmount } = assetYields.reduce(
+          (acc, y) => {
+            const amount = parseFloat(y.totalAmount || "0");
+            const distributed = parseFloat(y.distributedAmount || "0");
+            return {
+              totalAmount: acc.totalAmount + amount,
+              distributedAmount: acc.distributedAmount + distributed,
+              completedAmount: acc.completedAmount + (y.isCompleted ? amount : 0),
+              pendingAmount: acc.pendingAmount + (y.isCompleted ? 0 : amount),
+            };
+          },
+          { totalAmount: 0, distributedAmount: 0, completedAmount: 0, pendingAmount: 0 }
+        );
+
+        return {
+          assetId,
+          assetInfo: assetInfos[index],
+          yields: assetYields,
+          totalAmount,
+          distributedAmount,
+          completedAmount,
+          pendingAmount,
+        };
+      });
+
+      setAssetGroups(groups);
     } catch (e: any) {
       setError(e.message ?? "加载数据失败");
     } finally {
@@ -512,15 +596,52 @@ export default function AdminYieldsPage() {
                   暂无收益分配记录
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {yields.map((y) => (
+                <div className="space-y-6">
+                  {assetGroups.map((group) => (
                     <div
-                      key={y.id}
-                      className="px-5 py-4 relative overflow-hidden"
+                      key={group.assetId}
+                      className="glass-effect rounded-2xl border border-slate-700/50 overflow-hidden"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
-                      <div className="relative z-10">
-                        <div className="flex items-start justify-between mb-3">
+                      {/* 资产汇总头部 */}
+                      <div className="bg-gradient-to-r from-sky-500/10 to-purple-500/10 px-6 py-4 border-b border-slate-700/50">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-lg font-bold text-slate-200">
+                                {group.assetInfo 
+                                  ? `${group.assetInfo.brand} ${group.assetInfo.model}${group.assetInfo.year ? ` (${group.assetInfo.year})` : ''}`
+                                  : `资产 ${group.assetId.slice(0, 8)}...`}
+                              </h3>
+                              <span className="px-2 py-1 rounded text-xs bg-slate-700/40 text-slate-300">
+                                {group.assetInfo?.assetType === 'watch' ? '腕表' : group.assetInfo?.assetType === 'jewelry' ? '珠宝' : '其他'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              资产 ID: {group.assetId.slice(0, 8)}... | {group.yields.length} 笔分配记录
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-slate-400 mb-1">该资产分配汇总</div>
+                            <div className="text-xl font-bold text-emerald-400">
+                              {formatAmount(group.totalAmount.toString())} MNT
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">
+                              已完成: {formatAmount(group.completedAmount.toString())} MNT | 进行中: {formatAmount(group.pendingAmount.toString())} MNT
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 该资产的收益分配记录列表 */}
+                      <div className="px-6 py-4 space-y-3">
+                        {group.yields.map((y) => (
+                          <div
+                            key={y.id}
+                            className="card-hover glass-effect rounded-xl border border-slate-700/30 px-4 py-3 relative overflow-hidden"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/3 to-purple-500/3"></div>
+                            <div className="relative z-10">
+                              <div className="flex items-start justify-between mb-3">
                           <div>
                             <div className="flex items-center gap-2 mb-2">
                               <span
@@ -571,9 +692,9 @@ export default function AdminYieldsPage() {
                               {formatAmount(y.distributedAmount || "0")} MNT
                             </div>
                           </div>
-                        </div>
+                              </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-slate-400">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-slate-400">
                           <div>
                             <div className="mb-1">创建时间</div>
                             <div className="text-slate-300">
@@ -604,9 +725,9 @@ export default function AdminYieldsPage() {
                               </span>
                             )}
                           </div>
-                        </div>
+                              </div>
 
-                        <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+                              <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
                           <button
                             type="button"
                             onClick={() => handleCreateOnChain(y.id)}
@@ -649,7 +770,10 @@ export default function AdminYieldsPage() {
                               ? "分发中..."
                               : "执行链上分发并标记完成"}
                           </button>
-                        </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
