@@ -10,6 +10,14 @@
 - **后端 API**: [https://mantleluxury-production.up.railway.app](https://mantleluxury-production.up.railway.app)
   - 健康检查: [https://mantleluxury-production.up.railway.app/api/health](https://mantleluxury-production.up.railway.app/api/health)
 
+## 📋 Compliance Disclosure
+
+**Regulated Asset Disclosure**: MantleLuxury is a Real World Asset (RWA) tokenization platform that **involves regulated assets**. The platform tokenizes physical luxury assets (watches, jewelry) which may be subject to securities regulations, financial services regulations, AML/KYC requirements, and consumer protection laws in various jurisdictions. 
+
+The platform implements comprehensive compliance measures including mandatory KYC/AML verification, professional asset custody, comprehensive insurance, third-party authentication, and transparent reporting.
+
+**Full Compliance Disclosure**: See [COMPLIANCE_DISCLOSURE.md](./COMPLIANCE_DISCLOSURE.md) for detailed information.
+
 ---
 
 > 快速了解：请查看一页纸白皮书 `ONE_PAGER.md`（Problem / Solution / Business Model / Roadmap）。
