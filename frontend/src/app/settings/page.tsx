@@ -134,17 +134,8 @@ export default function SettingsPage() {
   return (
     <PageContainer
       title="账户设置"
-      subtitle="管理您的账户信息和通知偏好"
       maxWidth="5xl"
     >
-      <div className="mb-6 flex items-center justify-end">
-          <div>
-            <h1 className="text-2xl font-semibold">账户与设置</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              管理你的账户信息和通知偏好
-            </p>
-          </div>
-        </div>
 
         {!isConnected || !address ? (
           <TechCard className="px-6 py-8 text-center">
