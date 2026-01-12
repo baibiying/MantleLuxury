@@ -56,13 +56,6 @@ export default function AdminNavigation() {
         <span className="relative z-10">KYC / AML 管理</span>
       </Link>
       <Link
-        href="/admin/aml"
-        className="relative overflow-hidden rounded-full border border-cyan-500/30 px-4 py-2 text-cyan-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400 hover:text-cyan-100 hover:shadow-[0_0_15px_rgba(0,255,255,0.5)] whitespace-nowrap flex-shrink-0"
-      >
-        <span className="absolute inset-0 bg-gradient-to-r from-cyan-600/20 via-cyan-500/20 to-cyan-400/20 opacity-0 transition-opacity duration-300 hover:opacity-100" />
-        <span className="relative z-10">AML告警</span>
-      </Link>
-      <Link
         href="/admin/assets"
         className="relative overflow-hidden rounded-full border border-cyan-500/30 px-4 py-2 text-cyan-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400 hover:text-cyan-100 hover:shadow-[0_0_15px_rgba(0,255,255,0.5)] whitespace-nowrap flex-shrink-0"
       >
@@ -75,13 +68,6 @@ export default function AdminNavigation() {
       >
         <span className="absolute inset-0 bg-gradient-to-r from-cyan-600/20 via-cyan-500/20 to-cyan-400/20 opacity-0 transition-opacity duration-300 hover:opacity-100" />
         <span className="relative z-10">收益分配控制台</span>
-      </Link>
-      <Link
-        href="/admin/reports"
-        className="relative overflow-hidden rounded-full border border-cyan-500/30 px-4 py-2 text-cyan-200 transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400 hover:text-cyan-100 hover:shadow-[0_0_15px_rgba(0,255,255,0.5)] whitespace-nowrap flex-shrink-0"
-      >
-        <span className="absolute inset-0 bg-gradient-to-r from-cyan-600/20 via-cyan-500/20 to-cyan-400/20 opacity-0 transition-opacity duration-300 hover:opacity-100" />
-        <span className="relative z-10">报表导出</span>
       </Link>
     </>
   );
