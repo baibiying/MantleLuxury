@@ -791,36 +791,87 @@ export default function PortfolioPage() {
                 {/* 收益记录标签页 */}
                 {/* 总收益统计 */}
                 <div className="mb-6 grid gap-4 md:grid-cols-3">
-                  <TechCard className="px-6 py-5">
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
-                    <div className="relative z-10">
-                      <div className="text-xs text-slate-400 mb-2">累计收益</div>
-                      <div className="text-2xl font-bold text-emerald-400">
-                        {formatAmount(totalUserYield)} / {formatAmount(totalAllYield)} MNT
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        我的收益 / 总收益
-                      </div>
-                    </div>
-                  </TechCard>
-                  <TechCard className="px-6 py-5">
-                    <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
-                    <div className="relative z-10">
-                      <div className="text-xs text-slate-400 mb-2">资产数量</div>
-                      <div className="text-2xl font-bold text-sky-400">
-                        {assetGroups.length}
-                      </div>
-                    </div>
-                  </TechCard>
-                  <TechCard className="px-6 py-5">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
-                    <div className="relative z-10">
-                      <div className="text-xs text-slate-400 mb-2">已完成分配</div>
-                      <div className="text-2xl font-bold text-amber-400">
-                        {yields.filter((y) => y.isCompleted).length}
-                      </div>
-                    </div>
-                  </TechCard>
+                  {submittedAssets.length > 0 ? (
+                    <>
+                      {/* 提交者视角：代币销售收入 */}
+                      <TechCard className="px-6 py-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
+                        <div className="relative z-10">
+                          <div className="text-xs text-slate-400 mb-2">代币销售收入</div>
+                          <div className="text-2xl font-bold text-emerald-400">
+                            {formatAmount(
+                              submittedAssets.reduce((sum, asset) => sum + parseFloat(asset.revenue || "0"), 0).toString()
+                            )} MNT
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            来自投资者的购买
+                          </div>
+                        </div>
+                      </TechCard>
+                      {/* 提交的资产数量 */}
+                      <TechCard className="px-6 py-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+                        <div className="relative z-10">
+                          <div className="text-xs text-slate-400 mb-2">提交的资产</div>
+                          <div className="text-2xl font-bold text-sky-400">
+                            {submittedAssets.length}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {submittedAssets.filter(a => a.status === "funded" || a.status === "sold").length} 个已满额/已售出
+                          </div>
+                        </div>
+                      </TechCard>
+                      {/* 投资收益（如果也有投资） */}
+                      <TechCard className="px-6 py-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
+                        <div className="relative z-10">
+                          <div className="text-xs text-slate-400 mb-2">投资收益</div>
+                          <div className="text-2xl font-bold text-amber-400">
+                            {formatAmount(totalUserYield)} MNT
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {assetGroups.filter(g => !g.isSubmittedByUser).length > 0 
+                              ? `${assetGroups.filter(g => !g.isSubmittedByUser).length} 个投资资产`
+                              : "暂无投资收益"}
+                          </div>
+                        </div>
+                      </TechCard>
+                    </>
+                  ) : (
+                    <>
+                      {/* 投资者视角：投资收益 */}
+                      <TechCard className="px-6 py-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
+                        <div className="relative z-10">
+                          <div className="text-xs text-slate-400 mb-2">累计收益</div>
+                          <div className="text-2xl font-bold text-emerald-400">
+                            {formatAmount(totalUserYield)} / {formatAmount(totalAllYield)} MNT
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            我的收益 / 总收益
+                          </div>
+                        </div>
+                      </TechCard>
+                      <TechCard className="px-6 py-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+                        <div className="relative z-10">
+                          <div className="text-xs text-slate-400 mb-2">资产数量</div>
+                          <div className="text-2xl font-bold text-sky-400">
+                            {assetGroups.length}
+                          </div>
+                        </div>
+                      </TechCard>
+                      <TechCard className="px-6 py-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
+                        <div className="relative z-10">
+                          <div className="text-xs text-slate-400 mb-2">已完成分配</div>
+                          <div className="text-2xl font-bold text-amber-400">
+                            {yields.filter((y) => y.isCompleted).length}
+                          </div>
+                        </div>
+                      </TechCard>
+                    </>
+                  )}
                 </div>
 
                 {/* 收益记录列表 */}
