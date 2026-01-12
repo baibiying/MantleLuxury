@@ -1111,13 +1111,7 @@ SHOW TABLES;
 ## Team Bios and Contact Info
 
 ### Abby Bai
-- **Role**: Full Stack Developer & Project Mananger
+- **Role**: Full Stack Developer & Project Manager
+- **Bio**: Full-stack developer with expertise in blockchain, smart contracts, and web3 applications. Led the development of MantleLuxury from concept to MVP, including smart contract architecture, backend API design, frontend development, and deployment infrastructure.
 - **Email**: baibiying@icloud.com
-- **Phone**: 18600665034
-
----
-
-## 合规声明（RWA 相关项目需特别提供）
-- 本项目涉及与实物资产映射的链上代币（RWA），在部分司法辖区可能被视为受监管资产，需根据当地法律法规完成必要的许可、备案或豁免申请。
-- 本代码库仅用于技术演示与内部评估，不构成投资邀约或法律、税务、合规建议。上线生产环境前，请获取合格律师的正式法律意见，并确保获得所需的金融牌照/监管批准。
-- 如果您位于或服务的对象位于受限制/制裁地区，请勿使用或部署本项目；使用者须自行承担遵守当地法规的全部责任。
+- **Phone**: +8618600665034
