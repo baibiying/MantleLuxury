@@ -334,38 +334,17 @@ export default function PortfolioPage() {
           yieldsData = await yieldsRes.json();
         }
 
-        // 获取用户提交的资产的收益记录
+        // 获取用户提交的资产列表（用于显示代币销售收入，而不是YieldDistribution）
         let submittedAssetsData: SubmittedAsset[] = [];
         if (submittedAssetsRes.ok) {
           submittedAssetsData = await submittedAssetsRes.json();
         }
 
-        // 对于用户提交的资产，获取每个资产的收益记录
-        if (submittedAssetsData.length > 0) {
-          const submittedYieldsPromises = submittedAssetsData.map(async (asset) => {
-            try {
-              const res = await fetch(`${API_BASE}/api/yields/asset/${asset.assetId}`);
-              if (res.ok) {
-                const assetYields = await res.json();
-                return assetYields;
-              }
-            } catch (err) {
-              console.warn(`Failed to fetch yields for submitted asset ${asset.assetId}:`, err);
-            }
-            return [];
-          });
-
-          const submittedYieldsArrays = await Promise.all(submittedYieldsPromises);
-          const submittedYields = submittedYieldsArrays.flat();
-
-          // 合并收益记录，避免重复（使用id作为唯一标识）
-          const existingYieldIds = new Set(yieldsData.map(y => y.id));
-          const newYields = submittedYields.filter((y: YieldDistribution) => !existingYieldIds.has(y.id));
-          yieldsData = [...yieldsData, ...newYields];
-        }
-
-        // 获取用户提交的资产ID列表（用于标记哪些资产是用户提交的）
+        // 获取用户提交的资产ID列表（用于从收益记录中排除用户提交的资产）
         const submittedAssetIds = new Set(submittedAssetsData.map((a: any) => a.assetId));
+        
+        // 从收益记录中排除用户提交的资产（因为提交者的收益是代币销售收入，不是YieldDistribution）
+        yieldsData = yieldsData.filter(y => !submittedAssetIds.has(y.assetId));
 
         setYields(yieldsData);
 
@@ -853,166 +832,56 @@ export default function PortfolioPage() {
                   <div className="glass-effect border border-red-500/40 rounded-2xl px-6 py-8 text-center">
                     <p className="text-red-300">{yieldsError}</p>
                   </div>
-                ) : yields.length === 0 ? (
-                  <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
-                    <p className="text-slate-300 mb-4">暂无收益记录</p>
-                    <Link
-                      href="/assets"
-                      className="text-sky-400 hover:text-sky-300 underline"
-                    >
-                      去投资资产 →
-                    </Link>
-                  </div>
                 ) : (
                   <div className="space-y-8">
-                    {/* 我提交的资产收益 */}
-                    {assetGroups.filter(g => g.isSubmittedByUser).length > 0 && (
+                    {/* 我提交的资产收益（代币销售收入） */}
+                    {submittedAssets.length > 0 && (
                       <div>
                         <h3 className="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
                           <span className="px-3 py-1 rounded-full text-xs bg-purple-500/20 text-purple-300 border border-purple-400/40 font-medium">
                             我提交的资产
                           </span>
                           <span className="text-sm font-normal text-slate-400">
-                            ({assetGroups.filter(g => g.isSubmittedByUser).length} 个资产)
+                            ({submittedAssets.length} 个资产)
                           </span>
                         </h3>
                         <div className="space-y-6">
-                          {assetGroups.filter(g => g.isSubmittedByUser).map((group) => (
+                          {submittedAssets.map((asset) => (
                             <div
-                              key={group.assetId}
+                              key={asset.assetId}
                               className="glass-effect rounded-2xl border border-purple-500/30 overflow-hidden"
                             >
-                        {/* 资产汇总头部 */}
-                        <div className="bg-gradient-to-r from-sky-500/10 to-purple-500/10 px-6 py-4 border-b border-slate-700/50">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-lg font-bold text-slate-200">
-                                  {group.assetInfo 
-                                    ? `${group.assetInfo.brand} ${group.assetInfo.model}${group.assetInfo.year ? ` (${group.assetInfo.year})` : ''}`
-                                    : `资产 ${group.assetId.slice(0, 8)}...`}
-                                </h3>
-                                <span className="px-2 py-1 rounded text-xs bg-slate-700/40 text-slate-300">
-                                  {group.assetInfo?.assetType === 'watch' ? '腕表' : group.assetInfo?.assetType === 'jewelry' ? '珠宝' : '其他'}
-                                </span>
-                                {group.tokenSymbol && (
-                                  <span className="px-2 py-1 rounded text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-medium">
-                                    {group.tokenSymbol}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-slate-400">
-                                资产 ID: {group.assetId.slice(0, 8)}... | {group.yields.length} 笔收益记录
-                                {group.tokenSymbol && ` | 代币符号: ${group.tokenSymbol}`}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xs text-slate-400 mb-1">该资产收益汇总</div>
-                              <div className="text-xl font-bold text-emerald-400">
-                                {formatAmount(group.userTotal.toString())} / {formatAmount(group.allTotal.toString())} MNT
-                              </div>
-                              <div className="text-xs text-slate-500 mt-1">我的收益 / 总收益</div>
-                              {(() => {
-                                const holding = getAssetHolding(group.assetId, group.yields[0]?.tokenAddress || null);
-                                if (!holding) return null;
-                                return (
-                                  <div className="mt-3 space-y-1">
-                                    {holding.roi && (
-                                      <div className="text-xs text-slate-300">
-                                        收益率: <span className="font-medium text-sky-400">{(Number(holding.roi) * 100).toFixed(2)}%</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 该资产的收益记录列表 */}
-                        <div className="px-6 py-4 space-y-3">
-                          {group.yields.map((yieldItem) => (
-                            <div
-                              key={yieldItem.id}
-                              className="card-hover glass-effect rounded-xl border border-slate-700/30 px-4 py-3 relative overflow-hidden"
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-br from-sky-500/3 to-purple-500/3"></div>
-                              <div className="relative z-10">
-                                <div className="flex items-start justify-between mb-3">
+                              {/* 资产汇总头部 */}
+                              <div className="bg-gradient-to-r from-sky-500/10 to-purple-500/10 px-6 py-4 border-b border-slate-700/50">
+                                <div className="flex items-center justify-between">
                                   <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <span
-                                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                          yieldItem.isCompleted
-                                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40"
-                                            : "bg-amber-500/20 text-amber-300 border border-amber-400/40"
-                                        }`}
-                                      >
-                                        {yieldItem.isCompleted ? "已完成" : "进行中"}
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <h3 className="text-lg font-bold text-slate-200">
+                                        {asset.brand} {asset.model}{asset.year ? ` (${asset.year})` : ''}
+                                      </h3>
+                                      <span className="px-2 py-1 rounded text-xs bg-slate-700/40 text-slate-300">
+                                        {asset.assetType === 'watch' ? '腕表' : asset.assetType === 'jewelry' ? '珠宝' : '其他'}
                                       </span>
-                                      <span className="px-2 py-1 rounded-full text-xs bg-slate-700/40 text-slate-300 border border-slate-600/40">
-                                        {yieldItem.yieldType === "appreciation"
-                                          ? "升值收益"
-                                          : "租赁收益"}
+                                      <span className="px-2 py-1 rounded text-xs bg-sky-500/20 text-sky-300 border border-sky-400/40">
+                                        {asset.status === "fundraising" ? "募集中" : asset.status === "funded" ? "已满额" : asset.status === "sold" ? "已售出" : asset.status}
                                       </span>
                                     </div>
                                     <div className="text-xs text-slate-400">
-                                      分配 ID: {yieldItem.distributionIdBytes32.slice(0, 10)}...
-                                      {yieldItem.distributionIdBytes32.slice(-8)}
+                                      资产 ID: {asset.assetId.slice(0, 8)}...
+                                      {asset.pricePerShare && ` | 单份价格: ${formatAmount(asset.pricePerShare)} MNT`}
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    <div className="text-xs text-slate-400 mb-1">我的收益 / 总收益</div>
-                                    <div className="text-lg font-bold text-emerald-400">
-                                      {formatAmount(
-                                        yieldItem.userShare !== undefined 
-                                          ? yieldItem.userShare 
-                                          : yieldItem.totalAmount
-                                      )} / {formatAmount(yieldItem.totalAmount)} MNT
+                                    <div className="text-xs text-slate-400 mb-1">代币销售收入</div>
+                                    <div className="text-xl font-bold text-emerald-400">
+                                      {formatAmount(asset.revenue)} MNT
                                     </div>
-                                    {yieldItem.isCompleted && (
-                                      <div className="text-xs text-slate-500 mt-1">
-                                        已分配: {formatAmount(yieldItem.distributedAmount)} MNT
-                                      </div>
-                                    )}
+                                    <div className="text-xs text-slate-500 mt-1">来自投资者的购买</div>
                                   </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                                  <div>
-                                    <div className="text-slate-500 text-xs mb-1">创建时间</div>
-                                    <div className="text-slate-300">
-                                      {formatDate(yieldItem.createdAt)}
-                                    </div>
-                                  </div>
-                                  {yieldItem.completedAt && (
-                                    <div>
-                                      <div className="text-slate-500 text-xs mb-1">完成时间</div>
-                                      <div className="text-slate-300">
-                                        {formatDate(yieldItem.completedAt)}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {yieldItem.transactionHash && (
-                                    <div>
-                                      <div className="text-slate-500 text-xs mb-1">交易</div>
-                                      <a
-                                        href={`https://explorer.sepolia.mantle.xyz/tx/${yieldItem.transactionHash}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sky-400 hover:text-sky-300 text-xs"
-                                      >
-                                        查看交易 →
-                                      </a>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             </div>
                           ))}
-                        </div>
-                      </div>
-                    ))}
                         </div>
                       </div>
                     )}
@@ -1025,11 +894,11 @@ export default function PortfolioPage() {
                             我投资的资产
                           </span>
                           <span className="text-sm font-normal text-slate-400">
-                            ({assetGroups.filter(g => !g.isSubmittedByUser).length} 个资产)
+                            ({assetGroups.length} 个资产)
                           </span>
                         </h3>
                         <div className="space-y-6">
-                          {assetGroups.filter(g => !g.isSubmittedByUser).map((group) => (
+                          {assetGroups.map((group) => (
                             <div
                               key={group.assetId}
                               className="glass-effect rounded-2xl border border-slate-700/50 overflow-hidden"
@@ -1166,6 +1035,19 @@ export default function PortfolioPage() {
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* 如果没有投资收益记录且没有提交的资产，显示提示 */}
+                    {yields.length === 0 && assetGroups.length === 0 && submittedAssets.length === 0 && (
+                      <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+                        <p className="text-slate-300 mb-4">暂无收益记录</p>
+                        <Link
+                          href="/assets"
+                          className="text-sky-400 hover:text-sky-300 underline"
+                        >
+                          去投资资产 →
+                        </Link>
                       </div>
                     )}
                   </div>
