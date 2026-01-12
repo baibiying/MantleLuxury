@@ -395,7 +395,7 @@ public class AssetService {
         // 创建 AssetImage 实体
         AssetImage assetImage = new AssetImage();
         // 注意：如果 assetId 为 null，数据库表必须允许 asset_id 为 null
-        // 如果数据库表不允许 null，需要先执行迁移脚本：database/migration-allow-null-asset-id.sql
+        // 如果使用本地开发，请运行 database/start-mysql.sh 来初始化数据库（会自动处理此问题）
         assetImage.setAssetId(assetId); // 允许为 null（用于临时存储）
         assetImage.setImageIndex(imageIndex);
         assetImage.setImageData(imageData);
@@ -410,10 +410,10 @@ public class AssetService {
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             if (assetId == null && e.getMessage() != null && e.getMessage().contains("asset_id")) {
                 logger.error("Failed to save image with null assetId. Database table 'asset_images' may not allow null for 'asset_id' column. " +
-                        "Please execute migration script: database/migration-allow-null-asset-id.sql");
+                        "Please run database/start-mysql.sh to initialize the database properly.");
                 throw new IllegalStateException(
                         "Cannot save image without assetId. Database table 'asset_images' must allow null for 'asset_id' column. " +
-                        "Please execute migration script: database/migration-allow-null-asset-id.sql", e);
+                        "Please run database/start-mysql.sh to initialize the database properly.", e);
             }
             throw e;
         }
