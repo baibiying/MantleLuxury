@@ -29,6 +29,8 @@ type Asset = {
   description: string | null;
   imageUrls?: string | null;
   model3dUrl?: string | null;
+  rentalYield?: string | null; // 租赁收益
+  appreciationYield?: string | null; // 升值收益
   authentications?: Array<{
     id: string;
     authenticationStatus: string;
@@ -843,6 +845,18 @@ export default function AssetDetailPage() {
                   <div>
                     <dt className="text-slate-500">剩余可购</dt>
                     <dd>{displayRemaining}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">租赁收益</dt>
+                    <dd className="font-semibold text-emerald-400">
+                      {asset.rentalYield ? parseFloat(asset.rentalYield).toFixed(4) : "0.0000"} MNT
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">升值收益</dt>
+                    <dd className="font-semibold text-emerald-400">
+                      {asset.appreciationYield ? parseFloat(asset.appreciationYield).toFixed(4) : "0.0000"} MNT
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-slate-500">状态</dt>
