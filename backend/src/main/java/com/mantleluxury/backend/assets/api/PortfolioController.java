@@ -448,6 +448,58 @@ public class PortfolioController {
                 .headers(headers)
                 .body(csv.toString());
     }
+
+    /**
+     * 获取提交者的资产收益（提交者从他们提交的资产获得的收益）
+     */
+    @GetMapping("/{userAddress}/submitted-assets")
+    public ResponseEntity<List<Map<String, Object>>> getSubmittedAssetsRevenue(@PathVariable String userAddress) {
+        // 规范化地址
+        String normalizedAddress = userAddress.trim().toLowerCase();
+        if (!normalizedAddress.startsWith("0x")) {
+            normalizedAddress = "0x" + normalizedAddress;
+        }
+
+        // 查询该地址提交的所有资产
+        List<Asset> submittedAssets = assetRepository.findBySubmittedBy(normalizedAddress);
+        if (submittedAssets.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        // 获取所有投资记录，按资产ID分组计算收益
+        List<UserInvestment> allInvestments = investmentRepository.findAll();
+        Map<String, BigDecimal> revenueByAssetId = allInvestments.stream()
+                .collect(Collectors.groupingBy(
+                        UserInvestment::getAssetId,
+                        Collectors.reducing(
+                                BigDecimal.ZERO,
+                                UserInvestment::getInvestedAmountMnt,
+                                BigDecimal::add
+                        )
+                ));
+
+        // 构建结果
+        List<Map<String, Object>> result = submittedAssets.stream()
+                .map(asset -> {
+                    BigDecimal revenue = revenueByAssetId.getOrDefault(asset.getId(), BigDecimal.ZERO);
+                    Map<String, Object> m = new java.util.HashMap<>();
+                    m.put("assetId", asset.getId());
+                    m.put("assetType", asset.getAssetType());
+                    m.put("brand", asset.getBrand());
+                    m.put("model", asset.getModel());
+                    m.put("year", asset.getYear());
+                    m.put("tokenAddress", asset.getTokenAddress());
+                    m.put("status", asset.getStatus());
+                    m.put("pricePerShare", asset.getPricePerShare());
+                    m.put("totalSupply", asset.getTotalSupply());
+                    m.put("revenue", revenue); // 从该资产获得的收益
+                    m.put("createdAt", asset.getCreatedAt());
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
+    }
 }
 
 

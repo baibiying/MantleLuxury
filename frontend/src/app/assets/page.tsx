@@ -124,18 +124,18 @@ export default function AssetsPage() {
         withToken
           .filter((a) => a.status === "fundraising")
           .map(async (asset) => {
-            try {
-              const raw = (await publicClient.readContract({
-                address: asset.tokenAddress as `0x${string}`,
-                abi: luxuryTokenAbi,
-                functionName: "getAvailableTokens",
-              })) as bigint;
-              const formatted = formatEther(raw);
-              return [asset.tokenAddress as string, formatted] as const;
-            } catch {
-              return null;
-            }
-          })
+          try {
+            const raw = (await publicClient.readContract({
+              address: asset.tokenAddress as `0x${string}`,
+              abi: luxuryTokenAbi,
+              functionName: "getAvailableTokens",
+            })) as bigint;
+            const formatted = formatEther(raw);
+            return [asset.tokenAddress as string, formatted] as const;
+          } catch {
+            return null;
+          }
+        })
       );
 
       const nextRemaining: Record<string, string> = {};
@@ -520,34 +520,34 @@ export default function AssetsPage() {
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   {/* 左列 */}
                   <div className="space-y-2">
-                    <div className="space-y-1">
-                      <dt className="text-slate-500 text-xs">单份价格</dt>
-                      <dd className="font-bold text-sky-400">{asset.pricePerShare} MNT</dd>
-                    </div>
-                    <div className="space-y-1">
-                      <dt className="text-slate-500 text-xs">剩余可购</dt>
+                  <div className="space-y-1">
+                    <dt className="text-slate-500 text-xs">单份价格</dt>
+                    <dd className="font-bold text-sky-400">{asset.pricePerShare} MNT</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-slate-500 text-xs">剩余可购</dt>
+                    <dd className="font-semibold text-emerald-400">
+                      {(() => {
+                        const remaining = asset.tokenAddress &&
+                          onchainRemaining[asset.tokenAddress] !== undefined
+                          ? onchainRemaining[asset.tokenAddress]
+                          : asset.remainingSupply;
+                        const remainingNum = parseFloat(remaining ?? "0");
+                        if (!remaining || isNaN(remainingNum) || remainingNum <= 0) {
+                          return "暂不可购";
+                        }
+                        return `${remaining} 份`;
+                      })()}
+                    </dd>
+                  </div>
+                  {asset.totalYield && parseFloat(asset.totalYield) > 0 && (
+                      <div className="space-y-1">
+                      <dt className="text-slate-500 text-xs">累计收益</dt>
                       <dd className="font-semibold text-emerald-400">
-                        {(() => {
-                          const remaining = asset.tokenAddress &&
-                            onchainRemaining[asset.tokenAddress] !== undefined
-                            ? onchainRemaining[asset.tokenAddress]
-                            : asset.remainingSupply;
-                          const remainingNum = parseFloat(remaining ?? "0");
-                          if (!remaining || isNaN(remainingNum) || remainingNum <= 0) {
-                            return "暂不可购";
-                          }
-                          return `${remaining} 份`;
-                        })()}
+                        {parseFloat(asset.totalYield).toFixed(4)} MNT
                       </dd>
                     </div>
-                    {asset.totalYield && parseFloat(asset.totalYield) > 0 && (
-                      <div className="space-y-1">
-                        <dt className="text-slate-500 text-xs">累计收益</dt>
-                        <dd className="font-semibold text-emerald-400">
-                          {parseFloat(asset.totalYield).toFixed(4)} MNT
-                        </dd>
-                      </div>
-                    )}
+                  )}
                   </div>
                   
                   {/* 右列 */}
@@ -562,20 +562,20 @@ export default function AssetsPage() {
                         <dd className="font-semibold text-sky-400">{tokenInfos[asset.tokenAddress].symbol}</dd>
                       </div>
                     )}
-                    {(() => {
-                      const expectedYield = calculateExpectedYield(asset);
-                      if (expectedYield > 0) {
-                        return (
+                  {(() => {
+                    const expectedYield = calculateExpectedYield(asset);
+                    if (expectedYield > 0) {
+                      return (
                           <div className="space-y-1">
-                            <dt className="text-slate-500 text-xs">预期收益率</dt>
-                            <dd className="font-semibold text-amber-400">
-                              {expectedYield.toFixed(2)}%
-                            </dd>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
+                          <dt className="text-slate-500 text-xs">预期收益率</dt>
+                          <dd className="font-semibold text-amber-400">
+                            {expectedYield.toFixed(2)}%
+                          </dd>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   </div>
                 </dl>
               </div>
