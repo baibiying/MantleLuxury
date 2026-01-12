@@ -587,26 +587,28 @@ export default function PortfolioPage() {
             {activeTab === "holdings" ? (
               <>
             {/* 持仓统计 */}
-            <div className="mb-6 grid gap-4 md:grid-cols-2">
-              <TechCard className="px-6 py-5">
-                <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
-                <div className="relative z-10">
-                  <div className="text-xs text-slate-400 mb-2">持仓资产数</div>
-                  <div className="text-2xl font-bold text-sky-400">
-                    {holdings.length}
+            {holdings.length > 0 && (
+              <div className="mb-6 grid gap-4 md:grid-cols-2">
+                <TechCard className="px-6 py-5">
+                  <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+                  <div className="relative z-10">
+                    <div className="text-xs text-slate-400 mb-2">持仓资产数</div>
+                    <div className="text-2xl font-bold text-sky-400">
+                      {holdings.length}
+                    </div>
                   </div>
-                </div>
-              </TechCard>
-              <TechCard className="px-6 py-5">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
-                <div className="relative z-10">
-                  <div className="text-xs text-slate-400 mb-2">总持仓成本</div>
-                  <div className="text-2xl font-bold text-amber-400">
-                    {holdings.reduce((sum, h) => sum + parseFloat(h.totalCost || "0"), 0).toFixed(4)} MNT
+                </TechCard>
+                <TechCard className="px-6 py-5">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
+                  <div className="relative z-10">
+                    <div className="text-xs text-slate-400 mb-2">总持仓成本</div>
+                    <div className="text-2xl font-bold text-amber-400">
+                      {holdings.reduce((sum, h) => sum + parseFloat(h.totalCost || "0"), 0).toFixed(4)} MNT
+                    </div>
                   </div>
-                </div>
-              </TechCard>
-            </div>
+                </TechCard>
+              </div>
+            )}
 
             {loading ? (
               <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center text-sm text-slate-300">
@@ -790,7 +792,7 @@ export default function PortfolioPage() {
               <>
                 {/* 收益记录标签页 */}
                 {/* 总收益统计 */}
-                <div className="mb-6 grid gap-4 md:grid-cols-3">
+                <div className={`mb-6 grid gap-4 ${submittedAssets.length > 0 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
                   {submittedAssets.length > 0 ? (
                     <>
                       {/* 提交者视角：代币销售收入 */}
@@ -818,21 +820,6 @@ export default function PortfolioPage() {
                           </div>
                           <div className="text-xs text-slate-500 mt-1">
                             {submittedAssets.filter(a => a.status === "funded" || a.status === "sold").length} 个已满额/已售出
-                          </div>
-                        </div>
-                      </TechCard>
-                      {/* 投资收益（如果也有投资） */}
-                      <TechCard className="px-6 py-5">
-                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
-                        <div className="relative z-10">
-                          <div className="text-xs text-slate-400 mb-2">投资收益</div>
-                          <div className="text-2xl font-bold text-amber-400">
-                            {formatAmount(totalUserYield)} MNT
-                          </div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            {assetGroups.filter(g => !g.isSubmittedByUser).length > 0 
-                              ? `${assetGroups.filter(g => !g.isSubmittedByUser).length} 个投资资产`
-                              : "暂无投资收益"}
                           </div>
                         </div>
                       </TechCard>
