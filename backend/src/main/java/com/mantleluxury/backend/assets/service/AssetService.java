@@ -518,13 +518,21 @@ public class AssetService {
         
         // 计算累计收益（统计所有收益记录，包括未完成的）
         BigDecimal totalYield = BigDecimal.ZERO;
+        BigDecimal rentalYield = BigDecimal.ZERO;
+        BigDecimal appreciationYield = BigDecimal.ZERO;
         if (asset.getId() != null) {
             List<YieldDistribution> yields = yieldDistributionRepository.findByAssetId(asset.getId());
-            totalYield = yields.stream()
-                    .map(dist -> dist.getIsCompleted() 
-                        ? dist.getDistributedAmount() 
-                        : dist.getTotalAmount())
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            for (YieldDistribution dist : yields) {
+                BigDecimal amount = dist.getIsCompleted() 
+                    ? (dist.getDistributedAmount() != null ? dist.getDistributedAmount() : BigDecimal.ZERO)
+                    : (dist.getTotalAmount() != null ? dist.getTotalAmount() : BigDecimal.ZERO);
+                totalYield = totalYield.add(amount);
+                if ("rental".equals(dist.getYieldType())) {
+                    rentalYield = rentalYield.add(amount);
+                } else if ("appreciation".equals(dist.getYieldType())) {
+                    appreciationYield = appreciationYield.add(amount);
+                }
+            }
         }
         
         // 获取认证信息
@@ -567,6 +575,8 @@ public class AssetService {
                 asset.getImageUrls(),     // 图片
                 asset.getModel3dUrl(),    // 3D模型URL
                 totalYield,                // 累计收益
+                rentalYield,               // 租赁收益
+                appreciationYield,         // 升值收益
                 authentications,           // 认证信息
                 custody,                   // 托管信息
                 insurance,                 // 保险信息

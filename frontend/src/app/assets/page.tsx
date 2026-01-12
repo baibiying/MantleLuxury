@@ -23,6 +23,8 @@ type Asset = {
   tokenAddress: string | null;
   imageUrls?: string | null;
   totalYield?: string | null; // 累计收益
+  rentalYield?: string | null; // 租赁收益
+  appreciationYield?: string | null; // 升值收益
   custody?: {
     id: string;
     custodyStatus: string;
@@ -56,7 +58,7 @@ export default function AssetsPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
-  const [sortKey, setSortKey] = useState<"price" | "recent" | "yield">("recent");
+  const [sortKey, setSortKey] = useState<"price" | "recent" | "rentalYield" | "appreciationYield">("recent");
   const [priceMin, setPriceMin] = useState<string>("");
   const [priceMax, setPriceMax] = useState<string>("");
   const [myAssetsOnly, setMyAssetsOnly] = useState<boolean>(false);
@@ -202,24 +204,6 @@ export default function AssetsPage() {
   // 提取所有品牌（用于筛选下拉框）
   const allBrands = Array.from(new Set(assets.map(a => a.brand).filter(Boolean))).sort();
 
-  // 计算预期收益率（基于累计收益和总供应量）
-  const calculateExpectedYield = (asset: Asset): number => {
-    if (!asset.totalYield || !asset.totalSupply || !asset.pricePerShare) {
-      return 0;
-    }
-    const totalYield = parseFloat(asset.totalYield);
-    const totalSupply = parseFloat(asset.totalSupply);
-    const pricePerShare = parseFloat(asset.pricePerShare);
-    
-    if (totalSupply === 0 || pricePerShare === 0) {
-      return 0;
-    }
-    
-    // 预期收益率 = (累计收益 / 总供应量) / 每份价格 * 100
-    // 这表示每份代币的平均收益相对于价格的百分比
-    const yieldPerShare = totalYield / totalSupply;
-    return (yieldPerShare / pricePerShare) * 100;
-  };
 
   // 过滤与排序
   const filtered = assets
@@ -250,11 +234,17 @@ export default function AssetsPage() {
       if (sortKey === "price") {
         return parseFloat(a.pricePerShare) - parseFloat(b.pricePerShare);
       }
-      if (sortKey === "yield") {
-        // 按预期收益率从高到低排序
-        const yieldA = calculateExpectedYield(a);
-        const yieldB = calculateExpectedYield(b);
-        return yieldB - yieldA;
+      if (sortKey === "rentalYield") {
+        // 按租赁收益从高到低排序
+        const rentalA = a.rentalYield ? parseFloat(a.rentalYield) : 0;
+        const rentalB = b.rentalYield ? parseFloat(b.rentalYield) : 0;
+        return rentalB - rentalA;
+      }
+      if (sortKey === "appreciationYield") {
+        // 按升值收益从高到低排序
+        const appreciationA = a.appreciationYield ? parseFloat(a.appreciationYield) : 0;
+        const appreciationB = b.appreciationYield ? parseFloat(b.appreciationYield) : 0;
+        return appreciationB - appreciationA;
       }
       // recent: 默认按加载顺序（假定后端按创建时间）
       return 0;
@@ -376,7 +366,8 @@ export default function AssetsPage() {
               >
                 <option value="recent">上架时间（默认）</option>
                 <option value="price">价格（从低到高）</option>
-                <option value="yield">预期收益率（从高到低）</option>
+                <option value="rentalYield">租赁收益（从高到低）</option>
+                <option value="appreciationYield">升值收益（从高到低）</option>
               </select>
             </div>
             {/* 价格区间占据 2 列 */}
@@ -540,14 +531,12 @@ export default function AssetsPage() {
                       })()}
                     </dd>
                   </div>
-                  {asset.totalYield && parseFloat(asset.totalYield) > 0 && (
-                      <div className="space-y-1">
-                      <dt className="text-slate-500 text-xs">累计收益</dt>
-                      <dd className="font-semibold text-emerald-400">
-                        {parseFloat(asset.totalYield).toFixed(4)} MNT
-                      </dd>
-                    </div>
-                  )}
+                  <div className="space-y-1">
+                    <dt className="text-slate-500 text-xs">租赁收益</dt>
+                    <dd className="font-semibold text-emerald-400">
+                      {asset.rentalYield ? parseFloat(asset.rentalYield).toFixed(4) : "0.0000"} MNT
+                    </dd>
+                  </div>
                   </div>
                   
                   {/* 右列 */}
@@ -562,20 +551,12 @@ export default function AssetsPage() {
                         <dd className="font-semibold text-sky-400">{tokenInfos[asset.tokenAddress].symbol}</dd>
                       </div>
                     )}
-                  {(() => {
-                    const expectedYield = calculateExpectedYield(asset);
-                    if (expectedYield > 0) {
-                      return (
-                          <div className="space-y-1">
-                          <dt className="text-slate-500 text-xs">预期收益率</dt>
-                          <dd className="font-semibold text-amber-400">
-                            {expectedYield.toFixed(2)}%
-                          </dd>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
+                    <div className="space-y-1">
+                      <dt className="text-slate-500 text-xs">升值收益</dt>
+                      <dd className="font-semibold text-emerald-400">
+                        {asset.appreciationYield ? parseFloat(asset.appreciationYield).toFixed(4) : "0.0000"} MNT
+                      </dd>
+                    </div>
                   </div>
                 </dl>
               </div>

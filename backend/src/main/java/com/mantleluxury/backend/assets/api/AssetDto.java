@@ -24,6 +24,8 @@ public record AssetDto(
         String imageUrls,      // 资产图片（JSON 字符串）
         String model3dUrl,      // 3D模型文件URL
         BigDecimal totalYield, // 累计收益（升值收益）
+        BigDecimal rentalYield, // 租赁收益
+        BigDecimal appreciationYield, // 升值收益
         List<Map<String, Object>> authentications,  // 认证信息列表
         Map<String, Object> custody,  // 托管信息
         Map<String, Object> insurance,  // 保险信息

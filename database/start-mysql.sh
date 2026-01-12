@@ -606,6 +606,28 @@ ensure_schema() {
     
     # 检查并创建 asset_images 表（如果不存在），并确保 asset_id 允许为 null
     print_info "检查 asset_images 表..."
+    
+    # 首先检查表是否存在且有表空间问题
+    local check_table_exists_sql="
+        SELECT COUNT(*) 
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND TABLE_NAME = 'asset_images';
+    "
+    local table_exists=$(docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -sN -e "$check_table_exists_sql" 2>/dev/null)
+    
+    # 如果表存在，尝试测试查询以检查是否有表空间问题
+    if [ "$table_exists" = "1" ]; then
+        print_info "asset_images 表已存在，检查表空间问题..."
+        if ! docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT 1 FROM asset_images LIMIT 1" > /dev/null 2>&1; then
+            print_warn "检测到 asset_images 表存在表空间问题，将删除并重新创建..."
+            # 删除有问题的表
+            docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "DROP TABLE IF EXISTS asset_images;" > /dev/null 2>&1
+            print_info "已删除有问题的 asset_images 表"
+        fi
+    fi
+    
+    # 创建表（如果不存在）
     local create_asset_images_table_sql="
         CREATE TABLE IF NOT EXISTS asset_images (
             id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -616,7 +638,6 @@ ensure_schema() {
             original_filename VARCHAR(255) COMMENT '原始文件名',
             file_size BIGINT COMMENT '文件大小（字节）',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
             INDEX idx_asset_id (asset_id),
             INDEX idx_asset_image_index (asset_id, image_index),
             UNIQUE KEY uk_asset_image (asset_id, image_index)
@@ -624,6 +645,40 @@ ensure_schema() {
     "
     if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$create_asset_images_table_sql" > /dev/null 2>&1; then
         print_info "asset_images 表检查完成（如不存在已自动创建）"
+        
+        # 如果 assets 表存在，添加外键约束
+        local check_assets_table_sql="
+            SELECT COUNT(*) 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'assets';
+        "
+        local assets_table_exists=$(docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -sN -e "$check_assets_table_sql" 2>/dev/null)
+        
+        if [ "$assets_table_exists" = "1" ]; then
+            # 检查外键是否已存在
+            local check_fk_sql="
+                SELECT COUNT(*) 
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'asset_images'
+                AND CONSTRAINT_NAME = 'fk_asset_images_asset_id';
+            "
+            local fk_exists=$(docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -sN -e "$check_fk_sql" 2>/dev/null)
+            
+            if [ "$fk_exists" != "1" ]; then
+                local add_fk_sql="
+                    ALTER TABLE asset_images 
+                    ADD CONSTRAINT fk_asset_images_asset_id 
+                    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE;
+                "
+                if docker exec "$CONTAINER_NAME" mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "$add_fk_sql" > /dev/null 2>&1; then
+                    print_info "已添加 asset_images 表的外键约束"
+                else
+                    print_warn "添加外键约束失败，但不影响功能"
+                fi
+            fi
+        fi
     else
         print_warn "asset_images 表创建失败，请手动检查数据库"
     fi
