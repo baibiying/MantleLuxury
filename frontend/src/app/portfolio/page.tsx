@@ -102,7 +102,7 @@ export default function PortfolioPage() {
   const chainId = useChainId();
 
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<"holdings" | "yields">("holdings");
+  const [activeTab, setActiveTab] = useState<"holdings" | "investment-yields" | "submitted-yields">("holdings");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [holdings, setHoldings] = useState<Holding[]>([]);
@@ -573,14 +573,24 @@ export default function PortfolioPage() {
                 我的持仓
               </button>
               <button
-                onClick={() => setActiveTab("yields")}
+                onClick={() => setActiveTab("investment-yields")}
                 className={`px-6 py-3 text-sm font-medium transition-colors ${
-                  activeTab === "yields"
+                  activeTab === "investment-yields"
                     ? "text-sky-400 border-b-2 border-sky-400"
                     : "text-slate-400 hover:text-slate-300"
                 }`}
               >
-                收益记录
+                资产投资收益
+              </button>
+              <button
+                onClick={() => setActiveTab("submitted-yields")}
+                className={`px-6 py-3 text-sm font-medium transition-colors ${
+                  activeTab === "submitted-yields"
+                    ? "text-sky-400 border-b-2 border-sky-400"
+                    : "text-slate-400 hover:text-slate-300"
+                }`}
+              >
+                提交资产收益
               </button>
             </div>
 
@@ -788,45 +798,25 @@ export default function PortfolioPage() {
               </>
             )}
               </>
-            ) : (
+            ) : activeTab === "investment-yields" ? (
               <>
-                {/* 收益记录标签页 */}
-                {/* 总收益统计 */}
-                <div className={`mb-6 grid gap-4 ${submittedAssets.length > 0 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-                  {submittedAssets.length > 0 ? (
-                    <>
-                      {/* 提交者视角：代币销售收入 */}
-                      <TechCard className="px-6 py-5">
-                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
-                        <div className="relative z-10">
-                          <div className="text-xs text-slate-400 mb-2">代币销售收入</div>
-                          <div className="text-2xl font-bold text-emerald-400">
-                            {formatAmount(
-                              submittedAssets.reduce((sum, asset) => sum + parseFloat(asset.revenue || "0"), 0).toString()
-                            )} MNT
-                          </div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            来自投资者的购买
-                          </div>
-                        </div>
-                      </TechCard>
-                      {/* 提交的资产数量 */}
-                      <TechCard className="px-6 py-5">
-                        <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
-                        <div className="relative z-10">
-                          <div className="text-xs text-slate-400 mb-2">提交的资产</div>
-                          <div className="text-2xl font-bold text-sky-400">
-                            {submittedAssets.length}
-                          </div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            {submittedAssets.filter(a => a.status === "funded" || a.status === "sold").length} 个已满额/已售出
-                          </div>
-                        </div>
-                      </TechCard>
-                    </>
-                  ) : (
-                    <>
-                      {/* 投资者视角：投资收益 */}
+                {/* 资产投资收益标签页 */}
+                {yieldsLoading ? (
+                  <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+                    <p className="text-slate-300">加载中...</p>
+                  </div>
+                ) : yieldsError ? (
+                  <div className="glass-effect border border-red-500/40 rounded-2xl px-6 py-8 text-center">
+                    <p className="text-red-300">{yieldsError}</p>
+                  </div>
+                ) : assetGroups.filter(g => !g.isSubmittedByUser).length === 0 ? (
+                  <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+                    <p className="text-slate-300">暂无投资收益记录</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* 总收益统计 */}
+                    <div className="mb-6 grid gap-4 md:grid-cols-3">
                       <TechCard className="px-6 py-5">
                         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
                         <div className="relative z-10">
@@ -844,7 +834,7 @@ export default function PortfolioPage() {
                         <div className="relative z-10">
                           <div className="text-xs text-slate-400 mb-2">资产数量</div>
                           <div className="text-2xl font-bold text-sky-400">
-                            {assetGroups.length}
+                            {assetGroups.filter(g => !g.isSubmittedByUser).length}
                           </div>
                         </div>
                       </TechCard>
@@ -857,86 +847,11 @@ export default function PortfolioPage() {
                           </div>
                         </div>
                       </TechCard>
-                    </>
-                  )}
-                </div>
+                    </div>
 
-                {/* 收益记录列表 */}
-                {yieldsLoading ? (
-                  <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
-                    <p className="text-slate-300">加载中...</p>
-                  </div>
-                ) : yieldsError ? (
-                  <div className="glass-effect border border-red-500/40 rounded-2xl px-6 py-8 text-center">
-                    <p className="text-red-300">{yieldsError}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-8">
-                    {/* 我提交的资产收益（代币销售收入） */}
-                    {submittedAssets.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
-                          <span className="px-3 py-1 rounded-full text-xs bg-purple-500/20 text-purple-300 border border-purple-400/40 font-medium">
-                            我提交的资产
-                          </span>
-                          <span className="text-sm font-normal text-slate-400">
-                            ({submittedAssets.length} 个资产)
-                          </span>
-                        </h3>
-                        <div className="space-y-6">
-                          {submittedAssets.map((asset) => (
-                            <div
-                              key={asset.assetId}
-                              className="glass-effect rounded-2xl border border-purple-500/30 overflow-hidden"
-                            >
-                              {/* 资产汇总头部 */}
-                              <div className="bg-gradient-to-r from-sky-500/10 to-purple-500/10 px-6 py-4 border-b border-slate-700/50">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                      <h3 className="text-lg font-bold text-slate-200">
-                                        {asset.brand} {asset.model}{asset.year ? ` (${asset.year})` : ''}
-                                      </h3>
-                                      <span className="px-2 py-1 rounded text-xs bg-slate-700/40 text-slate-300">
-                                        {asset.assetType === 'watch' ? '腕表' : asset.assetType === 'jewelry' ? '珠宝' : '其他'}
-                                      </span>
-                                      <span className="px-2 py-1 rounded text-xs bg-sky-500/20 text-sky-300 border border-sky-400/40">
-                                        {asset.status === "fundraising" ? "募集中" : asset.status === "funded" ? "已满额" : asset.status === "sold" ? "已售出" : asset.status}
-                                      </span>
-                                    </div>
-                                    <div className="text-xs text-slate-400">
-                                      资产 ID: {asset.assetId.slice(0, 8)}...
-                                      {asset.pricePerShare && ` | 单份价格: ${formatAmount(asset.pricePerShare)} MNT`}
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="text-xs text-slate-400 mb-1">代币销售收入</div>
-                                    <div className="text-xl font-bold text-emerald-400">
-                                      {formatAmount(asset.revenue)} MNT
-                                    </div>
-                                    <div className="text-xs text-slate-500 mt-1">来自投资者的购买</div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 我投资的资产收益 */}
-                    {assetGroups.filter(g => !g.isSubmittedByUser).length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
-                          <span className="px-3 py-1 rounded-full text-xs bg-sky-500/20 text-sky-300 border border-sky-400/40 font-medium">
-                            我投资的资产
-                          </span>
-                          <span className="text-sm font-normal text-slate-400">
-                            ({assetGroups.length} 个资产)
-                          </span>
-                        </h3>
-                        <div className="space-y-6">
-                          {assetGroups.map((group) => (
+                    {/* 投资收益记录列表 */}
+                    <div className="space-y-6">
+                      {assetGroups.filter(g => !g.isSubmittedByUser).map((group) => (
                             <div
                               key={group.assetId}
                               className="glass-effect rounded-2xl border border-slate-700/50 overflow-hidden"
@@ -1072,26 +987,106 @@ export default function PortfolioPage() {
                               </div>
                             </div>
                           ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 如果没有投资收益记录且没有提交的资产，显示提示 */}
-                    {yields.length === 0 && assetGroups.length === 0 && submittedAssets.length === 0 && (
-                      <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
-                        <p className="text-slate-300 mb-4">暂无收益记录</p>
-                        <Link
-                          href="/assets"
-                          className="text-sky-400 hover:text-sky-300 underline"
-                        >
-                          去投资资产 →
-                        </Link>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  </>
                 )}
               </>
-            )}
+            ) : activeTab === "submitted-yields" ? (
+              <>
+                {/* 提交资产收益标签页 */}
+                {submittedAssetsLoading ? (
+                  <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+                    <p className="text-slate-300">加载中...</p>
+                  </div>
+                ) : submittedAssetsError ? (
+                  <div className="glass-effect border border-red-500/40 rounded-2xl px-6 py-8 text-center">
+                    <p className="text-red-300">{submittedAssetsError}</p>
+                  </div>
+                ) : submittedAssets.length === 0 ? (
+                  <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
+                    <p className="text-slate-300 mb-4">暂无提交的资产收益</p>
+                    <Link
+                      href="/assets/submit"
+                      className="text-sky-400 hover:text-sky-300 underline"
+                    >
+                      去提交资产 →
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    {/* 总收益统计 */}
+                    <div className="mb-6 grid gap-4 md:grid-cols-2">
+                      <TechCard className="px-6 py-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-blue-500/5"></div>
+                        <div className="relative z-10">
+                          <div className="text-xs text-slate-400 mb-2">代币销售收入</div>
+                          <div className="text-2xl font-bold text-emerald-400">
+                            {formatAmount(
+                              submittedAssets.reduce((sum, asset) => sum + parseFloat(asset.revenue || "0"), 0).toString()
+                            )} MNT
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            来自投资者的购买
+                          </div>
+                        </div>
+                      </TechCard>
+                      <TechCard className="px-6 py-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-purple-500/5"></div>
+                        <div className="relative z-10">
+                          <div className="text-xs text-slate-400 mb-2">提交的资产</div>
+                          <div className="text-2xl font-bold text-sky-400">
+                            {submittedAssets.length}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {submittedAssets.filter(a => a.status === "funded" || a.status === "sold").length} 个已满额/已售出
+                          </div>
+                        </div>
+                      </TechCard>
+                    </div>
+
+                    {/* 提交资产收益记录列表 */}
+                    <div className="space-y-6">
+                      {submittedAssets.map((asset) => (
+                      <div
+                        key={asset.assetId}
+                        className="glass-effect rounded-2xl border border-purple-500/30 overflow-hidden"
+                      >
+                        {/* 资产汇总头部 */}
+                        <div className="bg-gradient-to-r from-sky-500/10 to-purple-500/10 px-6 py-4 border-b border-slate-700/50">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-lg font-bold text-slate-200">
+                                  {asset.brand} {asset.model}{asset.year ? ` (${asset.year})` : ''}
+                                </h3>
+                                <span className="px-2 py-1 rounded text-xs bg-slate-700/40 text-slate-300">
+                                  {asset.assetType === 'watch' ? '腕表' : asset.assetType === 'jewelry' ? '珠宝' : '其他'}
+                                </span>
+                                <span className="px-2 py-1 rounded text-xs bg-sky-500/20 text-sky-300 border border-sky-400/40">
+                                  {asset.status === "fundraising" ? "募集中" : asset.status === "funded" ? "已满额" : asset.status === "sold" ? "已售出" : asset.status}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                资产 ID: {asset.assetId.slice(0, 8)}...
+                                {asset.pricePerShare && ` | 单份价格: ${formatAmount(asset.pricePerShare)} MNT`}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs text-slate-400 mb-1">代币销售收入</div>
+                              <div className="text-xl font-bold text-emerald-400">
+                                {formatAmount(asset.revenue)} MNT
+                              </div>
+                              <div className="text-xs text-slate-500 mt-1">来自投资者的购买</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : null}
           </>
         )}
     </PageContainer>
