@@ -71,9 +71,9 @@ public class StatsController {
                 .filter(u -> "approved".equalsIgnoreCase(u.getKycStatus()))
                 .count();
         
-        // 活跃投资者：有持仓的用户数
-        Set<String> activeInvestors = holdings.stream()
-                .map(UserHolding::getUserAddress)
+        // 活跃投资者：有投资记录的用户数（使用 user_investments 表，更准确）
+        Set<String> activeInvestors = investments.stream()
+                .map(UserInvestment::getUserAddress)
                 .collect(Collectors.toSet());
         long activeInvestorCount = activeInvestors.size();
 

@@ -204,20 +204,50 @@ export default function Home() {
                   style={{ transform: `translateX(-${currentSlide * 100}%)` }}
                 >
                   {featuredAssets.map((asset) => {
-                    const imageUrl = asset.imageUrls
-                      ? (() => {
-                          try {
-                            const arr = JSON.parse(asset.imageUrls);
-                            if (Array.isArray(arr) && arr.length > 0) {
-                              const url = arr[0];
-                              return url.startsWith('/uploads/') ? `${API_BASE}${url}` : url;
+                    // 使用与可投资资产页面相同的图片处理逻辑
+                    const getImageUrl = (asset: FeaturedAsset): string => {
+                      if (asset.imageUrls) {
+                        try {
+                          const arr = JSON.parse(asset.imageUrls);
+                          if (Array.isArray(arr) && arr.length > 0) {
+                            const url = arr[0];
+                            // 如果是旧的 /uploads/ 路径，直接使用文件系统路径（兼容旧图片）
+                            if (url.startsWith('/uploads/')) {
+                              return `${API_BASE}${url}`;
                             }
-                          } catch {}
-                          return null;
-                        })()
-                      : asset.assetType === "watch"
-                      ? "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"
-                      : "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=800&q=80";
+                            // 如果是新的 API 路径，直接使用
+                            if (url.startsWith('/api/assets/')) {
+                              return url.startsWith('http') ? url : `${API_BASE}${url}`;
+                            }
+                            // 如果是临时图片格式 image:{imageId}，转换为 API 路径
+                            if (url.startsWith('image:')) {
+                              if (asset.id) {
+                                return `${API_BASE}/api/assets/${asset.id}/images/0`;
+                              }
+                            }
+                            // 如果是完整 URL（http/https），直接返回
+                            if (url.startsWith('http://') || url.startsWith('https://')) {
+                              return url;
+                            }
+                            // 其他情况，尝试拼接 API_BASE
+                            return url.startsWith('/') ? `${API_BASE}${url}` : url;
+                          }
+                        } catch (e) {
+                          console.warn("Failed to parse imageUrls:", e);
+                        }
+                      }
+                      // 如果没有图片URL，尝试从数据库获取（索引0）
+                      if (asset.id) {
+                        return `${API_BASE}/api/assets/${asset.id}/images/0`;
+                      }
+                      // 最后回退到默认图片
+                      if (asset.assetType === "watch") {
+                        return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+                      }
+                      return "https://images.unsplash.com/photo-1506634064465-1c59a0a51ee3?auto=format&fit=crop&w=800&q=80";
+                    };
+                    
+                    const imageUrl = getImageUrl(asset);
 
                     return (
                       <div
