@@ -889,13 +889,15 @@ export default function PortfolioPage() {
                                     {(() => {
                                       const holding = getAssetHolding(group.assetId, group.yields[0]?.tokenAddress || null);
                                       if (!holding) return null;
+                                      const totalCost = parseFloat(holding.totalCost || "0");
+                                      if (totalCost === 0) return null;
+                                      // 收益率 = 用户实际分到的收益 / 用户投入的成本
+                                      const roi = group.userTotal / totalCost;
                                       return (
                                         <div className="mt-3 space-y-1">
-                                          {holding.roi && (
-                                            <div className="text-xs text-slate-300">
-                                              收益率: <span className="font-medium text-sky-400">{(Number(holding.roi) * 100).toFixed(2)}%</span>
-                                            </div>
-                                          )}
+                                          <div className="text-xs text-slate-300">
+                                            收益率: <span className="font-medium text-sky-400">{(roi * 100).toFixed(2)}%</span>
+                                          </div>
                                         </div>
                                       );
                                     })()}
@@ -1004,13 +1006,7 @@ export default function PortfolioPage() {
                   </div>
                 ) : submittedAssets.length === 0 ? (
                   <div className="glass-effect border border-slate-700/60 rounded-2xl px-6 py-8 text-center">
-                    <p className="text-slate-300 mb-4">暂无提交的资产收益</p>
-                    <Link
-                      href="/assets/submit"
-                      className="text-sky-400 hover:text-sky-300 underline"
-                    >
-                      去提交资产 →
-                    </Link>
+                    <p className="text-slate-300">暂无提交的资产收益</p>
                   </div>
                 ) : (
                   <>
