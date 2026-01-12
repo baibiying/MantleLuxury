@@ -1,159 +1,170 @@
-# MantleLuxury 技术设计文档
+# MantleLuxury Technical Design Document
 
-**版本：** v1.0  
-**最后更新：** 2025-12-01  
-**文档类型：** 技术架构与实现设计文档
-
----
-
-## 目录
-
-1. [总体架构概览](#1-总体架构概览)
-2. [智能合约设计](#2-智能合约设计)
-3. [后端服务设计](#3-后端服务设计)
-4. [前端应用设计](#4-前端应用设计)
-5. [Mantle 集成设计](#5-mantle-集成设计)
-6. [数据存储设计](#6-数据存储设计)
-7. [安全与合规设计](#7-安全与合规设计)
-8. [API 设计](#8-api-设计)
-9. [部署与运维](#9-部署与运维)
-10. [开发环境与工具链](#10-开发环境与工具链)
+**Version:** v1.0  
+**Last Updated:** Jan 2026
+**Document Type:** Technical Architecture and Implementation Design Document
 
 ---
 
-## 1. 总体架构概览
+## Table of Contents
 
-### 1.1 架构分层
+1. [Overall Architecture Overview](#1-overall-architecture-overview)
+2. [Smart Contract Design](#2-smart-contract-design)
+3. [Backend Service Design](#3-backend-service-design)
+4. [Frontend Application Design](#4-frontend-application-design)
+5. [Mantle Integration Design](#5-mantle-integration-design)
+6. [Data Storage Design](#6-data-storage-design)
+7. [Security and Compliance Design](#7-security-and-compliance-design)
+8. [API Design](#8-api-design)
+9. [Deployment and Operations](#9-deployment-and-operations)
+10. [Development Environment and Toolchain](#10-development-environment-and-toolchain)
+
+---
+
+## 1. Overall Architecture Overview
+
+### 1.1 Architecture Layers
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    前端层 (Frontend)                      │
-│  Next.js + TypeScript + Tailwind CSS                     │
-│  - 资产展示、投资流程、投资组合、KYC                      │
+│                    Frontend Layer                        │
+│  Next.js 16 + TypeScript + Tailwind CSS 4              │
+│  - Asset display, investment flow, portfolio, KYC        │
 └─────────────────────────────────────────────────────────┘
-                            ↕ HTTP/WebSocket
+                            ↕ HTTP/REST API
 ┌─────────────────────────────────────────────────────────┐
-│                  BFF 层 (Backend for Frontend)           │
-│  Spring Boot (REST API / Gateway)                        │
-│  - 统一 API 入口、请求聚合、权限校验                      │
-└─────────────────────────────────────────────────────────┘
-                            ↕
-┌─────────────────────────────────────────────────────────┐
-│                  业务服务层 (Microservices)               │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐│
-│  │ 用户服务 │  │ 资产服务 │  │ 收益服务 │  │ 合规服务 ││
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘│
+│              Backend Layer (Monolithic)                  │
+│  Spring Boot 3.3.2 + Java 17                           │
+│  - REST API, business logic, blockchain integration      │
+│  - Event indexer, KYC/AML, asset management             │
 └─────────────────────────────────────────────────────────┘
                             ↕
 ┌─────────────────────────────────────────────────────────┐
-│                  区块链层 (Mantle L2)                     │
+│              Blockchain Layer (Mantle L2)                │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐│
 │  │LuxuryToken│ │KYCRegistry│ │YieldDist.│ │CustodyMgr ││
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘│
 └─────────────────────────────────────────────────────────┘
                             ↕
 ┌─────────────────────────────────────────────────────────┐
-│                  数据与存储层                             │
-│  PostgreSQL + Redis + IPFS/S3 + 事件索引器              │
+│              Data and Storage Layer                      │
+│  MySQL 8.0+ + File System (uploads) + Event Indexer    │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 技术栈选型
+### 1.2 Technology Stack
 
-#### 前端
-- **框架**: Next.js 14+ (App Router)
-- **语言**: TypeScript
-- **样式**: Tailwind CSS
-- **Web3 集成**: 
-  - `ethers.js` 或 `viem` (以太坊/Mantle 交互)
-  - `wagmi` (React Hooks for Ethereum)
-  - `WalletConnect` (多钱包支持)
+#### Frontend
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 4
+- **Web3 Integration**: 
+  - `wagmi` 3.1.0 (React Hooks for Ethereum)
+  - `viem` 2.41.2 (TypeScript Ethereum library)
+  - `@metamask/sdk` (MetaMask integration)
+- **3D Rendering**: Three.js + @react-three/fiber + @react-three/drei
+- **Data Fetching**: @tanstack/react-query
+- **Charts**: Recharts
 
-#### 后端
-- **BFF/API Gateway**: Spring Boot
-- **微服务**: Java 17+ + Spring Boot
-- **数据库**: PostgreSQL (主数据) + Redis (缓存)
-- **消息队列**: RabbitMQ 或 Kafka（可选，用于异步任务）
+#### Backend
+- **Framework**: Spring Boot 3.3.2
+- **Language**: Java 17
+- **Database**: MySQL 8.0+ (via HikariCP connection pool)
+- **ORM**: Spring Data JPA / Hibernate
+- **Blockchain Integration**: Web3j 4.10.3
+- **Build Tool**: Gradle
+- **Architecture**: Monolithic (single Spring Boot application)
 
-#### 区块链
-- **开发框架**: Hardhat
-- **语言**: Solidity 0.8.20+
-- **库**: OpenZeppelin Contracts
-- **网络**: Mantle L2 (测试网/主网)
+#### Blockchain
+- **Development Framework**: Hardhat
+- **Language**: Solidity 0.8.24
+- **Libraries**: OpenZeppelin Contracts
+- **Network**: Mantle Sepolia Testnet (Chain ID: 5003) / Mantle Mainnet
+- **Compiler**: Solidity compiler with optimizer (200 runs)
 
-#### 基础设施
-- **容器化**: Docker + Docker Compose (开发) / Kubernetes (生产)
-- **CI/CD**: GitHub Actions
-- **监控**: Prometheus + Grafana
-- **日志**: ELK Stack 或 Loki
+#### Infrastructure
+- **Frontend Deployment**: Vercel
+- **Backend Deployment**: Railway
+- **Database**: Railway MySQL
+- **File Storage**: Local filesystem (uploads directory) - can be migrated to S3/IPFS
+- **CI/CD**: Manual deployment (can be automated with GitHub Actions)
 
-### 1.3 核心设计原则
+### 1.3 Core Design Principles
 
-1. **链上链下分离**
-   - 关键状态（KYC、资产所有权、收益分配）在链上可验证
-   - 大体积数据（图片、报告、元数据）存储在链下（IPFS/S3），哈希上链
+1. **On-Chain/Off-Chain Separation**
+   - Critical state (KYC, asset ownership, yield distribution) is verifiable on-chain
+   - Large data (images, reports, metadata) stored off-chain (filesystem/IPFS), hash stored on-chain
 
-2. **最小信任面**
-   - 所有与资产和收益相关的操作以链上结果为准
-   - 前端和后端仅作为链上数据的展示和索引层
+2. **Minimal Trust Surface**
+   - All asset and yield-related operations are based on on-chain results
+   - Frontend and backend serve as display and indexing layers for on-chain data
 
-3. **可扩展性**
-   - 微服务架构便于独立扩展
-   - 合约设计支持批量操作，降低 Gas 成本
+3. **Scalability**
+   - Monolithic architecture simplifies deployment and maintenance
+   - Contract design supports batch operations to reduce gas costs
+   - Event indexer enables efficient off-chain data synchronization
 
-4. **安全优先**
-   - 多签钱包管理关键操作
-   - 所有合约通过第三方审计
-   - 后台系统采用 RBAC 权限控制
+4. **Security First**
+   - Multi-signature wallet management for critical operations (planned)
+   - All contracts use OpenZeppelin libraries
+   - Backend implements admin role-based access control
 
 ---
 
-## 2. 智能合约设计
+## 2. Smart Contract Design
 
-### 2.1 合约架构
+### 2.1 Contract Architecture
 
-#### 2.1.1 LuxuryToken (ERC-20 份额代币)
+#### 2.1.1 LuxuryToken (ERC-20 Fractional Ownership Token)
 
-**功能概述**: 代表单个实物奢侈品的份额代币，基于 ERC-20 标准，增加 KYC 转账限制。
+**Function Overview**: Represents fractional ownership tokens for individual physical luxury assets, based on ERC-20 standard with KYC transfer restrictions.
 
-**核心接口**:
+**Core Interface**:
 
 ```solidity
 interface ILuxuryToken {
-    // 基础 ERC-20 功能
+    // Basic ERC-20 functions
     function totalSupply() external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
     function transfer(address to, uint256 amount) external returns (bool);
     function approve(address spender, uint256 amount) external returns (bool);
     
-    // 资产元数据
+    // Asset metadata
     function assetId() external view returns (bytes32);
     function metadataHash() external view returns (bytes32);
-    function custodyManager() external view returns (address);
+    function pricePerToken() external view returns (uint256);
     
-    // 发行与配置（仅管理员）
-    function mint(address to, uint256 amount) external;
-    function setMetadataHash(bytes32 _hash) external;
+    // Purchase function
+    function buyTokens(uint256 amount) external payable;
+    
+    // Owner functions
+    function setPrice(uint256 newPrice) external;
+    function toggleSales() external;
+    function setKYCRegistry(address newRegistry) external;
 }
 ```
 
-**关键实现细节**:
-- 继承 `ERC20` 和 `ERC20Pausable` (OpenZeppelin)
-- 在 `_beforeTokenTransfer` 中检查 `KYCRegistry.isKYCApproved(to)`
-- 存储 `assetId` (bytes32) 和 `metadataHash` (IPFS 哈希)
-- 支持 `Ownable` 或 `AccessControl` 进行权限管理
+**Key Implementation Details**:
+- Inherits `ERC20` and `Ownable` from OpenZeppelin
+- Checks `KYCRegistry.isKYCApproved(buyer)` before allowing token purchases
+- Stores `assetId` (bytes32) and `metadataHash` (IPFS hash)
+- Supports configurable price per token
+- Funds are immediately transferred to the asset owner upon purchase
+- Sales can be toggled on/off by owner
 
-**事件**:
+**Events**:
 ```solidity
-event TokenIssued(bytes32 indexed assetId, address indexed tokenAddress, uint256 totalSupply);
-event MetadataUpdated(bytes32 indexed assetId, bytes32 newHash);
+event TokensPurchased(address indexed buyer, uint256 amount, uint256 totalCost);
+event PaymentTransferred(address indexed recipient, uint256 amount);
+event PriceUpdated(uint256 newPrice);
+event SalesToggled(bool enabled);
 ```
 
-#### 2.1.2 KYCRegistry (KYC 状态注册表)
+#### 2.1.2 KYCRegistry (KYC Status Registry)
 
-**功能概述**: 链上维护地址与 KYC 状态的映射，供其他合约检查权限。
+**Function Overview**: Maintains on-chain mapping of addresses to KYC status for other contracts to check permissions.
 
-**核心接口**:
+**Core Interface**:
 
 ```solidity
 interface IKYCRegistry {
@@ -166,22 +177,22 @@ interface IKYCRegistry {
 }
 ```
 
-**关键实现细节**:
-- 使用 `mapping(address => Status)` 存储状态
-- 仅 `ROLE_COMPLIANCE` 角色可调用 `setKYCStatus`
-- `isKYCApproved` 返回 `status == Status.Approved`
-- 支持批量操作以降低 Gas 成本
+**Key Implementation Details**:
+- Uses `mapping(address => Status)` to store status
+- Only `ROLE_COMPLIANCE` role can call `setKYCStatus`
+- `isKYCApproved` returns `status == Status.Approved`
+- Supports batch operations to reduce gas costs
 
-**事件**:
+**Events**:
 ```solidity
 event KYCStatusUpdated(address indexed user, Status indexed oldStatus, Status indexed newStatus);
 ```
 
-#### 2.1.3 YieldDistribution (收益分配合约)
+#### 2.1.3 YieldDistribution (Yield Distribution Contract)
 
-**功能概述**: 根据持仓比例，将收益池资金分配给持有人。支持升值收益和租赁收益两种类型。
+**Function Overview**: Distributes funds from yield pool to holders proportionally based on token holdings. Supports appreciation and rental yield types.
 
-**核心接口**:
+**Core Interface**:
 
 ```solidity
 interface IYieldDistribution {
@@ -189,7 +200,7 @@ interface IYieldDistribution {
     
     struct Distribution {
         bytes32 distributionId;
-        address tokenAddress;  // LuxuryToken 地址
+        address tokenAddress;  // LuxuryToken address
         YieldType yieldType;
         uint256 totalAmount;
         uint256 distributedAmount;
@@ -210,17 +221,17 @@ interface IYieldDistribution {
 }
 ```
 
-**分配策略** (MVP 采用方案 A，后续可升级为 Merkle):
-- **方案 A (直接循环分发)**: 合约遍历所有持有人，按比例转账（适合持有人 < 100）
-- **方案 B (Merkle 分发)**: 链下计算 Merkle 树，用户自行 `claim`（适合大规模分发）
+**Distribution Strategy**:
+- **Direct Loop Distribution**: Contract iterates through all holders and transfers proportionally (suitable for < 100 holders)
+- **Merkle Distribution** (future): Off-chain Merkle tree calculation, users claim themselves (suitable for large-scale distribution)
 
-**关键实现细节**:
-- 接收稳定币（USDC/USDT）或原生代币（ETH/MNT）
-- 使用 `LuxuryToken.balanceOf` 计算持仓比例
-- 支持暂停/恢复分配（紧急情况）
-- 记录每次分配的完整历史
+**Key Implementation Details**:
+- Accepts native token (MNT) for distribution
+- Uses `LuxuryToken.balanceOf` to calculate holding proportions
+- Supports pause/resume distribution (emergency situations)
+- Records complete history of each distribution
 
-**事件**:
+**Events**:
 ```solidity
 event DistributionCreated(
     bytes32 indexed distributionId,
@@ -232,11 +243,11 @@ event DistributionCompleted(bytes32 indexed distributionId, uint256 totalDistrib
 event Claimed(bytes32 indexed distributionId, address indexed user, uint256 amount);
 ```
 
-#### 2.1.4 CustodyManager (托管与保险管理)
+#### 2.1.4 CustodyManager (Custody and Insurance Management)
 
-**功能概述**: 记录实物资产托管、保险状态，对接线下流程。
+**Function Overview**: Records physical asset custody and insurance status, interfaces with off-chain processes.
 
-**核心接口**:
+**Core Interface**:
 
 ```solidity
 interface ICustodyManager {
@@ -245,9 +256,9 @@ interface ICustodyManager {
     struct AssetInfo {
         bytes32 assetId;
         AssetStatus status;
-        bytes32 custodyInfoHash;  // 托管机构、位置等信息的哈希
-        bytes32 insuranceInfoHash; // 保险信息的哈希
-        address tokenAddress;  // 关联的 LuxuryToken
+        bytes32 custodyInfoHash;  // Hash of custody organization, location, etc.
+        bytes32 insuranceInfoHash; // Hash of insurance information
+        address tokenAddress;  // Associated LuxuryToken
         uint256 registeredAt;
     }
     
@@ -262,15 +273,16 @@ interface ICustodyManager {
     function updateCustodyInfo(bytes32 assetId, bytes32 newHash) external;
     function updateInsuranceInfo(bytes32 assetId, bytes32 newHash) external;
     function getAssetInfo(bytes32 assetId) external view returns (AssetInfo memory);
+    function getAssetStatus(bytes32 assetId) external view returns (AssetStatus);
 }
 ```
 
-**关键实现细节**:
-- 状态迁移需多签确认或特定角色授权
-- `Sold` 状态触发后，可自动通知 `YieldDistribution` 创建分配
-- 所有链下详细信息（托管机构名称、地址、保险单号等）仅存储哈希
+**Key Implementation Details**:
+- Status transitions require multi-signature confirmation or specific role authorization
+- `Sold` status can trigger automatic notification to `YieldDistribution` to create distribution
+- All off-chain detailed information (custody organization name, address, insurance policy number, etc.) stored as hash only
 
-**事件**:
+**Events**:
 ```solidity
 event AssetRegistered(bytes32 indexed assetId, address indexed tokenAddress, bytes32 custodyHash);
 event StatusUpdated(bytes32 indexed assetId, AssetStatus indexed oldStatus, AssetStatus indexed newStatus);
@@ -278,588 +290,659 @@ event CustodyInfoUpdated(bytes32 indexed assetId, bytes32 newHash);
 event InsuranceInfoUpdated(bytes32 indexed assetId, bytes32 newHash);
 ```
 
-### 2.2 合约部署与升级策略
+### 2.2 Contract Deployment and Upgrade Strategy
 
-#### 部署顺序
-1. `KYCRegistry` (基础合约，其他合约依赖)
-2. `CustodyManager` (资产注册需要)
-3. `YieldDistribution` (收益分配需要)
-4. `LuxuryToken` (每个资产一个实例，通过工厂合约或手动部署)
+#### Deployment Order
+1. `KYCRegistry` (base contract, other contracts depend on it)
+2. `CustodyManager` (required for asset registration)
+3. `YieldDistribution` (required for yield distribution)
+4. `LuxuryToken` (one instance per asset, deployed automatically when asset is submitted)
 
-#### 升级策略
-- **不可升级合约**: `KYCRegistry`, `CustodyManager` (核心状态，避免复杂性)
-- **可升级合约**: `YieldDistribution` (可能需要优化分配算法)
-- **工厂模式**: `LuxuryTokenFactory` 用于批量部署 `LuxuryToken` 实例
+#### Upgrade Strategy
+- **Non-upgradeable Contracts**: `KYCRegistry`, `CustodyManager` (core state, avoid complexity)
+- **Non-upgradeable Contracts**: `LuxuryToken` (one per asset, immutable)
+- **Potentially Upgradeable**: `YieldDistribution` (may need to optimize distribution algorithm in future)
 
-### 2.3 安全考虑
+### 2.3 Security Considerations
 
-- **使用 OpenZeppelin 库**: `ReentrancyGuard`, `Pausable`, `AccessControl`
-- **输入验证**: 所有外部输入进行边界检查
-- **Gas 优化**: 批量操作、事件精简、存储优化
-- **审计要求**: 所有合约上线前通过第三方安全审计
+- **OpenZeppelin Libraries**: Uses `ReentrancyGuard`, `Ownable`, `AccessControl`
+- **Input Validation**: All external inputs have boundary checks
+- **Gas Optimization**: Batch operations, event optimization, storage optimization
+- **Audit Requirements**: All contracts should pass third-party security audits before mainnet deployment
 
 ---
 
-## 3. 后端服务设计
+## 3. Backend Service Design
 
-### 3.1 服务模块划分
+### 3.1 Service Module Structure
 
-#### 3.1.1 BFF (Backend for Frontend)
+The backend is a monolithic Spring Boot application organized into the following modules:
 
-**职责**:
-- 统一 API 入口，聚合多个微服务数据
-- 处理前端特定的数据格式转换
-- 实现请求限流、认证、日志记录
+#### 3.1.1 API Layer
 
-**技术栈**: Java 17+ + Spring Boot (Spring Web, Spring Security)
+**Responsibilities**:
+- REST API endpoints for frontend
+- Request validation and error handling
+- CORS configuration
+- Admin authentication and authorization
 
-**主要路由**:
-```
-GET  /api/assets              # 资产列表
-GET  /api/assets/:id          # 资产详情
-POST /api/assets/:id/purchase # 购买代币（生成交易参数）
-GET  /api/portfolio           # 用户投资组合
-GET  /api/kyc/status          # KYC 状态
-POST /api/kyc/submit          # 提交 KYC
-GET  /api/yields              # 收益记录
-```
+**Technology Stack**: Spring Boot Web, Spring Security (planned)
 
-#### 3.1.2 用户与合规服务 (Identity & Compliance Service)
+**Main Controllers**:
+- `AssetController`: Asset listing, details, submission
+- `PortfolioController`: User portfolio and holdings
+- `KycController`: KYC submission and status
+- `YieldController`: Yield distribution and records
+- `AssetAuthenticationController`: Asset authentication management
+- `CustodyController`: Custody record management
+- `InsuranceController`: Insurance record management
+- `AdminAssetController`: Admin asset management
+- `AdminKycController`: Admin KYC management
+- `AdminYieldController`: Admin yield distribution management
+- `StatsController`: Platform statistics
 
-**技术栈**: Java 17+ + Spring Boot (Spring Web, Spring Data JPA, Spring Security)  
+#### 3.1.2 Service Layer
 
-**职责**:
-- 管理用户身份信息（链下存储，加密）
-- 对接第三方 KYC/AML 服务（如 Sumsub, Onfido）
-- 与 `KYCRegistry` 合约同步 KYC 状态（通过 web3j 调用合约）
-- 处理 AML 风险检测与黑名单管理
+**Asset Service** (`AssetService`):
+- Manages asset off-chain metadata (brand, model, images, reports)
+- Handles asset submission and review workflow
+- Integrates with blockchain for token deployment
+- Manages asset images and file uploads
 
-**核心功能**:
-- KYC 审核工作流（基于数据库状态机 + Spring 事件）
-- AML 地址筛查（Chainalysis/Elliptic 集成）
-- 用户权限与角色管理（基于 Spring Security + RBAC）
+**User Service** (via `UserRepository` and domain entities):
+- Manages user identity information (off-chain storage, encrypted)
+- KYC status management
+- User settings and preferences
 
-#### 3.1.3 资产与估值服务 (Asset Service)
+**KYC/AML Service** (`AmlService`):
+- KYC workflow management (database state machine)
+- AML address screening (can integrate with Chainalysis/Elliptic)
+- Blacklist management
 
-**技术栈**: Java 17+ + Spring Boot (Spring Web, Spring Data JPA)  
+**Yield Service** (`YieldService`):
+- Yield distribution creation and management
+- Integration with `YieldDistribution` contract
+- Yield record tracking and reporting
 
-**职责**:
-- 管理资产链下元数据（品牌、型号、图片、报告）
-- 存储托管与保险文档（IPFS/S3）
-- 与 `CustodyManager` 状态同步（监听链上事件或定时拉取）
-- 管理估值记录与历史
+**Blockchain Integration Services**:
+- `TokenDeploymentService`: Automatic token contract deployment
+- `KYCRegistryService`: KYC status synchronization with on-chain registry
+- `CustodyManagerService`: Custody status synchronization
+- `LuxuryTokenService`: Token interaction (balance queries, etc.)
+- `EventIndexerService`: On-chain event indexing and synchronization
 
-**核心功能**:
-- 资产上架审核流程
-- 元数据 CRUD 操作
-- IPFS 上传与哈希管理
-- 估值报告存储与版本管理
+#### 3.1.3 Event Indexer
 
-#### 3.1.4 收益与报表服务 (Yield & Reporting Service)
+**Responsibilities**: Listens to Mantle on-chain events and synchronizes to database.
 
-**技术栈**: Java 17+ + Spring Boot (Spring Web, Spring Batch)  
-
-**职责**:
-- 监听链上收益分配事件
-- 为用户生成收益报表（CSV/PDF）
-- 为机构生成合规审计报表
-- 计算与展示收益统计
-
-**核心功能**:
-- 事件索引与数据同步
-- 报表生成（年度收益、交易记录）
-- 数据导出（CSV, PDF）
-
-### 3.2 事件索引器 (Event Indexer)
-
-**职责**: 监听 Mantle 链上事件，同步到数据库。
-
-**监听的事件**:
-- `LuxuryToken.TokenIssued`
+**Listened Events**:
+- `LuxuryToken.TokensPurchased`
 - `KYCRegistry.KYCStatusUpdated`
 - `YieldDistribution.DistributionCreated`, `Claimed`
 - `CustodyManager.StatusUpdated`
 
-**实现方式**:
-- 使用 `web3j` 或 Java 以太坊/Mantle 客户端库监听事件
-- 定期扫描区块（从上次同步位置开始）
-- 将事件数据写入 PostgreSQL
-- 处理链重组（reorg）情况
+**Implementation**:
+- Uses Web3j to listen to events
+- Periodically scans blocks (from last synced position)
+- Writes event data to MySQL
+- Handles chain reorganization (reorg) situations
+- Self-hosted event indexer (not using The Graph)
 
-### 3.3 数据同步策略
+### 3.2 Data Synchronization Strategy
 
-- **链上 → 链下**: 事件索引器实时同步
-- **链下 → 链上**: 通过管理员钱包/多签调用合约（KYC 状态更新、收益分配触发）
+- **On-Chain → Off-Chain**: Event indexer synchronizes in real-time
+- **Off-Chain → On-Chain**: Through admin wallet/multi-signature calling contracts (KYC status updates, yield distribution triggers)
 
----
+### 3.3 Automatic Contract Deployment
 
-## 4. 前端应用设计
+When an asset is submitted:
+1. Backend automatically compiles the `LuxuryToken` contract using Hardhat
+2. Deploys the contract to Mantle testnet
+3. Records the contract address in the database
+4. Updates asset status
 
-### 4.1 项目结构
-
-```
-web/
-├── app/                    # Next.js App Router
-│   ├── page.tsx           # 首页
-│   ├── assets/
-│   │   ├── page.tsx       # 资产列表
-│   │   └── [id]/
-│   │       └── page.tsx   # 资产详情
-│   ├── portfolio/
-│   │   └── page.tsx       # 投资组合
-│   └── kyc/
-│       └── page.tsx       # KYC 流程
-├── components/            # 通用组件
-│   ├── WalletConnect.tsx
-│   ├── AssetCard.tsx
-│   ├── AssetDetail.tsx
-│   ├── PortfolioChart.tsx
-│   └── KYCForm.tsx
-├── lib/
-│   ├── web3/              # Web3 工具
-│   │   ├── contracts.ts  # 合约 ABI 与地址
-│   │   ├── hooks.ts      # React Hooks (useWallet, useLuxuryToken)
-│   │   └── mantle.ts     # Mantle 网络配置
-│   └── api/               # 后端 API 客户端
-│       └── client.ts
-└── public/                # 静态资源
-```
-
-### 4.2 核心功能实现
-
-#### 4.2.1 钱包连接
-
-使用 `wagmi` + `WalletConnect`:
-
-```typescript
-// lib/web3/hooks.ts
-import { useAccount, useConnect, useNetwork } from 'wagmi';
-import { mantleTestnet } from 'wagmi/chains';
-
-export function useWallet() {
-  const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
-  const { chain, switchNetwork } = useNetwork();
-  
-  // 检查是否在 Mantle 网络
-  const isMantleNetwork = chain?.id === mantleTestnet.id;
-  
-  return { address, isConnected, connect, isMantleNetwork, switchNetwork };
-}
-```
-
-#### 4.2.2 资产列表与详情
-
-- **列表页**: 从后端 API 获取资产数据，支持筛选和排序
-- **详情页**: 
-  - 展示高清图片、3D 模型（Three.js 或模型查看器）
-  - 显示估值报告、托管/保险信息
-  - 购买模块：输入金额 → 计算份额 → 调用合约 `transfer`
-
-#### 4.2.3 投资组合
-
-- 从链上读取用户持有的所有 `LuxuryToken` 余额
-- 从后端 API 获取资产元数据和估值
-- 使用 Chart.js 或 Recharts 展示收益曲线和资产分布
-
-#### 4.2.4 KYC 流程
-
-- 多步骤表单（React Hook Form）
-- 文件上传（图片、PDF）
-- 调用后端 API 提交 KYC
-- 轮询或 WebSocket 获取审核状态
-
-### 4.3 状态管理
-
-- **全局状态**: Zustand 或 React Context (钱包状态、用户信息)
-- **服务端状态**: React Query (资产列表、投资组合数据)
-- **链上状态**: `wagmi` hooks (余额、交易状态)
-
-### 4.4 样式与 UI
-
-- **设计系统**: Tailwind CSS + 自定义组件库
-- **主题**: 符合奢侈品定位的高端视觉风格（深色/浅色模式）
-- **响应式**: 移动端优先，桌面端优化
+This is handled by `MantleTokenDeploymentService` which:
+- Executes Hardhat compilation and deployment scripts
+- Manages deployment configuration
+- Handles deployment errors and retries
 
 ---
 
-## 5. Mantle 集成设计
+## 4. Frontend Application Design
 
-### 5.1 网络配置
+### 4.1 Project Structure
 
-**测试网配置**:
+```
+frontend/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── page.tsx           # Homepage
+│   │   ├── assets/
+│   │   │   ├── page.tsx       # Asset list
+│   │   │   ├── [id]/
+│   │   │   │   └── page.tsx   # Asset detail
+│   │   │   └── submit/
+│   │   │       └── page.tsx   # Asset submission
+│   │   ├── portfolio/
+│   │   │   └── page.tsx       # Portfolio
+│   │   └── kyc/
+│   │       └── page.tsx       # KYC flow
+│   ├── components/            # Reusable components
+│   │   ├── WalletConnect.tsx
+│   │   ├── AssetCard.tsx
+│   │   ├── AssetDetail.tsx
+│   │   ├── PortfolioChart.tsx
+│   │   └── KYCForm.tsx
+│   ├── lib/
+│   │   ├── web3/              # Web3 utilities
+│   │   │   ├── config.ts     # Wagmi configuration
+│   │   │   └── contracts.ts  # Contract ABIs and addresses
+│   │   └── api/               # Backend API client
+│   │       └── client.ts
+│   └── providers/
+│       └── Web3Provider.tsx   # Web3 context provider
+└── public/                    # Static assets
+```
+
+### 4.2 Core Feature Implementation
+
+#### 4.2.1 Wallet Connection
+
+Uses `wagmi` + `viem`:
+
 ```typescript
-// lib/web3/mantle.ts
-export const mantleTestnet = {
-  id: 5001,
-  name: 'Mantle Testnet',
-  network: 'mantle-testnet',
+// lib/web3/config.ts
+import { createConfig, http } from 'wagmi';
+import { mantleSepolia } from 'wagmi/chains';
+import { metaMask } from 'wagmi/connectors';
+
+export const wagmiConfig = createConfig({
+  chains: [mantleSepolia],
+  connectors: [metaMask()],
+  transports: {
+    [mantleSepolia.id]: http(),
+  },
+});
+```
+
+#### 4.2.2 Asset List and Details
+
+- **List Page**: Fetches asset data from backend API, supports filtering and sorting
+- **Detail Page**: 
+  - Displays high-resolution images, 3D models (Three.js)
+  - Shows valuation reports, custody/insurance information
+  - Purchase module: Input amount → Calculate shares → Call contract `buyTokens`
+
+#### 4.2.3 Portfolio
+
+- Reads user's `LuxuryToken` balances from on-chain
+- Fetches asset metadata and valuations from backend API
+- Uses Recharts to display yield curves and asset distribution
+- Supports CSV export for tax and accounting
+
+#### 4.2.4 KYC Flow
+
+- Multi-step form (React Hook Form)
+- File upload (images, PDFs)
+- Calls backend API to submit KYC
+- Polls or uses WebSocket to get review status
+
+### 4.3 State Management
+
+- **Global State**: React Context (wallet state, user info)
+- **Server State**: React Query (@tanstack/react-query) for asset list, portfolio data
+- **On-Chain State**: `wagmi` hooks (balance, transaction status)
+
+### 4.4 Styling and UI
+
+- **Design System**: Tailwind CSS 4 + custom component library
+- **Theme**: Premium visual style matching luxury positioning (dark mode)
+- **Responsive**: Mobile-first, desktop optimized
+
+---
+
+## 5. Mantle Integration Design
+
+### 5.1 Network Configuration
+
+**Testnet Configuration**:
+```typescript
+// lib/web3/config.ts
+export const mantleSepolia = {
+  id: 5003,
+  name: 'Mantle Sepolia',
+  network: 'mantle-sepolia',
   nativeCurrency: { name: 'Mantle', symbol: 'MNT', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://rpc.testnet.mantle.xyz'] },
-    public: { http: ['https://rpc.testnet.mantle.xyz'] },
+    default: { http: ['https://rpc.sepolia.mantle.xyz'] },
   },
   blockExplorers: {
-    default: { name: 'Mantle Explorer', url: 'https://explorer.testnet.mantle.xyz' },
+    default: { name: 'Mantle Explorer', url: 'https://explorer.sepolia.mantle.xyz' },
   },
 };
 ```
 
-### 5.2 Gas 优化策略
+### 5.2 Gas Optimization Strategy
 
-- **批量操作**: 收益分配使用批量转账，减少交易次数
-- **事件精简**: 只记录必要数据，降低 Gas 消耗
-- **存储优化**: 使用 `bytes32` 存储哈希而非完整字符串
+- **Batch Operations**: Yield distribution uses batch transfers to reduce transaction count
+- **Event Optimization**: Only record necessary data to reduce gas consumption
+- **Storage Optimization**: Use `bytes32` to store hashes instead of full strings
 
-### 5.3 跨链桥接
+### 5.3 Monitoring and Health Checks
 
-- 集成 Mantle 官方桥接方案
-- 前端提供从以太坊主网到 Mantle 的资产桥接引导
-- 支持 USDC/USDT 等稳定币跨链
-
-### 5.4 监控与健康检查
-
-- 监控 Mantle RPC 节点可用性
-- 跟踪区块确认时间
-- 告警：RPC 延迟 > 5s 或节点不可用
+- Monitor Mantle RPC node availability
+- Track block confirmation time
+- Alert: RPC latency > 5s or node unavailable
 
 ---
 
-## 6. 数据存储设计
+## 6. Data Storage Design
 
-### 6.1 关系型数据库 (PostgreSQL)
+### 6.1 Relational Database (MySQL 8.0+)
 
-#### 核心表结构
+#### Core Table Structure
 
-**users 表**:
+**users table**:
 ```sql
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     wallet_address VARCHAR(42) UNIQUE NOT NULL,
     email VARCHAR(255),
     kyc_status VARCHAR(20) NOT NULL, -- 'none', 'pending', 'approved', 'rejected'
-    kyc_submitted_at TIMESTAMP,
-    kyc_approved_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    kyc_submitted_at TIMESTAMP NULL,
+    kyc_approved_at TIMESTAMP NULL,
+    kyc_rejected_at TIMESTAMP NULL,
+    kyc_rejection_reason TEXT,
+    full_name VARCHAR(200),
+    id_number VARCHAR(50),
+    id_type VARCHAR(20),
+    address TEXT,
+    phone VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 ```
 
-**assets 表**:
+**assets table**:
 ```sql
 CREATE TABLE assets (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    asset_id_bytes32 VARCHAR(66) UNIQUE NOT NULL, -- 链上 assetId
-    token_address VARCHAR(42) NOT NULL, -- LuxuryToken 合约地址
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    asset_id_bytes32 VARCHAR(66) UNIQUE NOT NULL,
+    token_address VARCHAR(42),
     asset_type VARCHAR(50) NOT NULL, -- 'watch', 'jewelry'
     brand VARCHAR(100),
     model VARCHAR(100),
-    year INTEGER,
-    total_supply NUMERIC(36, 18), -- 代币总供应量
-    price_per_share NUMERIC(36, 18), -- 每份价格
-    metadata_hash VARCHAR(66), -- IPFS 哈希
+    year INT,
+    total_supply DECIMAL(36, 18),
+    price_per_share DECIMAL(36, 18),
+    metadata_hash VARCHAR(66),
     custody_info_hash VARCHAR(66),
     insurance_info_hash VARCHAR(66),
     status VARCHAR(20) NOT NULL, -- 'registered', 'fundraising', 'funded', 'sold'
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    submitted_by VARCHAR(42),
+    description TEXT,
+    purchase_price DECIMAL(36, 18),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 ```
 
-**valuations 表**:
+**asset_authentications table**:
 ```sql
-CREATE TABLE valuations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    asset_id UUID REFERENCES assets(id),
-    valuation_amount NUMERIC(36, 18),
-    valuation_currency VARCHAR(10) DEFAULT 'USD',
-    valuation_date DATE,
-    valuation_agency VARCHAR(100),
-    report_url TEXT, -- IPFS 或 S3 URL
-    created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE asset_authentications (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    asset_id CHAR(36) NOT NULL,
+    authenticator_name VARCHAR(200) NOT NULL,
+    authenticator_type VARCHAR(50), -- 'official_brand', 'third_party', 'ai_system'
+    authentication_status VARCHAR(20) NOT NULL, -- 'pending', 'verified', 'rejected'
+    report_url TEXT,
+    report_hash VARCHAR(66),
+    verifier_signature TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (asset_id) REFERENCES assets(id)
 );
 ```
 
-**yield_distributions 表**:
+**custodies table**:
+```sql
+CREATE TABLE custodies (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    asset_id CHAR(36) NOT NULL,
+    custody_organization VARCHAR(200) NOT NULL,
+    warehouse_location VARCHAR(200),
+    warehouse_address_hash VARCHAR(66),
+    entry_date DATE,
+    custody_contract_url TEXT,
+    custody_contract_hash VARCHAR(66),
+    facility_standards TEXT,
+    status VARCHAR(20) NOT NULL, -- 'registered', 'in_custody', 'for_sale', 'sold', 'withdrawn'
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (asset_id) REFERENCES assets(id)
+);
+```
+
+**insurances table**:
+```sql
+CREATE TABLE insurances (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    asset_id CHAR(36) NOT NULL,
+    insurance_company VARCHAR(200) NOT NULL,
+    policy_number VARCHAR(100),
+    coverage_amount DECIMAL(36, 18) NOT NULL,
+    coverage_currency VARCHAR(10) DEFAULT 'USD',
+    policy_start_date DATE,
+    policy_end_date DATE NOT NULL,
+    premium_amount DECIMAL(36, 18),
+    coverage_type VARCHAR(50) DEFAULT '全险',
+    policy_document_url TEXT,
+    policy_document_hash VARCHAR(66),
+    is_active BOOLEAN DEFAULT TRUE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (asset_id) REFERENCES assets(id)
+);
+```
+
+**yield_distributions table**:
 ```sql
 CREATE TABLE yield_distributions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     distribution_id_bytes32 VARCHAR(66) UNIQUE NOT NULL,
-    asset_id UUID REFERENCES assets(id),
+    asset_id CHAR(36) NOT NULL,
     token_address VARCHAR(42) NOT NULL,
     yield_type VARCHAR(20) NOT NULL, -- 'appreciation', 'rental'
-    total_amount NUMERIC(36, 18),
-    distributed_amount NUMERIC(36, 18) DEFAULT 0,
+    total_amount DECIMAL(36, 18),
+    distributed_amount DECIMAL(36, 18) DEFAULT 0,
     is_completed BOOLEAN DEFAULT FALSE,
     transaction_hash VARCHAR(66),
-    created_at TIMESTAMP DEFAULT NOW(),
-    completed_at TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    FOREIGN KEY (asset_id) REFERENCES assets(id)
 );
 ```
 
-**user_holdings 表** (从链上事件索引):
+**user_holdings table** (indexed from on-chain events):
 ```sql
 CREATE TABLE user_holdings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     user_address VARCHAR(42) NOT NULL,
     token_address VARCHAR(42) NOT NULL,
-    balance NUMERIC(36, 18) NOT NULL,
-    last_updated_at TIMESTAMP DEFAULT NOW(),
+    balance DECIMAL(36, 18) NOT NULL,
+    last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE(user_address, token_address)
 );
 ```
 
-### 6.2 缓存 (Redis)
+### 6.2 File Storage
 
-**缓存策略**:
-- 资产列表（TTL: 5 分钟）
-- 首页统计数据（AUM、用户数，TTL: 1 分钟）
-- KYC 状态（TTL: 10 分钟）
-- 用户持仓（TTL: 30 秒）
+**Current Implementation**: Local filesystem (uploads directory on server)
 
-### 6.3 对象存储 (IPFS/S3)
+**Storage Content**:
+- Asset high-resolution images
+- 3D model files
+- Valuation report PDFs
+- Authentication certificate scans
+- Custody and insurance documents
 
-**存储内容**:
-- 资产高清图片
-- 3D 模型文件
-- 估值报告 PDF
-- 鉴定证书扫描件
-- 托管与保险文档
+**Future Migration**: Can migrate to S3, Cloudinary, or IPFS for production
 
-**哈希管理**: 所有文件上传后返回 IPFS 哈希，存储到数据库并上链。
+**Hash Management**: All files uploaded return a hash, stored in database and on-chain.
 
 ---
 
-## 7. 安全与合规设计
+## 7. Security and Compliance Design
 
-### 7.1 智能合约安全
+### 7.1 Smart Contract Security
 
-- **审计**: 所有合约上线前通过第三方审计（如 OpenZeppelin, Trail of Bits）
-- **漏洞赏金**: 建立漏洞赏金计划，鼓励社区发现安全问题
-- **多签钱包**: 关键操作（KYC 状态更新、收益分配触发）需多签确认
+- **OpenZeppelin Libraries**: All contracts use OpenZeppelin's battle-tested libraries
+- **Audit**: Contracts should pass third-party security audits before mainnet deployment
+- **Bug Bounty**: Establish bug bounty program to encourage community discovery
+- **Multi-Signature Wallet**: Critical operations (KYC status updates, yield distribution triggers) require multi-signature confirmation (planned)
 
-### 7.2 后端安全
+### 7.2 Backend Security
 
-- **认证**: JWT Token + 多因素认证（MFA）
-- **权限控制**: RBAC (Role-Based Access Control)
-- **API 限流**: 防止 DDoS 和滥用
-- **数据加密**: 敏感数据（用户身份信息）加密存储
+- **Authentication**: Admin wallet address verification (planned: JWT Token + MFA)
+- **Authorization**: Admin role-based access control (wallet address whitelist)
+- **API Rate Limiting**: Prevent DDoS and abuse (planned)
+- **Data Encryption**: Sensitive data (user identity information) encrypted storage (planned)
+- **CORS**: Configured to allow only frontend domain
 
-### 7.3 合规流程
+### 7.3 Compliance Process
 
-- **KYC/AML**: 集成第三方服务（Sumsub, Onfido, Chainalysis）
-- **风控规则**: 
-  - 大额交易（> 10,000 USD）触发人工审核
-  - 高风险地址自动冻结
-- **审计日志**: 所有关键操作记录审计日志，可追溯
+- **KYC/AML**: Integration with third-party services (can integrate Sumsub, Onfido, Chainalysis)
+- **Risk Control Rules**: 
+  - Large transactions trigger manual review (configurable threshold)
+  - High-risk addresses automatically flagged
+- **Audit Logging**: All critical operations record audit logs, traceable
 
-### 7.4 数据隐私
+### 7.4 Data Privacy
 
-- **GDPR 合规**: 支持用户数据导出和删除
-- **数据脱敏**: 序列号等敏感信息在前端脱敏显示
-- **访问控制**: 仅授权人员可访问完整用户数据
+- **GDPR Compliance**: Support user data export and deletion (planned)
+- **Data Masking**: Serial numbers and other sensitive information masked in frontend display
+- **Access Control**: Only authorized personnel can access complete user data
 
 ---
 
-## 8. API 设计
+## 8. API Design
 
-### 8.1 REST API 规范
+### 8.1 REST API Specification
 
-**基础 URL**: `https://api.mantleluxury.com/v1`
+**Base URL**: `https://mantleluxury-production.up.railway.app/api`
 
-#### 资产相关
-
-```
-GET    /assets                    # 获取资产列表
-GET    /assets/:id                # 获取资产详情
-POST   /assets/:id/purchase        # 生成购买交易参数（前端调用合约）
-```
-
-#### 用户相关
+#### Asset Related
 
 ```
-GET    /users/me                  # 获取当前用户信息
-GET    /users/me/portfolio        # 获取投资组合
-GET    /users/me/yields           # 获取收益记录
-POST   /users/me/export-report    # 导出收益报表
+GET    /api/assets                    # Get asset list
+GET    /api/assets/:id                # Get asset details
+POST   /api/assets/submit             # Submit new asset
+POST   /api/assets/:id/purchase        # Generate purchase transaction parameters (frontend calls contract)
+GET    /api/assets/:id/images          # Get asset images
+POST   /api/assets/:id/images          # Upload asset images
 ```
 
-#### KYC 相关
+#### User Related
 
 ```
-GET    /kyc/status                # 获取 KYC 状态
-POST   /kyc/submit                # 提交 KYC 申请
-GET    /kyc/status/:requestId     # 查询 KYC 审核状态
+GET    /api/portfolio                 # Get user portfolio
+GET    /api/portfolio/holdings        # Get user holdings
+GET    /api/yields                     # Get yield records
+GET    /api/yields/user/:address       # Get user's yield records
+GET    /api/yields/asset/:assetId     # Get asset's yield records
+POST   /api/yields/create              # Create yield distribution (admin)
+POST   /api/yields/:id/distribute      # Trigger yield distribution (admin)
 ```
 
-### 8.2 响应格式
+#### KYC Related
+
+```
+GET    /api/kyc/status                 # Get KYC status
+POST   /api/kyc/submit                 # Submit KYC application
+GET    /api/kyc/status/:requestId      # Query KYC review status
+```
+
+#### Asset Management (Admin)
+
+```
+POST   /api/asset-authentications      # Create asset authentication record
+POST   /api/asset-authentications/:id/review  # Review authentication
+GET    /api/asset-authentications/asset/:assetId  # Get asset authentications
+POST   /api/custodies                  # Create custody record
+POST   /api/custodies/:assetId/status  # Update custody status
+POST   /api/insurances                 # Create insurance record
+POST   /api/insurances/renew           # Renew insurance
+GET    /api/insurances/asset/:assetId  # Get asset insurances
+```
+
+#### Statistics
+
+```
+GET    /api/stats/overview             # Get platform overview statistics
+```
+
+### 8.2 Response Format
 
 ```json
 {
-  "success": true,
+  "id": "uuid",
   "data": { ... },
-  "error": null,
   "timestamp": "2025-12-01T10:00:00Z"
 }
 ```
 
-### 8.3 认证
+### 8.3 Authentication
 
-- **Header**: `Authorization: Bearer <JWT_TOKEN>`
-- **Web3 签名**: 部分接口支持 Web3 签名验证（替代 JWT）
-
----
-
-## 9. 部署与运维
-
-### 9.1 环境划分
-
-#### 开发环境 (Development)
-- 本地 Hardhat 节点或 Mantle 测试网
-- Docker Compose 启动数据库、Redis
-- 前端本地开发服务器
-
-#### 测试环境 (Staging)
-- 合约部署到 Mantle 测试网
-- 后端服务部署到测试集群（Kubernetes 或云服务）
-- 前端部署到测试域名
-
-#### 生产环境 (Production)
-- 合约部署到 Mantle 主网
-- 后端服务部署到生产集群（高可用、自动扩缩容）
-- 前端部署到 CDN
-- 数据库主从复制、定期备份
-
-### 9.2 CI/CD 流程
-
-**GitHub Actions 工作流**:
-1. **合约测试**: 运行 Hardhat 测试套件
-2. **前端构建**: 构建 Next.js 应用
-3. **后端测试**: 运行单元测试和集成测试
-4. **部署**: 
-   - 测试环境自动部署
-   - 生产环境需手动审批
-
-### 9.3 监控与告警
-
-#### 监控指标
-
-**应用层**:
-- API 响应时间 (P50, P95, P99)
-- 错误率
-- 请求量 (QPS)
-
-**基础设施**:
-- CPU、内存、磁盘使用率
-- 数据库连接池状态
-- Redis 缓存命中率
-
-**区块链层**:
-- Mantle RPC 延迟
-- 合约交易成功率
-- Gas 使用量
-
-#### 告警规则
-
-- API 错误率 > 5%
-- RPC 延迟 > 5s
-- 数据库连接数 > 80%
-- 大额异常交易（> 50,000 USD）
-
-### 9.4 日志管理
-
-- **集中式日志**: ELK Stack 或 Loki + Grafana
-- **日志级别**: DEBUG (开发), INFO (生产), ERROR (告警)
-- **日志保留**: 90 天
+- **Admin Operations**: Verified by wallet address (configured in `ADMIN_WALLET_ADDRESSES`)
+- **Future**: JWT Token or Web3 signature verification for user operations
 
 ---
 
-## 10. 开发环境与工具链
+## 9. Deployment and Operations
 
-### 10.1 本地开发设置
+### 9.1 Environment Setup
 
-#### 前置要求
+#### Development Environment
+- Local Hardhat node or Mantle testnet
+- Local MySQL database (Docker)
+- Frontend local development server
+- Backend local Spring Boot server
+
+#### Production Environment
+- **Frontend**: Deployed on Vercel
+- **Backend**: Deployed on Railway
+- **Database**: Railway MySQL
+- **Contracts**: Deployed on Mantle Sepolia Testnet (Chain ID: 5003)
+
+### 9.2 Deployment Process
+
+#### Frontend Deployment (Vercel)
+1. Connect GitHub repository to Vercel
+2. Configure build settings (root directory: `frontend`)
+3. Set environment variables (`NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_CHAIN_ID`)
+4. Automatic deployment on git push
+
+#### Backend Deployment (Railway)
+1. Connect GitHub repository to Railway
+2. Configure build command: `cd backend && ./gradlew bootJar --no-daemon`
+3. Configure start command: `cd backend && java -jar build/libs/mantle-luxury-backend-*.jar`
+4. Set environment variables (database, blockchain, admin addresses)
+5. Automatic deployment on git push
+
+#### Contract Deployment
+1. Deploy core contracts manually (KYCRegistry, CustodyManager, YieldDistribution)
+2. LuxuryToken contracts are deployed automatically when assets are submitted
+3. Update contract addresses in backend configuration
+
+### 9.3 Monitoring and Alerts
+
+#### Monitoring Metrics
+
+**Application Layer**:
+- API response time (P50, P95, P99)
+- Error rate
+- Request volume (QPS)
+
+**Infrastructure**:
+- CPU, memory, disk usage (Railway dashboard)
+- Database connection pool status
+- File storage usage
+
+**Blockchain Layer**:
+- Mantle RPC latency
+- Contract transaction success rate
+- Gas usage
+
+#### Alert Rules (Planned)
+- API error rate > 5%
+- RPC latency > 5s
+- Database connection pool > 80%
+- Large abnormal transactions (> 50,000 USD)
+
+### 9.4 Log Management
+
+- **Backend Logs**: View in Railway service logs
+- **Frontend Logs**: View in Vercel deployment logs
+- **Log Retention**: Railway and Vercel default retention periods
+
+---
+
+## 10. Development Environment and Toolchain
+
+### 10.1 Local Development Setup
+
+#### Prerequisites
 - Java 17+
-- Maven 或 Gradle
+- Gradle (or use Gradle Wrapper)
+- Node.js 18+
 - Docker & Docker Compose
 - Git
 
-#### 快速开始
+#### Quick Start
 
 ```bash
-# 1. 克隆仓库
+# 1. Clone repository
 git clone https://github.com/your-org/MantleLuxury.git
 cd MantleLuxury
 
-# 2. 启动本地基础设施（数据库、Redis）
-docker-compose up -d
+# 2. Start local infrastructure (MySQL)
+./database/start-mysql.sh
 
-# 3. 安装依赖（合约和前端）
+# 3. Install dependencies (contracts and frontend)
 cd contracts && npm install
-cd ../web && npm install
+cd ../frontend && npm install
 
-# 4. 启动本地 Hardhat 节点
-cd contracts && npx hardhat node
+# 4. Configure contracts environment
+cd contracts
+cp .env.example .env
+# Edit .env with your private key and RPC URL
 
-# 5. 部署合约到本地节点
-npx hardhat run scripts/deploy.ts --network localhost
+# 5. Deploy core contracts to Mantle testnet
+npx hardhat run scripts/deployKYCRegistry.ts --network mantleTestnet
+npx hardhat run scripts/deployCustodyManager.ts --network mantleTestnet
+npx hardhat run scripts/deployYieldDistribution.ts --network mantleTestnet
 
-# 6. 启动后端 Spring Boot 服务
-cd ../backend && ./mvnw spring-boot:run
+# 6. Configure backend environment
+cd ../backend
+# Edit application.yml or set environment variables:
+# - DATABASE_URL
+# - BLOCKCHAIN_PRIVATE_KEY
+# - BLOCKCHAIN_RPC_URL
+# - YIELD_DISTRIBUTION_CONTRACT
+# - KYC_REGISTRY_CONTRACT
+# - CUSTODY_MANAGER_CONTRACT
+# - ADMIN_WALLET_ADDRESSES
 
-# 7. 启动前端开发服务器
-cd ../web && npm run dev
+# 7. Start backend Spring Boot service
+./gradlew bootRun
+
+# 8. Start frontend development server
+cd ../frontend
+npm run dev
 ```
 
-### 10.2 开发工具
+### 10.2 Development Tools
 
-- **合约开发**: Hardhat, Foundry (可选)
-- **后端开发**: Spring Boot, Spring Initializr, web3j
-- **前端测试**: Jest + React Testing Library
-- **代码质量**: ESLint, Prettier, Checkstyle/Spotless, Solidity Linter
-- **版本控制**: Git + Conventional Commits
+- **Contract Development**: Hardhat, OpenZeppelin Contracts
+- **Backend Development**: Spring Boot, Spring Initializr, Web3j
+- **Frontend Development**: Next.js, TypeScript, Tailwind CSS
+- **Code Quality**: ESLint, Prettier (frontend), Checkstyle/Spotless (backend, planned)
+- **Version Control**: Git
 
-### 10.3 测试策略
+### 10.3 Testing Strategy
 
-#### 合约测试
-- 单元测试: 每个合约函数单独测试
-- 集成测试: 合约间交互测试
-- 安全测试: 使用 Slither 或 Mythril 进行静态分析
+#### Contract Testing
+- Unit tests: Test each contract function individually
+- Integration tests: Test interactions between contracts
+- Security testing: Use Slither or Mythril for static analysis (planned)
 
-#### 前端测试
-- 单元测试: React Testing Library
-- E2E 测试: Playwright 或 Cypress
+#### Frontend Testing
+- Unit tests: React Testing Library (planned)
+- E2E tests: Playwright or Cypress (planned)
 
-#### 后端测试
-- 单元测试: JUnit 5 + Spring Boot Test
-- 集成测试: 使用 Testcontainers 启动 PostgreSQL/Redis，测试 API 端点与数据库交互
-
----
-
-## 11. 附录
-
-### 11.1 参考文档
-
-- [Mantle 官方文档](https://docs.mantle.xyz/)
-- [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts/)
-- [Next.js 文档](https://nextjs.org/docs)
-- [Wagmi 文档](https://wagmi.sh/)
-
-### 11.2 合约地址（待部署）
-
-- `KYCRegistry`: TBD
-- `CustodyManager`: TBD
-- `YieldDistribution`: TBD
-- `LuxuryTokenFactory`: TBD
-
-### 11.3 联系方式
-
-- 技术负责人: TBD
-- 安全审计: TBD
-- 问题反馈: GitHub Issues
-
----
-
-**文档版本历史**:
-- v1.0 (2025-12-01): 初始版本
-
+#### Backend Testing
+- Unit tests: JUnit 5 + Spring Boot Test (planned)
+- Integration tests: Testcontainers for MySQL, test API endpoints and database interactions (planned)
