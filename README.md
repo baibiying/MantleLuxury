@@ -18,6 +18,16 @@ MantleLuxury excels across all evaluation criteria:
 
 ---
 
+## 👥 Team Info
+
+### Abby Bai
+- **Role**: Full Stack Developer & Project Manager
+- **Bio**: Full-stack developer with expertise in blockchain, smart contracts, and web3 applications. Led the development of MantleLuxury from concept to MVP, including smart contract architecture, backend API design, frontend development, and deployment infrastructure.
+- **Email**: baibiying@icloud.com
+- **Phone**: +8618600665034
+
+---
+
 ## 🌐 Live Access
 
 - **Frontend Application**: [https://ml-snowy-five.vercel.app/](https://ml-snowy-five.vercel.app/)
@@ -211,13 +221,3 @@ npm run deploy:mantle  # Deploy to Mantle testnet
 - **RPC URL**: https://rpc.sepolia.mantle.xyz
 - **Block Explorer**: https://explorer.sepolia.mantle.xyz
 - **Faucet**: https://faucet.sepolia.mantle.xyz/
-
----
-
-## 👥 Team Info
-
-### Abby Bai
-- **Role**: Full Stack Developer & Project Manager
-- **Bio**: Full-stack developer with expertise in blockchain, smart contracts, and web3 applications. Led the development of MantleLuxury from concept to MVP, including smart contract architecture, backend API design, frontend development, and deployment infrastructure.
-- **Email**: baibiying@icloud.com
-- **Phone**: +8618600665034
