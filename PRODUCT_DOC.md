@@ -25,6 +25,34 @@
 - Provide investors with a **transparent, secure, and seamless** luxury investment experience
 - Offer asset owners **efficient liquidity and monetization** solutions
 
+### 1.4 Key Features
+
+#### Core Functionality
+
+- **Fractional Ownership**: Invest in luxury watches and jewelry with as little as $500
+- **Asset Tokenization**: Automatic ERC-20 token deployment when assets are submitted
+- **KYC/AML Integration**: Mandatory verification before investment
+- **Portfolio Management**: View holdings, transaction history, and yield records
+- **Yield Distribution**: Automated distribution of appreciation and rental yields via smart contracts
+- **Asset Authentication**: Third-party authentication and valuation reports
+- **Custody & Insurance**: Professional custody and comprehensive insurance tracking
+- **CSV Export**: Export transaction and holding records for tax filing
+
+#### Asset Management
+
+- **Asset Submission**: Submit luxury assets with high-resolution images, 3D models, and detailed information
+- **Authentication Flow**: Create authentication records → Review → Asset status automatically updates to `fundraising`
+- **Custody Management**: Track asset custody with warehouse location, entry date, and facility standards
+- **Insurance Management**: Manage insurance policies with coverage amounts, policy numbers, and expiration dates
+
+#### Investment Flow
+
+1. **Browse Assets**: View available assets with detailed information, images, and authentication status
+2. **Complete KYC**: Mandatory KYC/AML verification before investment
+3. **Invest**: Connect wallet and invest in fractional ownership tokens
+4. **Track Portfolio**: Monitor holdings, transaction history, and yield distributions
+5. **Export Records**: Download CSV files for tax filing and compliance reporting
+
 ---
 
 ## 2. Users and Use Cases
@@ -295,7 +323,17 @@ This section describes end-to-end processes from a product perspective for desig
 
 ### 8.1 Phase 1 – MVP (Completed)
 
+- **Status**: MVP is completed and currently in testing phase
+
 - **Deliverables:**
+  - Core smart contracts deployed on Mantle Sepolia testnet
+  - Asset submission and review system
+  - KYC/AML integration
+  - Portfolio management and yield tracking
+  - Yield distribution console for administrators
+  - CSV export for transactions and holdings
+  - Self-hosted event indexer powering homepage and reports
+  - Frontend and backend integration
   - Basic tokenization and investment flow for watches/jewelry
   - Basic KYC & simple AML verification
   - One-time appreciation yield distribution capability

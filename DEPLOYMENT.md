@@ -9,10 +9,24 @@ This document provides comprehensive instructions for deploying the MantleLuxury
 ### Deployment Architecture
 
 - **Frontend**: Next.js application deployed on [Vercel](https://vercel.com)
+  - Configuration: [`frontend/vercel.json`](../frontend/vercel.json)
+  - Environment Variables: See [`frontend/ENV_VARIABLES.md`](../frontend/ENV_VARIABLES.md)
 - **Backend**: Spring Boot API deployed on [Railway](https://railway.app)
+  - Configuration: [`backend/Dockerfile`](../backend/Dockerfile), [`backend/railway.json`](../backend/railway.json), [`backend/railway.toml`](../backend/railway.toml)
+  - Environment Variables: See [`backend/ENV_VARIABLES.md`](../backend/ENV_VARIABLES.md)
 - **Database**: MySQL 8.0+ deployed on Railway
+  - Initialization Script: [`database/init-mysql.sql`](../database/init-mysql.sql)
 - **Smart Contracts**: Deployed on Mantle Sepolia Testnet (or Mantle Mainnet)
-- **Blockchain Network**: Mantle L2 (Chain ID: 5003 for Sepolia, 1 for Mainnet)
+- **Blockchain Network**: Mantle L2 (Chain ID: 5003 for Sepolia, 5000 for Mainnet)
+
+### Quick Deployment Checklist
+
+For experienced users, here's a quick checklist. Detailed instructions follow in the sections below.
+
+1. **Database**: Deploy MySQL on Railway and run initialization script (`database/init-mysql.sql`)
+2. **Backend**: Deploy Spring Boot application on Railway with environment variables configured
+3. **Frontend**: Deploy Next.js application on Vercel with environment variables configured
+4. **Smart Contracts**: Deploy core contracts (KYCRegistry, CustodyManager, YieldDistribution) and update backend configuration
 
 ---
 
