@@ -25,14 +25,22 @@ MantleLuxury excels across all evaluation criteria:
 - **Bio**: Full-stack developer with expertise in blockchain, smart contracts, and web3 applications. Led the development of MantleLuxury from concept to MVP, including smart contract architecture, backend API design, frontend development, and deployment infrastructure.
 - **Email**: baibiying@icloud.com
 - **Phone**: +8618600665034
+- **Location**: Shanghai, China
 
 ---
 
 ## 🌐 Live Access
 
+- **MVP Link / Demo URL (Testnet)**: [https://ml-snowy-five.vercel.app/](https://ml-snowy-five.vercel.app/)
 - **Frontend Application**: [https://ml-snowy-five.vercel.app/](https://ml-snowy-five.vercel.app/)
 - **Backend API**: [https://mantleluxury-production.up.railway.app](https://mantleluxury-production.up.railway.app)
   - Health Check: [https://mantleluxury-production.up.railway.app/api/health](https://mantleluxury-production.up.railway.app/api/health)
+- **Smart Contracts** (Mantle Sepolia Testnet):
+  - **KYCRegistry**: [`0x519AD3F043581620e67567c896508b8Da33fF91D`](https://explorer.sepolia.mantle.xyz/address/0x519AD3F043581620e67567c896508b8Da33fF91D)
+  - **CustodyManager**: [`0xF1c527a19b65E3e9Ab9AD7499cc8167C63c3ca87`](https://explorer.sepolia.mantle.xyz/address/0xF1c527a19b65E3e9Ab9AD7499cc8167C63c3ca87)
+  - **YieldDistribution**: [`0x988304593FC2e89e56FFAD9393Af0B97c37d9E5D`](https://explorer.sepolia.mantle.xyz/address/0x988304593FC2e89e56FFAD9393Af0B97c37d9E5D)
+  - **LuxuryToken**: Deployed per asset (each asset has its own ERC-20 token contract)
+  - **Block Explorer**: [Mantle Sepolia Explorer](https://explorer.sepolia.mantle.xyz)
 
 ---
 
